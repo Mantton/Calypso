@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/mantton/calypso/internal/evaluator"
+	"github.com/mantton/calypso/internal/calypso/evaluator"
 )
 
 func Run() {
@@ -34,7 +34,7 @@ func Run() {
 			continue
 		}
 
-		err = eval.Run(input)
+		err = eval.Run("repl", input)
 
 		if err != nil {
 			fmt.Println(err)

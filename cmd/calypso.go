@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mantton/calypso/internal/repl"
+	"github.com/mantton/calypso/internal/calypso/repl"
 )
 
 func main() {
