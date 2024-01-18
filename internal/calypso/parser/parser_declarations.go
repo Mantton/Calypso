@@ -11,9 +11,17 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 
 	switch p.current() {
 	case token.CONST:
-		panic("parse constant")
-	case token.LET:
-		panic("parse variable")
+		stmt, err := p.parseVariableStatement()
+
+		if err != nil {
+			panic(err)
+		}
+
+		p.expect(token.SEMICOLON)
+		return &ast.ConstantDeclaration{
+			Stmt: stmt,
+		}
+
 	case token.FUNC:
 		return p.parseFunctionDeclaration()
 	}
@@ -26,7 +34,7 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 	p.expect(token.FUNC) // Expect current to be `func`, consume
 
 	// Name
-	p.expect(token.IDENTIFIER) // TODO: Parse Function Name
+	name := p.expect(token.IDENTIFIER).Lit // Function Name
 
 	// Parameters
 
@@ -38,7 +46,7 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 	body := p.parseFunctionBody()
 
 	lit := &ast.FunctionLiteral{
-		Name: "main",
+		Name: name,
 		Body: body,
 	}
 
@@ -88,43 +96,4 @@ func (p *Parser) parseStatementList() []ast.Statement {
 
 	return list
 
-}
-
-func (p *Parser) parseStatement() (ast.Statement, error) {
-
-	switch p.current() {
-	case token.CONST, token.LET:
-		/**
-		let x = `expr`;
-		const y = `expr`;
-		*/
-		p.next()                          // Move to next token
-		tok := p.expect(token.IDENTIFIER) // Parse Ident
-
-		p.expect(token.ASSIGN)
-
-		expr, err := p.parseExpression()
-
-		if err != nil {
-			return nil, err
-		}
-
-		if token.CONST == p.current() {
-			// TODO: Const Statement
-			return &ast.LetStatement{
-				Ident: tok.Lit,
-				Value: expr,
-			}, nil
-		} else {
-
-			return &ast.LetStatement{
-				Ident: tok.Lit,
-				Value: expr,
-			}, nil
-		}
-
-	}
-
-	p.next()
-	panic("bad statement")
 }

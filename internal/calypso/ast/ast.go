@@ -29,14 +29,7 @@ type File struct {
 // * Declarations
 // - Imports, Modules, Structs, Types
 type ConstantDeclaration struct {
-	Ident Expression
-	Value Expression
-	// Type  Expression
-}
-
-type VariableDeclaration struct {
-	Ident Expression
-	Value Expression
+	Stmt *VariableStatement
 	// Type  Expression
 }
 
@@ -44,7 +37,6 @@ type FunctionDeclaration struct {
 	Func *FunctionLiteral
 }
 
-func (d *VariableDeclaration) declarationNode() {}
 func (d *ConstantDeclaration) declarationNode() {}
 func (d *FunctionDeclaration) declarationNode() {}
 
@@ -53,9 +45,10 @@ type BlockStatement struct {
 	Statements []Statement
 }
 
-type LetStatement struct {
-	Ident string
-	Value Expression
+type VariableStatement struct {
+	Identifier string
+	Value      Expression
+	IsConstant bool
 }
 
 type FunctionStatement struct {
@@ -68,10 +61,11 @@ type BadStatement struct {
 
 func (s *BlockStatement) statementNode()    {}
 func (s *BadStatement) statementNode()      {}
-func (s *LetStatement) statementNode()      {}
+func (s *VariableStatement) statementNode() {}
 func (s *FunctionStatement) statementNode() {}
 
 // * Expressions
+
 type GroupedExpression struct {
 	Expr Expression
 }

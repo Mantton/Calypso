@@ -66,6 +66,8 @@ const (
 	NULL
 	VOID
 	MODULE
+	IF
+	ELSE
 	kw_e // Keywords End
 )
 
@@ -83,6 +85,8 @@ var keywords = map[string]Token{
 	"false":  FALSE,
 	"null":   NULL,
 	"void":   VOID,
+	"if":     IF,
+	"else":   ELSE,
 }
 
 func LookupIdent(ident string) Token {
@@ -102,7 +106,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST:
+	case FUNC, LET, CONST, IF:
 		return true
 	}
 
