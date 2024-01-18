@@ -20,12 +20,13 @@ func New(tokens []token.ScannedToken) *Parser {
 
 func (p *Parser) Parse() *ast.File {
 
-	moduleName := "main"
+	moduleName := "unknown"
 	// - Parse Module Declaration
 	// module main
-	p.expect(token.MODULE)     // Consume module token
-	p.expect(token.IDENTIFIER) // TODO: Parse Identifier
-	p.expect(token.SEMICOLON)  // Consume semicolon
+	p.expect(token.MODULE)            // Consume module token
+	tok := p.expect(token.IDENTIFIER) // Identifier
+	moduleName = tok.Lit
+	p.expect(token.SEMICOLON) // Consume semicolon
 
 	// Imports
 
@@ -34,13 +35,16 @@ func (p *Parser) Parse() *ast.File {
 
 	for p.current() != token.EOF {
 
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("DECL ERROR: ", r)
-				p.advance(token.IsDeclaration)
-			}
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("DECL ERROR: ", r)
+					p.advance(token.IsDeclaration)
+				}
+			}()
+			declarations = append(declarations, p.parseDeclaration())
 		}()
-		declarations = append(declarations, p.parseDeclaration())
+
 	}
 
 	return &ast.File{

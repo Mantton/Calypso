@@ -24,7 +24,7 @@ func (e *Evaluator) Run(filename, input string) error {
 
 	f := p.Parse()
 
-	fmt.Println(f)
+	fmt.Println("Parsed File:", f)
 
 	return nil
 }

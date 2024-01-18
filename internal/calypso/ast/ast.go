@@ -41,8 +41,7 @@ type VariableDeclaration struct {
 }
 
 type FunctionDeclaration struct {
-	Name string
-	Body Statement
+	Func *FunctionLiteral
 }
 
 func (d *VariableDeclaration) declarationNode() {}
@@ -59,8 +58,18 @@ type LetStatement struct {
 	Value Expression
 }
 
-func (s *BlockStatement) statementNode() {}
-func (s *LetStatement) statementNode()   {}
+type FunctionStatement struct {
+	Func *FunctionLiteral
+}
+
+type BadStatement struct {
+	Tok token.Token
+}
+
+func (s *BlockStatement) statementNode()    {}
+func (s *BadStatement) statementNode()      {}
+func (s *LetStatement) statementNode()      {}
+func (s *FunctionStatement) statementNode() {}
 
 // * Expressions
 type GroupedExpression struct {
@@ -102,9 +111,19 @@ type NullLiteral struct{}
 
 type VoidLiteral struct{}
 
-func (e *IntegerLiteral) expressionNode() {}
-func (e *FloatLiteral) expressionNode()   {}
-func (e *StringLiteral) expressionNode()  {}
-func (e *BooleanLiteral) expressionNode() {}
-func (e *NullLiteral) expressionNode()    {}
-func (e *VoidLiteral) expressionNode()    {}
+type FunctionLiteral struct {
+	Name string
+	Body Statement
+}
+
+type IdentifierLiteral struct {
+	Value string
+}
+
+func (e *IntegerLiteral) expressionNode()    {}
+func (e *FloatLiteral) expressionNode()      {}
+func (e *StringLiteral) expressionNode()     {}
+func (e *BooleanLiteral) expressionNode()    {}
+func (e *NullLiteral) expressionNode()       {}
+func (e *VoidLiteral) expressionNode()       {}
+func (e *IdentifierLiteral) expressionNode() {}

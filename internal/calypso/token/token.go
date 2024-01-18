@@ -108,3 +108,48 @@ func IsStatement(t Token) bool {
 
 	return false
 }
+
+var tokens = map[Token]string{
+	ILLEGAL: "ILLEGAL",
+	EOF:     "EOF",
+
+	ADD: "+",
+	SUB: "-",
+	MUL: "*",
+	QUO: "/",
+	REM: "%",
+
+	EQL:    "==",
+	LSS:    "<",
+	GTR:    ">",
+	ASSIGN: "=",
+	NOT:    "!",
+
+	NEQ: "!=",
+	LEQ: "<=",
+	GEQ: ">=",
+
+	LPAREN: "(",
+	LBRACE: "{",
+	COMMA:  ",",
+	PERIOD: ".",
+
+	RPAREN:    ")",
+	RBRACE:    "}",
+	SEMICOLON: ";",
+	COLON:     ":",
+
+	CONST: "const",
+	FUNC:  "func",
+	LET:   "let",
+}
+
+func LookUp(t Token) string {
+	v, ok := tokens[t]
+
+	if ok {
+		return v
+	}
+
+	return fmt.Sprintf("UNKNOWN %d", t)
+}

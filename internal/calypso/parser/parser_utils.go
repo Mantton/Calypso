@@ -61,12 +61,13 @@ func (p *Parser) isAtEnd() bool {
 	return p.peekAhead() == token.EOF
 }
 
-func (p *Parser) expect(t token.Token) {
+func (p *Parser) expect(t token.Token) token.ScannedToken {
 	if p.current() != t {
-		fmt.Println(p.currentScannedToken(), t)
-		panic("expected diff token")
+		panic(fmt.Errorf("expected `%s` got `%s`", token.LookUp(t), token.LookUp(p.current())))
 	} else {
-		p.next()
+
+		defer p.next()
+		return p.currentScannedToken()
 	}
 }
 func (p *Parser) next() {

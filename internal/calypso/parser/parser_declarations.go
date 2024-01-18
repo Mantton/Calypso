@@ -37,9 +37,13 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 	// Body
 	body := p.parseFunctionBody()
 
-	return &ast.FunctionDeclaration{
+	lit := &ast.FunctionLiteral{
 		Name: "main",
 		Body: body,
+	}
+
+	return &ast.FunctionDeclaration{
+		Func: lit,
 	}
 }
 
@@ -47,7 +51,6 @@ func (p *Parser) parseFunctionBody() *ast.BlockStatement {
 	// Opening
 	p.expect(token.LBRACE)
 	statements := p.parseStatementList()
-	fmt.Println(statements)
 	// Closing
 	p.expect(token.RBRACE)
 
@@ -60,22 +63,27 @@ func (p *Parser) parseFunctionBody() *ast.BlockStatement {
 func (p *Parser) parseStatementList() []ast.Statement {
 
 	var list = []ast.Statement{}
-	for p.current() != token.RBRACE && p.current() != token.EOF {
+	cancel := false
+	for p.current() != token.RBRACE && p.current() != token.EOF && !cancel {
 
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Print("ERROR ", r)
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("STMT ERROR: ", r)
+					p.advance(token.IsStatement)
+				}
+			}()
+
+			statement, err := p.parseStatement()
+
+			if err != nil {
+				panic(err)
 			}
+			p.expect(token.SEMICOLON)
+
+			list = append(list, statement)
 		}()
 
-		statement, err := p.parseStatement()
-
-		if err != nil {
-			panic(err)
-		}
-
-		list = append(list, statement)
-		p.expect(token.SEMICOLON)
 	}
 
 	return list
@@ -90,8 +98,9 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		let x = `expr`;
 		const y = `expr`;
 		*/
-		p.next()                   // Move to next token
-		p.expect(token.IDENTIFIER) // TODO: Parse Ident
+		p.next()                          // Move to next token
+		tok := p.expect(token.IDENTIFIER) // Parse Ident
+
 		p.expect(token.ASSIGN)
 
 		expr, err := p.parseExpression()
@@ -100,11 +109,22 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 			return nil, err
 		}
 
-		return &ast.LetStatement{
-			Ident: "name",
-			Value: expr,
-		}, nil
+		if token.CONST == p.current() {
+			// TODO: Const Statement
+			return &ast.LetStatement{
+				Ident: tok.Lit,
+				Value: expr,
+			}, nil
+		} else {
+
+			return &ast.LetStatement{
+				Ident: tok.Lit,
+				Value: expr,
+			}, nil
+		}
+
 	}
 
-	panic("statement")
+	p.next()
+	panic("bad statement")
 }
