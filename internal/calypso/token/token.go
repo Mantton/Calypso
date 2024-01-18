@@ -61,6 +61,10 @@ const (
 	FUNC
 	CONST
 	LET
+	TRUE
+	FALSE
+	NULL
+	VOID
 	MODULE
 	kw_e // Keywords End
 )
@@ -75,6 +79,10 @@ var keywords = map[string]Token{
 	"let":    LET,
 	"const":  CONST,
 	"module": MODULE,
+	"true":   TRUE,
+	"false":  FALSE,
+	"null":   NULL,
+	"void":   VOID,
 }
 
 func LookupIdent(ident string) Token {
@@ -89,5 +97,14 @@ func IsDeclaration(t Token) bool {
 	case FUNC, CONST, MODULE:
 		return true
 	}
+	return false
+}
+
+func IsStatement(t Token) bool {
+	switch t {
+	case FUNC, LET, CONST:
+		return true
+	}
+
 	return false
 }
