@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/parser"
 )
 
 type Evaluator struct {
@@ -19,7 +20,11 @@ func (e *Evaluator) Run(filename, input string) error {
 
 	tokens := l.AllTokens()
 
-	fmt.Println(tokens)
+	p := parser.New(tokens)
+
+	f := p.Parse()
+
+	fmt.Println(f)
 
 	return nil
 }

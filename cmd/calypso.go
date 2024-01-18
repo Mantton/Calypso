@@ -4,19 +4,31 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mantton/calypso/internal/calypso/repl"
+	"github.com/mantton/calypso/internal/calypso/evaluator"
 )
 
 func main() {
-	fmt.Println("CALYPSO")
 	fmt.Println()
 
 	args := os.Args[1:] // gets args without program path
-	runREPL := len(args) < 1
+	isInvalid := len(args) < 1
 
-	if runREPL {
-		repl.Run()
+	if isInvalid {
+		fmt.Println("Usage calypso [script]")
 	} else {
-		fmt.Println("Execute file")
+		path := args[0]
+
+		data, err := os.ReadFile(path)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		eval := evaluator.New()
+		err = eval.Run(path, string(data))
+
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 }

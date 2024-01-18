@@ -4,6 +4,8 @@ import "fmt"
 
 type Token byte
 
+type NodeChecker func(Token) bool
+
 type ScannedToken struct {
 	Tok Token
 	Pos int
@@ -59,6 +61,7 @@ const (
 	FUNC
 	CONST
 	LET
+	MODULE
 	kw_e // Keywords End
 )
 
@@ -68,9 +71,10 @@ func (t ScannedToken) String() string {
 }
 
 var keywords = map[string]Token{
-	"func":  FUNC,
-	"let":   LET,
-	"const": CONST,
+	"func":   FUNC,
+	"let":    LET,
+	"const":  CONST,
+	"module": MODULE,
 }
 
 func LookupIdent(ident string) Token {
@@ -78,4 +82,12 @@ func LookupIdent(ident string) Token {
 		return tok
 	}
 	return IDENTIFIER
+}
+
+func IsDeclaration(t Token) bool {
+	switch t {
+	case FUNC, CONST, MODULE:
+		return true
+	}
+	return false
 }
