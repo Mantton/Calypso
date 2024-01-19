@@ -70,12 +70,18 @@ type WhileStatement struct {
 	Action    *BlockStatement
 }
 
-func (s *IfStatement) statementNode()       {}
-func (s *WhileStatement) statementNode()    {}
-func (s *ReturnStatement) statementNode()   {}
-func (s *BlockStatement) statementNode()    {}
-func (s *VariableStatement) statementNode() {}
-func (s *FunctionStatement) statementNode() {}
+type AssignmentStatement struct {
+	Ident string
+	Value Expression
+}
+
+func (s *IfStatement) statementNode()         {}
+func (s *AssignmentStatement) statementNode() {}
+func (s *WhileStatement) statementNode()      {}
+func (s *ReturnStatement) statementNode()     {}
+func (s *BlockStatement) statementNode()      {}
+func (s *VariableStatement) statementNode()   {}
+func (s *FunctionStatement) statementNode()   {}
 
 // * Expressions
 

@@ -19,6 +19,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		return p.parseReturnStatement()
 	case token.WHILE:
 		return p.parseWhileStatement()
+	case token.IDENTIFIER:
+		return p.parseAssignmentStatement()
 	}
 
 	panic("expected statement")
@@ -136,4 +138,23 @@ func (p *Parser) parseWhileStatement() (ast.Statement, error) {
 	stmt.Action = block
 
 	return stmt, nil
+}
+
+func (p *Parser) parseAssignmentStatement() (ast.Statement, error) {
+	lit := p.expect(token.IDENTIFIER)
+
+	p.expect(token.ASSIGN)
+
+	expr, err := p.parseExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.expect(token.SEMICOLON)
+
+	return &ast.AssignmentStatement{
+		Ident: lit.Lit,
+		Value: expr,
+	}, nil
 }
