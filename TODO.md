@@ -3,7 +3,7 @@
 ## Lexer & Parser
 - [x] Array Literal
 - [x] Map Literal
-- [ ] Index Expression
+- [x] Index Expression
 - [ ] Property Expression
 - [ ] For Statement
 - [ ] Traits (export, private , async)

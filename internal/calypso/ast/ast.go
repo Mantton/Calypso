@@ -101,8 +101,8 @@ type BinaryExpression struct {
 }
 
 type AssignmentExpression struct {
-	Ident Expression
-	Value Expression
+	Target Expression
+	Value  Expression
 }
 
 type CallExpression struct {
@@ -110,11 +110,17 @@ type CallExpression struct {
 	Arguments []Expression
 }
 
+type IndexExpression struct {
+	Target Expression
+	Index  Expression
+}
+
 func (e *GroupedExpression) expressionNode()    {}
 func (e *CallExpression) expressionNode()       {}
 func (e *UnaryExpression) expressionNode()      {}
 func (e *BinaryExpression) expressionNode()     {}
 func (e *AssignmentExpression) expressionNode() {}
+func (e *IndexExpression) expressionNode()      {}
 
 // * Literals
 type IntegerLiteral struct {

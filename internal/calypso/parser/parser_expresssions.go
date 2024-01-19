@@ -32,8 +32,8 @@ func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		return &ast.AssignmentExpression{
-			Ident: expr,
-			Value: value,
+			Target: expr,
+			Value:  value,
 		}, nil
 	}
 
@@ -45,7 +45,7 @@ func (p *Parser) parseEqualityExpression() (ast.Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	for p.match(token.ASSIGN, token.EQL) {
+	for p.match(token.NEQ, token.EQL) {
 		op := p.previous()
 		right, err := p.parseComparisonExpression()
 		if err != nil {
@@ -143,7 +143,7 @@ func (p *Parser) parseUnaryExpression() (ast.Expression, error) {
 }
 
 func (p *Parser) parseCallExpression() (ast.Expression, error) {
-	expr, err := p.parsePrimaryExpression()
+	expr, err := p.parseIndexExpression()
 
 	if err != nil {
 		return nil, err
@@ -160,6 +160,31 @@ func (p *Parser) parseCallExpression() (ast.Expression, error) {
 		return &ast.CallExpression{
 			Target:    expr,
 			Arguments: list,
+		}, nil
+	}
+
+	return expr, nil
+}
+func (p *Parser) parseIndexExpression() (ast.Expression, error) {
+	expr, err := p.parsePrimaryExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.currentMatches(token.LBRACKET) {
+		p.expect(token.LBRACKET)
+		idx, err := p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		p.expect(token.RBRACKET)
+
+		return &ast.IndexExpression{
+			Target: expr,
+			Index:  idx,
 		}, nil
 	}
 
