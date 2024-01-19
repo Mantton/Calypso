@@ -15,7 +15,28 @@ func (p *Parser) parseExpression() (ast.Expression, error) {
 }
 
 func (p *Parser) parseBinaryExpression() (ast.Expression, error) {
-	return p.parseEqualityExpression()
+	return p.parseAssignmentExpression()
+}
+
+func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
+	expr, err := p.parseEqualityExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.ASSIGN) {
+		value, err := p.parseAssignmentExpression()
+		if err != nil {
+			return nil, err
+		}
+		return &ast.AssignmentExpression{
+			Ident: expr,
+			Value: value,
+		}, nil
+	}
+
+	return expr, nil
 }
 
 func (p *Parser) parseEqualityExpression() (ast.Expression, error) {

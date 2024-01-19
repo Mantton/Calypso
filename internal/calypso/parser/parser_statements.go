@@ -20,7 +20,7 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 	case token.WHILE:
 		return p.parseWhileStatement()
 	case token.IDENTIFIER:
-		return p.parseAssignmentStatement()
+		return p.parseExpressionStatement()
 	}
 
 	panic("expected statement")
@@ -55,6 +55,13 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 }
 
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	/**
+	   {
+	  	let x = 10;
+	  	print("hello");
+	  }
+	*/
+
 	// Opening
 	p.expect(token.LBRACE)
 	statements := p.parseStatementList()
@@ -68,6 +75,14 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 }
 
 func (p *Parser) parseIfStatement() (ast.Statement, error) {
+	/**
+	  if (true) {
+		return false;
+	  } else {
+		return true;
+	  }
+	*/
+
 	p.expect(token.IF)
 
 	// Condition
@@ -140,10 +155,7 @@ func (p *Parser) parseWhileStatement() (ast.Statement, error) {
 	return stmt, nil
 }
 
-func (p *Parser) parseAssignmentStatement() (ast.Statement, error) {
-	lit := p.expect(token.IDENTIFIER)
-
-	p.expect(token.ASSIGN)
+func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
 
 	expr, err := p.parseExpression()
 
@@ -152,9 +164,7 @@ func (p *Parser) parseAssignmentStatement() (ast.Statement, error) {
 	}
 
 	p.expect(token.SEMICOLON)
-
-	return &ast.AssignmentStatement{
-		Ident: lit.Lit,
-		Value: expr,
+	return &ast.ExpressionStatement{
+		Expr: expr,
 	}, nil
 }

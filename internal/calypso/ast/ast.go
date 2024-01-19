@@ -70,13 +70,12 @@ type WhileStatement struct {
 	Action    *BlockStatement
 }
 
-type AssignmentStatement struct {
-	Ident string
-	Value Expression
+type ExpressionStatement struct {
+	Expr Expression
 }
 
 func (s *IfStatement) statementNode()         {}
-func (s *AssignmentStatement) statementNode() {}
+func (s *ExpressionStatement) statementNode() {}
 func (s *WhileStatement) statementNode()      {}
 func (s *ReturnStatement) statementNode()     {}
 func (s *BlockStatement) statementNode()      {}
@@ -99,9 +98,15 @@ type BinaryExpression struct {
 	Right Expression
 }
 
-func (e *GroupedExpression) expressionNode() {}
-func (e *UnaryExpression) expressionNode()   {}
-func (e *BinaryExpression) expressionNode()  {}
+type AssignmentExpression struct {
+	Ident Expression
+	Value Expression
+}
+
+func (e *GroupedExpression) expressionNode()    {}
+func (e *UnaryExpression) expressionNode()      {}
+func (e *BinaryExpression) expressionNode()     {}
+func (e *AssignmentExpression) expressionNode() {}
 
 // * Literals
 type IntegerLiteral struct {
