@@ -39,7 +39,12 @@ func (p *Parser) Parse() *ast.File {
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Println("DECL ERROR: ", r)
-					p.advance(token.IsDeclaration)
+					hasMoved := p.advance(token.IsDeclaration)
+
+					// avoid infinite loop
+					if !hasMoved {
+						p.next()
+					}
 				}
 			}()
 			declarations = append(declarations, p.parseDeclaration())

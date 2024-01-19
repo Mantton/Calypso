@@ -49,12 +49,16 @@ func (p *Parser) next() {
 	p.cursor++
 }
 
-func (p *Parser) advance(check token.NodeChecker) {
+func (p *Parser) advance(check token.NodeChecker) bool {
+	moves := 0
 	for p.current() != token.EOF {
 		if check(p.current()) {
 			break
 		} else {
+			moves += 1
 			p.next()
 		}
 	}
+
+	return moves != 0
 }

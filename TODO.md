@@ -8,6 +8,9 @@
 - [ ] For Statement
 - [ ] Traits (export, private , async)
 - [ ] Structs
+- [ ] Nested Index, Call,  Property Expressions
+- [ ] Errors
+- [x] Fix Looping on Error
   
 ## Misc
 - [ ] Syntax Checking

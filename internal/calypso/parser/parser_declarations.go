@@ -52,7 +52,12 @@ func (p *Parser) parseStatementList() []ast.Statement {
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Println("STMT ERROR: ", r)
-					p.advance(token.IsStatement)
+					hasMoved := p.advance(token.IsStatement)
+
+					// avoid infinite loop
+					if !hasMoved {
+						p.next()
+					}
 				}
 			}()
 

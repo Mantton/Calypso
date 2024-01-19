@@ -1,8 +1,6 @@
 package lexer
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -135,7 +133,6 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		// Comment, match to end of line
 		if l.match('/') {
 			for l.peek() != '\n' && !l.isAtEnd() {
-				fmt.Println(string(l.peek()))
 				l.next()
 			}
 
