@@ -147,6 +147,10 @@ type FunctionLiteral struct {
 	Params []*IdentifierLiteral
 }
 
+type ArrayLiteral struct {
+	Elements []Expression
+}
+
 func (e *IntegerLiteral) expressionNode()    {}
 func (e *FloatLiteral) expressionNode()      {}
 func (e *StringLiteral) expressionNode()     {}
@@ -154,3 +158,4 @@ func (e *BooleanLiteral) expressionNode()    {}
 func (e *NullLiteral) expressionNode()       {}
 func (e *VoidLiteral) expressionNode()       {}
 func (e *IdentifierLiteral) expressionNode() {}
+func (e *ArrayLiteral) expressionNode()      {}

@@ -77,6 +77,10 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		tok = l.build(token.LPAREN)
 	case ')':
 		tok = l.build(token.RPAREN)
+	case '[':
+		tok = l.build(token.LBRACKET)
+	case ']':
+		tok = l.build(token.RBRACKET)
 	case '{':
 		tok = l.build(token.LBRACE)
 	case '}':

@@ -215,6 +215,9 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 		return &ast.GroupedExpression{
 			Expr: expr,
 		}, nil
+
+	case token.LBRACKET:
+		return p.parseArrayLit()
 	}
 
 	if expr != nil {
@@ -222,6 +225,8 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 		return expr, nil
 
 	}
+
+	fmt.Println(p.currentScannedToken())
 	return nil, errors.New("expected expression")
 }
 
@@ -329,4 +334,17 @@ func (p *Parser) parseIdentifier() *ast.IdentifierLiteral {
 	return &ast.IdentifierLiteral{
 		Value: tok.Lit,
 	}
+}
+
+func (p *Parser) parseArrayLit() (*ast.ArrayLiteral, error) {
+
+	elements, err := p.parseExpressionList(token.LBRACKET, token.RBRACKET)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ast.ArrayLiteral{
+		Elements: elements,
+	}, nil
 }
