@@ -65,7 +65,13 @@ type ReturnStatement struct {
 	Value Expression
 }
 
+type WhileStatement struct {
+	Condition Expression
+	Action    *BlockStatement
+}
+
 func (s *IfStatement) statementNode()       {}
+func (s *WhileStatement) statementNode()    {}
 func (s *ReturnStatement) statementNode()   {}
 func (s *BlockStatement) statementNode()    {}
 func (s *VariableStatement) statementNode() {}

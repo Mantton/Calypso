@@ -69,6 +69,7 @@ const (
 	IF
 	ELSE
 	RETURN
+	WHILE
 	kw_e // Keywords End
 )
 
@@ -89,6 +90,7 @@ var keywords = map[string]Token{
 	"if":     IF,
 	"else":   ELSE,
 	"return": RETURN,
+	"while":  WHILE,
 }
 
 func LookupIdent(ident string) Token {
@@ -151,6 +153,7 @@ var tokens = map[Token]string{
 	IF:     "if",
 	ELSE:   "else",
 	RETURN: "return",
+	WHILE:  "while",
 }
 
 func LookUp(t Token) string {

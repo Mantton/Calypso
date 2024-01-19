@@ -19,30 +19,9 @@ func (p *Parser) currentScannedToken() token.ScannedToken {
 	return p.tokens[p.cursor]
 }
 
-func (p *Parser) peekAhead() token.Token {
-
-	idx := p.cursor + 1
-
-	if idx >= len(p.tokens) {
-		return token.EOF
-	}
-
-	return p.tokens[idx].Tok
-}
-
 // bool indicating the current token is of the specified type
 func (p *Parser) currentMatches(t token.Token) bool {
 	return p.current() == t
-}
-
-// consumes a token if the peek matches a specified token, returns true if the peek matches setting the current token to it
-func (p *Parser) consumeIfPeekMatches(t token.Token) bool {
-	if p.peekMatches(t) {
-		p.next()
-		return true
-	} else {
-		return false
-	}
 }
 
 func (p *Parser) match(tokens ...token.Token) bool {
@@ -55,10 +34,6 @@ func (p *Parser) match(tokens ...token.Token) bool {
 	}
 
 	return false
-}
-
-func (p *Parser) isAtEnd() bool {
-	return p.peekAhead() == token.EOF
 }
 
 func (p *Parser) expect(t token.Token) token.ScannedToken {
@@ -82,9 +57,4 @@ func (p *Parser) advance(check token.NodeChecker) {
 			p.next()
 		}
 	}
-}
-
-// bool indicating the peek/next token is of the specified type
-func (p *Parser) peekMatches(t token.Token) bool {
-	return p.peekAhead() == t
 }

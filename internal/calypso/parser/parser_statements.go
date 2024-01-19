@@ -17,6 +17,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		return p.parseIfStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
+	case token.WHILE:
+		return p.parseWhileStatement()
 	}
 
 	panic("expected statement")
@@ -111,4 +113,27 @@ func (p *Parser) parseReturnStatement() (ast.Statement, error) {
 		Value: expr,
 	}, nil
 
+}
+
+func (p *Parser) parseWhileStatement() (ast.Statement, error) {
+	p.expect(token.WHILE)
+	// Condition
+	p.expect(token.LPAREN)
+
+	stmt := &ast.WhileStatement{}
+	condition, err := p.parseExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	stmt.Condition = condition
+
+	p.expect(token.RPAREN)
+
+	// Action Block
+	block := p.parseBlockStatement()
+	stmt.Action = block
+
+	return stmt, nil
 }
