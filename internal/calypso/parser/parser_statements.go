@@ -15,6 +15,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		return p.parseVariableStatement()
 	case token.IF:
 		return p.parseIfStatement()
+	case token.RETURN:
+		return p.parseReturnStatement()
 	}
 
 	panic("expected statement")
@@ -91,5 +93,22 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	}
 
 	return stmt, nil
+
+}
+
+func (p *Parser) parseReturnStatement() (ast.Statement, error) {
+	p.expect(token.RETURN)
+
+	expr, err := p.parseExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.expect(token.SEMICOLON)
+
+	return &ast.ReturnStatement{
+		Value: expr,
+	}, nil
 
 }

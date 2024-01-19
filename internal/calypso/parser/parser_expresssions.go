@@ -152,6 +152,10 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 		expr = &ast.StringLiteral{
 			Value: p.currentScannedToken().Lit,
 		}
+	case token.IDENTIFIER:
+		expr = &ast.IdentifierLiteral{
+			Value: p.currentScannedToken().Lit,
+		}
 
 	case token.LPAREN:
 		p.next() // Move to next token

@@ -61,7 +61,12 @@ type IfStatement struct {
 	Alternative *BlockStatement
 }
 
+type ReturnStatement struct {
+	Value Expression
+}
+
 func (s *IfStatement) statementNode()       {}
+func (s *ReturnStatement) statementNode()   {}
 func (s *BlockStatement) statementNode()    {}
 func (s *VariableStatement) statementNode() {}
 func (s *FunctionStatement) statementNode() {}

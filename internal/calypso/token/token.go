@@ -68,6 +68,7 @@ const (
 	MODULE
 	IF
 	ELSE
+	RETURN
 	kw_e // Keywords End
 )
 
@@ -87,6 +88,7 @@ var keywords = map[string]Token{
 	"void":   VOID,
 	"if":     IF,
 	"else":   ELSE,
+	"return": RETURN,
 }
 
 func LookupIdent(ident string) Token {
@@ -106,7 +108,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF:
+	case FUNC, LET, CONST, IF, RETURN:
 		return true
 	}
 
@@ -143,9 +145,12 @@ var tokens = map[Token]string{
 	SEMICOLON: ";",
 	COLON:     ":",
 
-	CONST: "const",
-	FUNC:  "func",
-	LET:   "let",
+	CONST:  "const",
+	FUNC:   "func",
+	LET:    "let",
+	IF:     "if",
+	ELSE:   "else",
+	RETURN: "return",
 }
 
 func LookUp(t Token) string {
