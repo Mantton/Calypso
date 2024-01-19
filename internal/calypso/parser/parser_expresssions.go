@@ -261,3 +261,72 @@ func (p *Parser) parseExpressionList(start, end token.Token) ([]ast.Expression, 
 
 	return list, nil
 }
+
+func (p *Parser) parseFunctionLiteral() (*ast.FunctionLiteral, error) {
+	p.expect(token.FUNC) // Expect current to be `func`, consume
+
+	// Name
+	name := p.expect(token.IDENTIFIER).Lit // Function Name
+
+	// Parameters
+	params := p.parseFunctionParameters()
+
+	if len(params) > 99 {
+		panic("too many parameters")
+	}
+
+	// Body
+	body := p.parseFunctionBody()
+
+	return &ast.FunctionLiteral{
+		Name:   name,
+		Body:   body,
+		Params: params,
+	}, nil
+}
+
+func (p *Parser) parseFunctionBody() *ast.BlockStatement {
+	// Opening
+	p.expect(token.LBRACE)
+	statements := p.parseStatementList()
+	// Closing
+	p.expect(token.RBRACE)
+
+	return &ast.BlockStatement{
+		Statements: statements,
+	}
+
+}
+
+func (p *Parser) parseFunctionParameters() []*ast.IdentifierLiteral {
+	identifiers := []*ast.IdentifierLiteral{}
+
+	p.expect(token.LPAREN)
+
+	// if immediately followed by end token, return
+	if p.match(token.RPAREN) {
+		return identifiers
+	}
+
+	expr := p.parseIdentifier()
+	identifiers = append(identifiers, expr)
+
+	for p.match(token.COMMA) {
+		expr := p.parseIdentifier()
+
+		identifiers = append(identifiers, expr)
+	}
+
+	p.expect(token.RPAREN)
+
+	return identifiers
+}
+
+func (p *Parser) parseIdentifier() *ast.IdentifierLiteral {
+
+	tok := p.expect(token.IDENTIFIER)
+
+	return &ast.IdentifierLiteral{
+		Value: tok.Lit,
+	}
+}

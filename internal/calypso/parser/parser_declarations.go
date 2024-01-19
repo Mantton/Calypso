@@ -31,41 +31,15 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 
-	p.expect(token.FUNC) // Expect current to be `func`, consume
+	fn, err := p.parseFunctionLiteral()
 
-	// Name
-	name := p.expect(token.IDENTIFIER).Lit // Function Name
-
-	// Parameters
-
-	p.expect(token.LPAREN)
-	// TODO: Parse Parameters
-	p.expect(token.RPAREN)
-
-	// Body
-	body := p.parseFunctionBody()
-
-	lit := &ast.FunctionLiteral{
-		Name: name,
-		Body: body,
+	if err != nil {
+		panic(err)
 	}
 
 	return &ast.FunctionDeclaration{
-		Func: lit,
+		Func: fn,
 	}
-}
-
-func (p *Parser) parseFunctionBody() *ast.BlockStatement {
-	// Opening
-	p.expect(token.LBRACE)
-	statements := p.parseStatementList()
-	// Closing
-	p.expect(token.RBRACE)
-
-	return &ast.BlockStatement{
-		Statements: statements,
-	}
-
 }
 
 func (p *Parser) parseStatementList() []ast.Statement {

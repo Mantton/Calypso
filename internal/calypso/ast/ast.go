@@ -1,6 +1,8 @@
 package ast
 
-import "github.com/mantton/calypso/internal/calypso/token"
+import (
+	"github.com/mantton/calypso/internal/calypso/token"
+)
 
 type Node interface {
 }
@@ -135,13 +137,14 @@ type NullLiteral struct{}
 
 type VoidLiteral struct{}
 
-type FunctionLiteral struct {
-	Name string
-	Body Statement
-}
-
 type IdentifierLiteral struct {
 	Value string
+}
+
+type FunctionLiteral struct {
+	Name   string
+	Body   Statement
+	Params []*IdentifierLiteral
 }
 
 func (e *IntegerLiteral) expressionNode()    {}
