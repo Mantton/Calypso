@@ -143,7 +143,7 @@ func (p *Parser) parseUnaryExpression() (ast.Expression, error) {
 }
 
 func (p *Parser) parseCallExpression() (ast.Expression, error) {
-	expr, err := p.parseIndexExpression()
+	expr, err := p.parsePropertyExpression()
 
 	if err != nil {
 		return nil, err
@@ -165,6 +165,26 @@ func (p *Parser) parseCallExpression() (ast.Expression, error) {
 
 	return expr, nil
 }
+
+func (p *Parser) parsePropertyExpression() (ast.Expression, error) {
+	expr, err := p.parseIndexExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.PERIOD) {
+		prop := p.parseIdentifier()
+
+		return &ast.PropertyExpression{
+			Target:   expr,
+			Property: prop,
+		}, nil
+	}
+
+	return expr, nil
+
+}
+
 func (p *Parser) parseIndexExpression() (ast.Expression, error) {
 	expr, err := p.parsePrimaryExpression()
 

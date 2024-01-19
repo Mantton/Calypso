@@ -115,12 +115,18 @@ type IndexExpression struct {
 	Index  Expression
 }
 
+type PropertyExpression struct {
+	Target   Expression
+	Property *IdentifierLiteral
+}
+
 func (e *GroupedExpression) expressionNode()    {}
 func (e *CallExpression) expressionNode()       {}
 func (e *UnaryExpression) expressionNode()      {}
 func (e *BinaryExpression) expressionNode()     {}
 func (e *AssignmentExpression) expressionNode() {}
 func (e *IndexExpression) expressionNode()      {}
+func (e *PropertyExpression) expressionNode()   {}
 
 // * Literals
 type IntegerLiteral struct {

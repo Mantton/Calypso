@@ -4,7 +4,7 @@
 - [x] Array Literal
 - [x] Map Literal
 - [x] Index Expression
-- [ ] Property Expression
+- [x] Property Expression
 - [ ] For Statement
 - [ ] Traits (export, private , async)
 - [ ] Structs
