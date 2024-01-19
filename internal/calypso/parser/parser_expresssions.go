@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
@@ -138,7 +139,31 @@ func (p *Parser) parseUnaryExpression() (ast.Expression, error) {
 			Expr: right,
 		}, nil
 	}
-	return p.parsePrimaryExpression()
+	return p.parseCallExpression()
+}
+
+func (p *Parser) parseCallExpression() (ast.Expression, error) {
+	expr, err := p.parsePrimaryExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.currentMatches(token.LPAREN) {
+
+		list, err := p.parseExpressionList(token.LPAREN, token.RPAREN)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &ast.CallExpression{
+			Target:    expr,
+			Arguments: list,
+		}, nil
+	}
+
+	return expr, nil
 }
 
 func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
@@ -198,4 +223,41 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 
 	}
 	return nil, errors.New("expected expression")
+}
+
+func (p *Parser) parseExpressionList(start, end token.Token) ([]ast.Expression, error) {
+	list := []ast.Expression{}
+
+	// expect start token
+	p.expect(start)
+
+	// if immediately followed by end token, return
+	if p.match(end) {
+		return list, nil
+	}
+
+	expr, err := p.parseExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	list = append(list, expr)
+
+	for p.match(token.COMMA) {
+		expr, err := p.parseExpression()
+
+		// TODO: Report Error
+
+		if err != nil {
+			fmt.Println(err)
+			p.next()
+		}
+
+		list = append(list, expr)
+	}
+
+	p.expect(end)
+
+	return list, nil
 }

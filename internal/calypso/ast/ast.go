@@ -103,7 +103,13 @@ type AssignmentExpression struct {
 	Value Expression
 }
 
+type CallExpression struct {
+	Target    Expression
+	Arguments []Expression
+}
+
 func (e *GroupedExpression) expressionNode()    {}
+func (e *CallExpression) expressionNode()       {}
 func (e *UnaryExpression) expressionNode()      {}
 func (e *BinaryExpression) expressionNode()     {}
 func (e *AssignmentExpression) expressionNode() {}

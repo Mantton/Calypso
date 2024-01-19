@@ -41,6 +41,7 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	expr, err := p.parseExpression()
 
 	if err != nil {
+
 		return nil, err
 	}
 
