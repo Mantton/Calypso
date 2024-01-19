@@ -87,6 +87,8 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		tok = l.build(token.RBRACE)
 	case ';':
 		tok = l.build(token.SEMICOLON)
+	case ':':
+		tok = l.build(token.COLON)
 	case ',':
 		tok = l.build(token.COMMA)
 	case '.':

@@ -218,6 +218,8 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 
 	case token.LBRACKET:
 		return p.parseArrayLit()
+	case token.LBRACE:
+		return p.parseMapLiteral()
 	}
 
 	if expr != nil {
@@ -252,11 +254,9 @@ func (p *Parser) parseExpressionList(start, end token.Token) ([]ast.Expression, 
 	for p.match(token.COMMA) {
 		expr, err := p.parseExpression()
 
-		// TODO: Report Error
-
+		// TODO: Report Individual Errors
 		if err != nil {
-			fmt.Println(err)
-			p.next()
+			panic(err)
 		}
 
 		list = append(list, expr)
@@ -347,4 +347,51 @@ func (p *Parser) parseArrayLit() (*ast.ArrayLiteral, error) {
 	return &ast.ArrayLiteral{
 		Elements: elements,
 	}, nil
+}
+
+func (p *Parser) parseMapLiteral() (*ast.MapLiteral, error) {
+	lit := &ast.MapLiteral{
+		Pairs: make(map[ast.Expression]ast.Expression),
+	}
+	p.expect(token.LBRACE)
+
+	// closes immediately
+	if p.match(token.RBRACE) {
+		return lit, nil
+	}
+	// Loop until match with RBRACE
+	for !p.match(token.RBRACE) {
+
+		// Parse Key
+		key, err := p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse Colon Divider
+		p.expect(token.COLON)
+
+		// Parse Value
+
+		value, err := p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		lit.Pairs[key] = value
+
+		if p.currentMatches(token.RBRACE) {
+			break
+		} else {
+			p.expect(token.COMMA)
+		}
+
+	}
+
+	// expect closing brace
+	p.expect(token.RBRACE)
+
+	return lit, nil
 }

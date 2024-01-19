@@ -2,7 +2,7 @@
 
 ## Lexer & Parser
 - [x] Array Literal
-- [ ] Object Literal
+- [x] Map Literal
 - [ ] Index Expression
 - [ ] Property Expression
 - [ ] For Statement
