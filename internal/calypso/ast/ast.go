@@ -55,12 +55,14 @@ type FunctionStatement struct {
 	Func *FunctionLiteral
 }
 
-type BadStatement struct {
-	Tok token.Token
+type IfStatement struct {
+	Condition   Expression
+	Action      *BlockStatement
+	Alternative *BlockStatement
 }
 
+func (s *IfStatement) statementNode()       {}
 func (s *BlockStatement) statementNode()    {}
-func (s *BadStatement) statementNode()      {}
 func (s *VariableStatement) statementNode() {}
 func (s *FunctionStatement) statementNode() {}
 

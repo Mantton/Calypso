@@ -1,18 +1,22 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
 func (p *Parser) parseStatement() (ast.Statement, error) {
+	fmt.Println("STMT:", p.currentScannedToken())
 
 	switch p.current() {
 	case token.CONST, token.LET:
 		return p.parseVariableStatement()
+	case token.IF:
+		return p.parseIfStatement()
 	}
 
-	p.next()
 	panic("expected statement")
 }
 
@@ -34,10 +38,58 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 		return nil, err
 	}
 
+	p.expect(token.SEMICOLON)
+
 	return &ast.VariableStatement{
 		Identifier: tok.Lit,
 		Value:      expr,
 		IsConstant: isConst,
 	}, nil
+
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	// Opening
+	p.expect(token.LBRACE)
+	statements := p.parseStatementList()
+	// Closing
+	p.expect(token.RBRACE)
+
+	return &ast.BlockStatement{
+		Statements: statements,
+	}
+
+}
+
+func (p *Parser) parseIfStatement() (ast.Statement, error) {
+	p.expect(token.IF)
+
+	// Condition
+	p.expect(token.LPAREN)
+
+	stmt := &ast.IfStatement{}
+	condition, err := p.parseExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	stmt.Condition = condition
+
+	p.expect(token.RPAREN)
+
+	// Action Block
+	block := p.parseBlockStatement()
+	stmt.Action = block
+
+	// Conditional Block
+
+	if p.currentMatches(token.ELSE) {
+		p.next()
+		alt := p.parseBlockStatement()
+		stmt.Alternative = alt
+	}
+
+	return stmt, nil
 
 }

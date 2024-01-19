@@ -8,6 +8,7 @@ import (
 )
 
 func (p *Parser) parseDeclaration() ast.Declaration {
+	fmt.Println("DECL:", p.currentScannedToken())
 
 	switch p.current() {
 	case token.CONST:
@@ -17,7 +18,6 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 			panic(err)
 		}
 
-		p.expect(token.SEMICOLON)
 		return &ast.ConstantDeclaration{
 			Stmt: stmt,
 		}
@@ -87,7 +87,6 @@ func (p *Parser) parseStatementList() []ast.Statement {
 			if err != nil {
 				panic(err)
 			}
-			p.expect(token.SEMICOLON)
 
 			list = append(list, statement)
 		}()
