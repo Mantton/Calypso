@@ -1,4 +1,7 @@
-expression     → equality ;
+expression     → index ;
+index
+call
+assignment  
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;

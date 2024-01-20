@@ -23,9 +23,10 @@ type Declaration interface {
 }
 
 type File struct {
-	ModuleName   string
-	Declarations []Declaration
-	Errors       []string
+	ModuleName string
+	Constants  []*ConstantDeclaration
+	Functions  []*FunctionDeclaration
+	Errors     []string
 }
 
 // * Declarations

@@ -5,6 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
+	"github.com/mantton/calypso/internal/calypso/resolver"
 )
 
 type Evaluator struct {
@@ -16,15 +17,33 @@ func New() *Evaluator {
 
 func (e *Evaluator) Run(filename, input string) error {
 
-	l := lexer.New(filename, input)
+	// Lexer / Scanner
+	lexer := lexer.New(filename, input)
 
-	tokens := l.AllTokens()
+	tokens := lexer.AllTokens()
 
-	p := parser.New(tokens)
+	// TODO: Error Check Tokens
 
-	f := p.Parse()
+	// Parser
+	parser := parser.New(tokens)
 
-	fmt.Println("Parsed File:", f)
+	file := parser.Parse()
 
+	fmt.Println("Parsed File:", file)
+
+	// TODO:: Error Check File
+
+	// Resolver
+	resolver := resolver.New()
+	resolver.ResolveFile(file)
+	// TODO: Error Check Resolver
+
+	if len(resolver.Errors) != 0 {
+		for _, err := range resolver.Errors {
+			fmt.Println(err)
+		}
+	}
+
+	// TODO: Type Checker
 	return nil
 }
