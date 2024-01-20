@@ -44,6 +44,7 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 	}
 
 	// TODO: Type Checker
+	fmt.Println("Done")
 	return 0
 }
 

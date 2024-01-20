@@ -34,12 +34,7 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 
 	p.expect(token.ASSIGN)
 
-	expr, err := p.parseExpression()
-
-	if err != nil {
-
-		return nil, err
-	}
+	expr := p.parseExpression()
 
 	p.expect(token.SEMICOLON)
 
@@ -86,11 +81,7 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	p.expect(token.LPAREN)
 
 	stmt := &ast.IfStatement{}
-	condition, err := p.parseExpression()
-
-	if err != nil {
-		return nil, err
-	}
+	condition := p.parseExpression()
 
 	stmt.Condition = condition
 
@@ -115,11 +106,7 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 func (p *Parser) parseReturnStatement() (ast.Statement, error) {
 	p.expect(token.RETURN)
 
-	expr, err := p.parseExpression()
-
-	if err != nil {
-		return nil, err
-	}
+	expr := p.parseExpression()
 
 	p.expect(token.SEMICOLON)
 
@@ -135,11 +122,7 @@ func (p *Parser) parseWhileStatement() (ast.Statement, error) {
 	p.expect(token.LPAREN)
 
 	stmt := &ast.WhileStatement{}
-	condition, err := p.parseExpression()
-
-	if err != nil {
-		return nil, err
-	}
+	condition := p.parseExpression()
 
 	stmt.Condition = condition
 
@@ -154,14 +137,16 @@ func (p *Parser) parseWhileStatement() (ast.Statement, error) {
 
 func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
 
-	expr, err := p.parseExpression()
+	expr := p.parseExpression()
 
-	if err != nil {
-		return nil, err
+	switch expr := expr.(type) {
+	case *ast.AssignmentExpression, *ast.CallExpression:
+		p.expect(token.SEMICOLON)
+		return &ast.ExpressionStatement{
+			Expr: expr,
+		}, nil
+	default:
+		panic(p.error("expected statement, not expression"))
 	}
 
-	p.expect(token.SEMICOLON)
-	return &ast.ExpressionStatement{
-		Expr: expr,
-	}, nil
 }

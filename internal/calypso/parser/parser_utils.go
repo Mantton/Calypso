@@ -16,12 +16,19 @@ func (p *Parser) previous() token.Token {
 
 }
 
+func (p *Parser) isAtEnd() bool {
+	return p.cursor == len(p.tokens)-1
+}
+
 func (p *Parser) currentScannedToken() token.ScannedToken {
 	return p.tokens[p.cursor]
 }
 
-func (p *Parser) peakAheadScannedToken() token.ScannedToken {
-	return p.tokens[p.cursor+1]
+func (p *Parser) peakAheadScannedToken() (token.ScannedToken, bool) {
+	if p.isAtEnd() {
+		return token.ScannedToken{}, false
+	}
+	return p.tokens[p.cursor+1], true
 }
 
 // bool indicating the current token is of the specified type
@@ -50,6 +57,9 @@ func (p *Parser) expect(t token.Token) token.ScannedToken {
 	}
 }
 func (p *Parser) next() {
+	if p.isAtEnd() {
+		return
+	}
 	p.cursor++
 }
 
@@ -68,9 +78,14 @@ func (p *Parser) advance(check token.NodeChecker) bool {
 }
 
 func (p *Parser) error(message string) lexer.Error {
+	end, ok := p.peakAheadScannedToken()
+
+	if !ok {
+		end = p.currentScannedToken()
+	}
 	return lexer.Error{
 		Start:   p.currentScannedToken().Pos,
-		End:     p.peakAheadScannedToken().Pos,
+		End:     end.Pos,
 		Message: message,
 	}
 

@@ -28,11 +28,7 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 
-	fn, err := p.parseFunctionLiteral()
-
-	if err != nil {
-		panic(err)
-	}
+	fn := p.parseFunctionExpression()
 
 	return &ast.FunctionDeclaration{
 		Func: fn,

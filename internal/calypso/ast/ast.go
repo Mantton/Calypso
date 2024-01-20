@@ -38,7 +38,7 @@ type ConstantDeclaration struct {
 }
 
 type FunctionDeclaration struct {
-	Func *FunctionLiteral
+	Func *FunctionExpression
 }
 
 func (d *ConstantDeclaration) declarationNode() {}
@@ -56,7 +56,7 @@ type VariableStatement struct {
 }
 
 type FunctionStatement struct {
-	Func *FunctionLiteral
+	Func *FunctionExpression
 }
 
 type IfStatement struct {
@@ -119,7 +119,7 @@ type IndexExpression struct {
 
 type PropertyExpression struct {
 	Target   Expression
-	Property *IdentifierLiteral
+	Property *IdentifierExpression
 }
 
 func (e *GroupedExpression) expressionNode()    {}
@@ -151,14 +151,14 @@ type NullLiteral struct{}
 
 type VoidLiteral struct{}
 
-type IdentifierLiteral struct {
+type IdentifierExpression struct {
 	Value string
 }
 
-type FunctionLiteral struct {
+type FunctionExpression struct {
 	Name   string
-	Body   Statement
-	Params []*IdentifierLiteral
+	Body   *BlockStatement
+	Params []*IdentifierExpression
 }
 
 type ArrayLiteral struct {
@@ -169,12 +169,14 @@ type MapLiteral struct {
 	Pairs map[Expression]Expression
 }
 
-func (e *IntegerLiteral) expressionNode()    {}
-func (e *FloatLiteral) expressionNode()      {}
-func (e *StringLiteral) expressionNode()     {}
-func (e *BooleanLiteral) expressionNode()    {}
-func (e *NullLiteral) expressionNode()       {}
-func (e *VoidLiteral) expressionNode()       {}
-func (e *IdentifierLiteral) expressionNode() {}
-func (e *ArrayLiteral) expressionNode()      {}
-func (e *MapLiteral) expressionNode()        {}
+func (e *IntegerLiteral) expressionNode() {}
+func (e *FloatLiteral) expressionNode()   {}
+func (e *StringLiteral) expressionNode()  {}
+func (e *BooleanLiteral) expressionNode() {}
+func (e *NullLiteral) expressionNode()    {}
+func (e *VoidLiteral) expressionNode()    {}
+func (e *ArrayLiteral) expressionNode()   {}
+func (e *MapLiteral) expressionNode()     {}
+
+func (e *IdentifierExpression) expressionNode() {}
+func (e *FunctionExpression) expressionNode()   {}
