@@ -1,15 +1,14 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
 type Parser struct {
 	tokens []token.ScannedToken
-	errors []string
+	errors lexer.ErrorList
 
 	cursor int
 }
@@ -39,7 +38,12 @@ func (p *Parser) Parse() *ast.File {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					fmt.Println("DECL ERROR: ", r)
+
+					if err, y := r.(lexer.Error); y {
+						p.errors.Add(err)
+					} else {
+						panic(r)
+					}
 					hasMoved := p.advance(token.IsDeclaration)
 
 					// avoid infinite loop
@@ -57,7 +61,7 @@ func (p *Parser) Parse() *ast.File {
 			case *ast.FunctionDeclaration:
 				functions = append(functions, decl)
 			default:
-				panic("unknown declaration")
+				panic(p.error("unknown declaration"))
 			}
 		}()
 

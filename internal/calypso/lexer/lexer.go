@@ -9,19 +9,21 @@ const (
 )
 
 type Lexer struct {
-	file         string // name of file being read
 	source       []rune // an array of each rune in the file
 	sourceLength int
 
 	anchor int // the start of the token
 	cursor int // the current position in the source
-	line   int // the current line
+
+	line       int // the current line
+	lineOffset int
 }
 
-func New(file, input string) *Lexer {
-	l := &Lexer{file: file, source: []rune(input)}
+func New(input string) *Lexer {
+	l := &Lexer{source: []rune(input)}
 	l.sourceLength = len(l.source)
 	l.line = 1
+	l.lineOffset = 1
 
 	return l
 }
@@ -45,7 +47,7 @@ func (l *Lexer) AllTokens() []token.ScannedToken {
 	}
 
 	// Add EOF token
-	tokens = append(tokens, token.ScannedToken{Pos: l.cursor, Tok: token.EOF, Lit: "EOF"})
+	tokens = append(tokens, token.ScannedToken{Pos: l.genPosition(), Tok: token.EOF, Lit: "EOF"})
 	return tokens
 }
 
@@ -56,6 +58,7 @@ func (l *Lexer) isAtEnd() bool {
 func (l *Lexer) next() rune {
 	c := l.source[l.cursor]
 	l.cursor++
+	l.lineOffset++
 	return c
 }
 
@@ -69,7 +72,7 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		// Ignore whitespace.
 		tok = l.build(token.IGNORE)
 	case '\n':
-		l.line++
+		l.newLine()
 		tok = l.build(token.IGNORE)
 	case '(':
 		tok = l.build(token.LPAREN)
@@ -157,7 +160,7 @@ func (l *Lexer) parseToken() token.ScannedToken {
 
 func (l *Lexer) build(t token.Token) token.ScannedToken {
 	return token.ScannedToken{
-		Pos: l.anchor,
+		Pos: l.genPosition(),
 		Tok: t,
 		Lit: string(l.source[l.anchor:l.cursor]),
 	}
@@ -187,7 +190,7 @@ func (l *Lexer) peek() rune {
 func (l *Lexer) string() token.ScannedToken {
 	for l.peek() != '"' && !l.isAtEnd() {
 		if l.peek() == '\n' {
-			l.line++
+			l.newLine()
 		}
 
 		l.next()
@@ -204,7 +207,7 @@ func (l *Lexer) string() token.ScannedToken {
 	return token.ScannedToken{
 		Lit: str,
 		Tok: token.STRING,
-		Pos: l.anchor,
+		Pos: l.genPosition(),
 	}
 }
 
@@ -235,7 +238,7 @@ func (l *Lexer) number() token.ScannedToken {
 	return token.ScannedToken{
 		Lit: str,
 		Tok: tType,
-		Pos: l.anchor,
+		Pos: l.genPosition(),
 	}
 }
 
@@ -268,4 +271,17 @@ func (l *Lexer) identifier() token.ScannedToken {
 	tok.Tok = token.LookupIdent(tok.Lit)
 
 	return tok
+}
+
+func (l *Lexer) newLine() {
+	l.line++
+	l.lineOffset = 1
+}
+
+func (l *Lexer) genPosition() token.TokenPosition {
+	return token.TokenPosition{
+		Line:   l.line,
+		Offset: l.lineOffset,
+		Index:  l.cursor,
+	}
 }

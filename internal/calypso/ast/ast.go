@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -26,7 +27,7 @@ type File struct {
 	ModuleName string
 	Constants  []*ConstantDeclaration
 	Functions  []*FunctionDeclaration
-	Errors     []string
+	Errors     lexer.ErrorList
 }
 
 // * Declarations

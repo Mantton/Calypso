@@ -1,15 +1,12 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
 func (p *Parser) parseDeclaration() ast.Declaration {
-	fmt.Println("DECL:", p.currentScannedToken())
-
 	switch p.current() {
 	case token.CONST:
 		stmt, err := p.parseVariableStatement()
@@ -26,7 +23,7 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 		return p.parseFunctionDeclaration()
 	}
 
-	panic("expected declaration")
+	panic(p.error("expected declaration"))
 }
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
@@ -51,7 +48,11 @@ func (p *Parser) parseStatementList() []ast.Statement {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					fmt.Println("STMT ERROR: ", r)
+					if err, y := r.(lexer.Error); y {
+						p.errors.Add(err)
+					} else {
+						panic(r)
+					}
 					hasMoved := p.advance(token.IsStatement)
 
 					// avoid infinite loop

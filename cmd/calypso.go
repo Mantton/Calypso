@@ -25,10 +25,8 @@ func main() {
 			return
 		}
 		eval := evaluator.New()
-		err = eval.Run(path, string(data))
+		code := eval.Evaluate(path, string(data))
 
-		if err != nil {
-			fmt.Println(err.Error())
-		}
+		os.Exit(code)
 	}
 }

@@ -322,7 +322,7 @@ func (p *Parser) parseFunctionLiteral() (*ast.FunctionLiteral, error) {
 	params := p.parseFunctionParameters()
 
 	if len(params) > 99 {
-		panic("too many parameters")
+		panic(p.error("too many parameters, maximum of 99"))
 	}
 
 	// Body

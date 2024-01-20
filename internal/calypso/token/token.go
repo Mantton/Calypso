@@ -8,8 +8,14 @@ type NodeChecker func(Token) bool
 
 type ScannedToken struct {
 	Tok Token
-	Pos int
+	Pos TokenPosition
 	Lit string
+}
+
+type TokenPosition struct {
+	Line   int
+	Offset int
+	Index  int
 }
 
 const (

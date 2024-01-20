@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 
+	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -17,6 +18,10 @@ func (p *Parser) previous() token.Token {
 
 func (p *Parser) currentScannedToken() token.ScannedToken {
 	return p.tokens[p.cursor]
+}
+
+func (p *Parser) peakAheadScannedToken() token.ScannedToken {
+	return p.tokens[p.cursor+1]
 }
 
 // bool indicating the current token is of the specified type
@@ -38,9 +43,8 @@ func (p *Parser) match(tokens ...token.Token) bool {
 
 func (p *Parser) expect(t token.Token) token.ScannedToken {
 	if p.current() != t {
-		panic(fmt.Errorf("expected `%s` got `%s`", token.LookUp(t), token.LookUp(p.current())))
+		panic(p.error(fmt.Sprintf("expected `%s`", token.LookUp(t)))) // never executed
 	} else {
-
 		defer p.next()
 		return p.currentScannedToken()
 	}
@@ -61,4 +65,13 @@ func (p *Parser) advance(check token.NodeChecker) bool {
 	}
 
 	return moves != 0
+}
+
+func (p *Parser) error(message string) lexer.Error {
+	return lexer.Error{
+		Start:   p.currentScannedToken().Pos,
+		End:     p.peakAheadScannedToken().Pos,
+		Message: message,
+	}
+
 }

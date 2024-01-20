@@ -1,15 +1,11 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
 func (p *Parser) parseStatement() (ast.Statement, error) {
-	fmt.Println("STMT:", p.currentScannedToken())
-
 	switch p.current() {
 	case token.CONST, token.LET:
 		return p.parseVariableStatement()
@@ -23,7 +19,7 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		return p.parseExpressionStatement()
 	}
 
-	panic("expected statement")
+	panic(p.error("expected statement"))
 }
 
 func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {

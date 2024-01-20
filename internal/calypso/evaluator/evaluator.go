@@ -15,23 +15,22 @@ func New() *Evaluator {
 	return &Evaluator{}
 }
 
-func (e *Evaluator) Run(filename, input string) error {
+func (e *Evaluator) Evaluate(filepath, input string) int {
 
 	// Lexer / Scanner
-	lexer := lexer.New(filename, input)
-
+	lexer := lexer.New(input)
 	tokens := lexer.AllTokens()
-
-	// TODO: Error Check Tokens
 
 	// Parser
 	parser := parser.New(tokens)
-
 	file := parser.Parse()
 
-	fmt.Println("Parsed File:", file)
-
-	// TODO:: Error Check File
+	if len(file.Errors) != 0 {
+		for _, err := range file.Errors {
+			fmt.Println(e.ErrorMessage(filepath, err))
+		}
+		return 1
+	}
 
 	// Resolver
 	resolver := resolver.New()
@@ -45,5 +44,9 @@ func (e *Evaluator) Run(filename, input string) error {
 	}
 
 	// TODO: Type Checker
-	return nil
+	return 0
+}
+
+func (e *Evaluator) ErrorMessage(filepath string, error *lexer.Error) string {
+	return fmt.Sprintf("\n%s:%d:%d\n\t%s", filepath, error.Start.Line, error.Start.Offset, error.Message)
 }
