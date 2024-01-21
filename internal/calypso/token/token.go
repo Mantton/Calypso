@@ -15,7 +15,12 @@ type ScannedToken struct {
 type TokenPosition struct {
 	Line   int
 	Offset int
-	Index  int
+	Start  int
+	End    int
+}
+
+func (p TokenPosition) Length() int {
+	return p.End - p.Start
 }
 
 const (
@@ -160,6 +165,8 @@ var tokens = map[Token]string{
 	ELSE:   "else",
 	RETURN: "return",
 	WHILE:  "while",
+
+	IDENTIFIER: "IDENTIFIER",
 }
 
 func LookUp(t Token) string {

@@ -26,11 +26,15 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	/**
 	let x = `expr`;
 	const y = `expr`;
+	const z :int = `expr`;
 	*/
 	isConst := p.current() == token.CONST
 
 	p.next()                          // Move to next token
 	tok := p.expect(token.IDENTIFIER) // Parse Ident
+
+	// Parse Type Expression If Found
+	t := p.parsePossibleTypeExpression()
 
 	p.expect(token.ASSIGN)
 
@@ -39,9 +43,10 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	p.expect(token.SEMICOLON)
 
 	return &ast.VariableStatement{
-		Identifier: tok.Lit,
-		Value:      expr,
-		IsConstant: isConst,
+		Identifier:     tok.Lit,
+		Value:          expr,
+		IsConstant:     isConst,
+		TypeAnnotation: t,
 	}, nil
 
 }

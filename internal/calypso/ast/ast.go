@@ -50,9 +50,10 @@ type BlockStatement struct {
 }
 
 type VariableStatement struct {
-	Identifier string
-	Value      Expression
-	IsConstant bool
+	Identifier     string
+	Value          Expression
+	IsConstant     bool
+	TypeAnnotation TypeExpression
 }
 
 type FunctionStatement struct {
@@ -130,6 +131,21 @@ func (e *AssignmentExpression) expressionNode() {}
 func (e *IndexExpression) expressionNode()      {}
 func (e *PropertyExpression) expressionNode()   {}
 
+// * Literal Expressions
+
+type IdentifierExpression struct {
+	Value string
+}
+
+type FunctionExpression struct {
+	Name   string
+	Body   *BlockStatement
+	Params []*IdentifierExpression
+}
+
+func (e *IdentifierExpression) expressionNode() {}
+func (e *FunctionExpression) expressionNode()   {}
+
 // * Literals
 type IntegerLiteral struct {
 	Value int
@@ -151,16 +167,6 @@ type NullLiteral struct{}
 
 type VoidLiteral struct{}
 
-type IdentifierExpression struct {
-	Value string
-}
-
-type FunctionExpression struct {
-	Name   string
-	Body   *BlockStatement
-	Params []*IdentifierExpression
-}
-
 type ArrayLiteral struct {
 	Elements []Expression
 }
@@ -178,5 +184,32 @@ func (e *VoidLiteral) expressionNode()    {}
 func (e *ArrayLiteral) expressionNode()   {}
 func (e *MapLiteral) expressionNode()     {}
 
-func (e *IdentifierExpression) expressionNode() {}
-func (e *FunctionExpression) expressionNode()   {}
+// * Types
+
+type TypeExpression interface {
+	Node
+	typeNode()
+}
+
+type IdentifierTypeExpression struct {
+	Identifier *IdentifierExpression
+	Arguments  *GenericArgumentList
+}
+
+type GenericArgumentList struct {
+	Arguments []TypeExpression
+}
+
+type ArrayTypeExpression struct {
+	Element TypeExpression
+}
+
+type MapTypeExpression struct {
+	Key   TypeExpression
+	Value TypeExpression
+}
+
+func (e *IdentifierTypeExpression) typeNode() {}
+func (e *GenericArgumentList) typeNode()      {}
+func (e *ArrayTypeExpression) typeNode()      {}
+func (e *MapTypeExpression) typeNode()        {}

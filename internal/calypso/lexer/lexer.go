@@ -282,6 +282,7 @@ func (l *Lexer) genPosition() token.TokenPosition {
 	return token.TokenPosition{
 		Line:   l.line,
 		Offset: l.lineOffset,
-		Index:  l.cursor,
+		Start:  l.anchor,
+		End:    l.cursor + 1,
 	}
 }
