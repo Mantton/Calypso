@@ -81,6 +81,7 @@ const (
 	ELSE
 	RETURN
 	WHILE
+	ANY
 	kw_e // Keywords End
 )
 
@@ -102,6 +103,7 @@ var keywords = map[string]Token{
 	"else":   ELSE,
 	"return": RETURN,
 	"while":  WHILE,
+	"any":    ANY,
 }
 
 func LookupIdent(ident string) Token {

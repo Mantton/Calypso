@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/scope"
 )
 
 // * Expressions
@@ -25,7 +24,7 @@ func (r *Resolver) resolveIdentifierExpression(expr *ast.IdentifierExpression) {
 	// Value in Scope
 
 	// Value in Scope But is Just Declared
-	if state == scope.DECLARED {
+	if state == DECLARED {
 		panic("cannot read local variable in its own definition")
 	}
 

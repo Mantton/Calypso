@@ -5,24 +5,23 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/collections"
-	"github.com/mantton/calypso/internal/calypso/scope"
 )
 
 type Resolver struct {
 	Errors []string
-	scopes collections.Stack[*scope.Scope]
+	scopes collections.Stack[*Scope]
 }
 
 func New() *Resolver {
 	return &Resolver{
 		Errors: []string{},
-		scopes: collections.Stack[*scope.Scope]{},
+		scopes: collections.Stack[*Scope]{},
 	}
 }
 
 // * Scopes
 func (r *Resolver) enterScope() {
-	r.scopes.Push(scope.New())
+	r.scopes.Push(NewScope())
 
 	if r.scopes.Length() > 1000 {
 		panic("exceeded max scope depth") // TODO : Error

@@ -1,4 +1,4 @@
-package scope
+package resolver
 
 type Scope struct {
 	data map[string]State
@@ -11,7 +11,7 @@ const (
 	DEFINED
 )
 
-func New() *Scope {
+func NewScope() *Scope {
 	return &Scope{
 		data: make(map[string]State),
 	}
