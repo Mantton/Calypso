@@ -193,13 +193,12 @@ type TypeExpression interface {
 
 type IdentifierTypeExpression struct {
 	Identifier *IdentifierExpression
-	Arguments  *GenericArgumentList
 }
 
-type GenericArgumentList struct {
-	Arguments []TypeExpression
+type GenericTypeExpression struct {
+	Identifier *IdentifierExpression
+	Arguments  []TypeExpression
 }
-
 type ArrayTypeExpression struct {
 	Element TypeExpression
 }
@@ -210,6 +209,6 @@ type MapTypeExpression struct {
 }
 
 func (e *IdentifierTypeExpression) typeNode() {}
-func (e *GenericArgumentList) typeNode()      {}
+func (e *GenericTypeExpression) typeNode()    {}
 func (e *ArrayTypeExpression) typeNode()      {}
 func (e *MapTypeExpression) typeNode()        {}

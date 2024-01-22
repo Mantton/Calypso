@@ -33,6 +33,7 @@ func (t *TypeChecker) checkVariableStatement(stmt *ast.VariableStatement) {
 		return
 	}
 
-	t.validate(annotation, initializer)
 	// Define In Scope
+	t.mustValidate(initializer, annotation)
+	t.define(stmt.Identifier, annotation)
 }

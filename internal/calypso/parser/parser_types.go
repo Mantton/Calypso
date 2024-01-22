@@ -50,23 +50,29 @@ func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
 	}
 }
 
-func (p *Parser) parseIdentifierTypeExpression() *ast.IdentifierTypeExpression {
+func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
 	ident := p.parseIdentifier()
-	var args *ast.GenericArgumentList
+	args := []ast.TypeExpression{}
 	if p.currentMatches(token.LSS) {
 		args = p.parseGenericArgumentClauseExpression()
 
 	}
 
+	if len(args) != 0 {
+		return &ast.GenericTypeExpression{
+			Identifier: ident,
+			Arguments:  args,
+		}
+	}
+
 	return &ast.IdentifierTypeExpression{
 		Identifier: ident,
-		Arguments:  args,
 	}
 
 }
 
-func (p *Parser) parseGenericArgumentClauseExpression() *ast.GenericArgumentList {
+func (p *Parser) parseGenericArgumentClauseExpression() []ast.TypeExpression {
 
 	args := []ast.TypeExpression{}
 	p.expect(token.LSS)
@@ -97,7 +103,5 @@ func (p *Parser) parseGenericArgumentClauseExpression() *ast.GenericArgumentList
 		panic("expected arguments")
 	}
 
-	return &ast.GenericArgumentList{
-		Arguments: args,
-	}
+	return args
 }

@@ -49,6 +49,7 @@ func (t *TypeChecker) CheckFile(file *ast.File) {
 	// TODO: Register STD Types?
 
 	t.enterScope() // global enter
+	t.registerBaseLiterals()
 	if len(file.Constants) != 0 {
 
 		for _, decl := range file.Constants {
@@ -71,12 +72,26 @@ func (t *TypeChecker) checkDeclaration(decl ast.Declaration) {
 	case *ast.ConstantDeclaration:
 		stmt := decl.Stmt
 		t.checkStatement(stmt)
-	case *ast.FunctionDeclaration:
-		// expr := decl.Func
-		panic("check decl")
 	default:
 		msg := fmt.Sprintf("declaration check not implemented, %T", decl)
 		panic(msg)
 
 	}
+}
+
+func (t *TypeChecker) registerBaseLiterals() {
+	// Only Register Literal Types if compiling std lib
+	if t.mode != STD {
+		return
+	}
+
+	t.define("IntegerLiteral", GenerateBaseType("IntegerLiteral"))
+	t.define("FloatLiteral", GenerateBaseType("FloatLiteral"))
+	t.define("StringLiteral", GenerateBaseType("StringLiteral"))
+	t.define("BooleanLiteral", GenerateBaseType("BooleanLiteral"))
+	t.define("AnyLiteral", GenerateBaseType("AnyLiteral"))
+	t.define("NullLiteral", GenerateBaseType("NullLiteral"))
+	t.define("VoidLiteral", GenerateBaseType("VoidLiteral"))
+	t.define("ArrayLiteral", GenerateGenericType("ArrayLiteral", GenerateBaseType("AnyLiteral")))
+	t.define("MapLiteral", GenerateGenericType("MapLiteral", GenerateBaseType("AnyLiteral"), GenerateBaseType("AnyLiteral")))
 }

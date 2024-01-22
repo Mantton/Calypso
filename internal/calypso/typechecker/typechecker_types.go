@@ -1,7 +1,8 @@
 package typechecker
 
 type ExpressionType interface {
-	Name() string
+	Ident() string
+	String() string
 }
 
 // Base Literal Type
@@ -9,7 +10,10 @@ type BaseType struct {
 	name string
 }
 
-func (t *BaseType) Name() string {
+func (t *BaseType) String() string {
+	return t.name
+}
+func (t *BaseType) Ident() string {
 	return t.name
 }
 
@@ -33,19 +37,23 @@ const (
 // Generic Type
 type GenericType struct {
 	name   string
-	params []ExpressionType
+	Params []ExpressionType
 }
 
-func (t *GenericType) Name() string {
+func (t *GenericType) Ident() string {
+	return t.name
+}
+
+func (t *GenericType) String() string {
 
 	out := t.name
 	out += "<"
 
-	for i, e := range t.params {
-		out += e.Name()
+	for i, e := range t.Params {
+		out += e.String()
 
-		if i != len(t.params) {
-			out += ","
+		if i != len(t.Params)-1 {
+			out += ", "
 		}
 	}
 
@@ -53,4 +61,9 @@ func (t *GenericType) Name() string {
 	return out
 }
 
-var builtin = map[BaseLiteral]ExpressionType{}
+func GenerateGenericType(name string, params ...ExpressionType) *GenericType {
+	return &GenericType{
+		name:   name,
+		Params: params,
+	}
+}
