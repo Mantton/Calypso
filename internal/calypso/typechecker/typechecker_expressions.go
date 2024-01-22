@@ -22,6 +22,8 @@ func (t *TypeChecker) evaluateExpression(expr ast.Expression) ExpressionType {
 	case *ast.MapLiteral:
 		k, v := t.evaluateExpressionPairs(expr.Pairs)
 		return GenerateGenericType("MapLiteral", k, v)
+	case *ast.FunctionExpression:
+		return GenerateBaseType("AnyLiteral")
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -83,4 +85,35 @@ func (t *TypeChecker) evaluateExpressionPairs(pairs map[ast.Expression]ast.Expre
 	}
 
 	return keyType, valueType
+}
+
+func (t *TypeChecker) checkExpression(expr ast.Expression) {
+	switch expr := expr.(type) {
+	case *ast.FunctionExpression:
+		t.checkFunctionExpression(expr)
+
+	default:
+		msg := fmt.Sprintf("expression check not implemented, %T", expr)
+		panic(msg)
+	}
+}
+
+func (t *TypeChecker) checkFunctionExpression(expr *ast.FunctionExpression) {
+	// TODO : Declare Type?
+
+	// Enter Function Scope
+	t.enterScope()
+
+	// Declare & Define Parameters
+	for _, param := range expr.Params {
+
+		paramType := t.evaluateTypeExpression(param.AnnotatedType)
+		t.register(param.Value, paramType)
+	}
+
+	// TypeCheck Function body
+	t.checkStatement(expr.Body)
+
+	// Resolution Complete, leave function scope
+	t.leaveScope()
 }

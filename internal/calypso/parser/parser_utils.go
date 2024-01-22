@@ -11,11 +11,6 @@ func (p *Parser) current() token.Token {
 	return p.tokens[p.cursor].Tok
 }
 
-func (p *Parser) previous() token.Token {
-	return p.tokens[p.cursor-1].Tok
-
-}
-
 func (p *Parser) isAtEnd() bool {
 	return p.cursor == len(p.tokens)-1
 }
@@ -79,6 +74,12 @@ func (p *Parser) advance(check token.NodeChecker) bool {
 	}
 
 	return moves != 0
+}
+
+func (p *Parser) reverse() {
+	if p.cursor-1 >= 0 {
+		p.cursor -= 1
+	}
 }
 
 func (p *Parser) error(message string) lexer.Error {

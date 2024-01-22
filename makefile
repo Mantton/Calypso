@@ -2,4 +2,5 @@
 
 # Define the 'run' target
 run:
-	@go run ./cmd/calypso.go ./dev.test.cly
+	@go build ./cmd/calypso.go 
+	@./calypso ./dev.test.cly -panic

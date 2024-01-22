@@ -333,10 +333,25 @@ func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {
 	}
 
 	expr := p.parseIdentifier()
+	if p.match(token.COLON) {
+		exprType := p.parseTypeExpression()
+		expr.AnnotatedType = exprType
+	} else {
+		p.reverse()
+		panic(p.error("expected type expression"))
+	}
+
 	identifiers = append(identifiers, expr)
 
 	for p.match(token.COMMA) {
 		expr := p.parseIdentifier()
+
+		if p.match(token.COLON) {
+			exprType := p.parseTypeExpression()
+			expr.AnnotatedType = exprType
+		} else {
+			panic(p.error("expected type expression"))
+		}
 
 		identifiers = append(identifiers, expr)
 	}

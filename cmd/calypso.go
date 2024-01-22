@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
@@ -11,16 +10,17 @@ import (
 func main() {
 	fmt.Println("calypso")
 
-	panicMode := flag.Bool("panic", false, "go panics will not be handled")
+	// panicMode := flag.Bool("panic", false, "go panics will not be handled")
+	// flag.Parse()
 
-	if !*panicMode {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println(r)
-				os.Exit(1)
-			}
-		}()
-	}
+	// if !*panicMode {
+	// 	defer func() {
+	// 		if r := recover(); r != nil {
+	// 			fmt.Println(r)
+	// 			os.Exit(1)
+	// 		}
+	// 	}()
+	// }
 
 	args := os.Args[1:] // gets args without program path
 	isInvalid := len(args) < 1

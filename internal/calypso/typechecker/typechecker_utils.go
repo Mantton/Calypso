@@ -71,11 +71,12 @@ func (t *TypeChecker) evaluateTypeExpression(expr ast.TypeExpression) Expression
 	case *ast.GenericTypeExpression:
 		return t.evaluateGenericTypeExpression(expr)
 	}
-	panic("evaluate type")
+	msg := fmt.Sprintf("type expression check not implemented, %T", expr)
+	panic(msg)
 }
 
 // * Utils
-func (t *TypeChecker) define(ident string, expr ExpressionType) {
+func (t *TypeChecker) register(ident string, expr ExpressionType) {
 	if t.scopes.IsEmpty() {
 		return
 	}
@@ -87,10 +88,33 @@ func (t *TypeChecker) define(ident string, expr ExpressionType) {
 		panic("unbalanced scopes")
 	}
 
-	msg := fmt.Sprintf("Defining `%s` as `%s`", ident, expr)
+	msg := fmt.Sprintf("Registering `%s` as `%s`", ident, expr)
 	fmt.Println(msg)
 
 	s.Define(ident, expr)
+}
+
+func (t *TypeChecker) define(ident *ast.IdentifierExpression, expr ExpressionType) {
+	if t.scopes.IsEmpty() {
+		return
+	}
+
+	s, ok := t.scopes.Head()
+
+	// No Scope
+	if !ok {
+		panic("unbalanced scopes")
+	}
+
+	msg := fmt.Sprintf("Defining `%s` as `%s`", ident.Value, expr)
+	fmt.Println(msg)
+
+	if s.Has(ident.Value) {
+		msg = fmt.Sprintf("type `%s` is already declared in the current scope", ident.Value)
+		panic(t.error(msg, ident))
+	}
+
+	s.Define(ident.Value, expr)
 }
 
 func (t *TypeChecker) get(ident *ast.IdentifierExpression) ExpressionType {

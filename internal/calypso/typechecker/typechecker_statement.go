@@ -10,6 +10,8 @@ func (t *TypeChecker) checkStatement(stmt ast.Statement) {
 	switch stmt := stmt.(type) {
 	case *ast.VariableStatement:
 		t.checkVariableStatement(stmt)
+	case *ast.BlockStatement:
+		t.checkBlockStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T", stmt)
 		panic(msg)
@@ -29,11 +31,22 @@ func (t *TypeChecker) checkVariableStatement(stmt *ast.VariableStatement) {
 	// Infer Variable Type From Initializer if no annotation is provided
 	if stmt.TypeAnnotation == nil {
 		// Define In Scope
-		t.define(stmt.Identifier.Value, initializer)
+		t.define(stmt.Identifier, initializer)
 		return
 	}
 
 	// Define In Scope
 	t.mustValidate(initializer, annotation, stmt.Identifier)
-	t.define(stmt.Identifier.Value, annotation)
+	t.define(stmt.Identifier, annotation)
+}
+
+func (t *TypeChecker) checkBlockStatement(blk *ast.BlockStatement) {
+
+	if len(blk.Statements) == 0 {
+		return
+	}
+
+	for _, stmt := range blk.Statements {
+		t.checkStatement(stmt)
+	}
 }

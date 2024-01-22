@@ -35,6 +35,7 @@ func New(mode Mode) *TypeChecker {
 // * Scopes
 func (t *TypeChecker) enterScope() {
 	t.scopes.Push(NewScope())
+	t.registerBaseLiterals()
 
 	if t.scopes.Length() > 1000 {
 		panic("exceeded max scope depth") // TODO : Error
@@ -50,7 +51,6 @@ func (t *TypeChecker) CheckFile(file *ast.File) {
 	// TODO: Register STD Types?
 
 	t.enterScope() // global enter
-	t.registerBaseLiterals()
 	if len(file.Constants) != 0 {
 
 		for _, decl := range file.Constants {
@@ -73,6 +73,9 @@ func (t *TypeChecker) checkDeclaration(decl ast.Declaration) {
 	case *ast.ConstantDeclaration:
 		stmt := decl.Stmt
 		t.checkStatement(stmt)
+	case *ast.FunctionDeclaration:
+		t.checkExpression(decl.Func)
+
 	default:
 		msg := fmt.Sprintf("declaration check not implemented, %T", decl)
 		panic(msg)
@@ -86,15 +89,15 @@ func (t *TypeChecker) registerBaseLiterals() {
 		return
 	}
 
-	t.define("IntegerLiteral", GenerateBaseType("IntegerLiteral"))
-	t.define("FloatLiteral", GenerateBaseType("FloatLiteral"))
-	t.define("StringLiteral", GenerateBaseType("StringLiteral"))
-	t.define("BooleanLiteral", GenerateBaseType("BooleanLiteral"))
-	t.define("AnyLiteral", GenerateBaseType("AnyLiteral"))
-	t.define("NullLiteral", GenerateBaseType("NullLiteral"))
-	t.define("VoidLiteral", GenerateBaseType("VoidLiteral"))
-	t.define("ArrayLiteral", GenerateGenericType("ArrayLiteral", GenerateBaseType("AnyLiteral")))
-	t.define("MapLiteral", GenerateGenericType("MapLiteral", GenerateBaseType("AnyLiteral"), GenerateBaseType("AnyLiteral")))
+	t.register("IntegerLiteral", GenerateBaseType("IntegerLiteral"))
+	t.register("FloatLiteral", GenerateBaseType("FloatLiteral"))
+	t.register("StringLiteral", GenerateBaseType("StringLiteral"))
+	t.register("BooleanLiteral", GenerateBaseType("BooleanLiteral"))
+	t.register("AnyLiteral", GenerateBaseType("AnyLiteral"))
+	t.register("NullLiteral", GenerateBaseType("NullLiteral"))
+	t.register("VoidLiteral", GenerateBaseType("VoidLiteral"))
+	t.register("ArrayLiteral", GenerateGenericType("ArrayLiteral", GenerateBaseType("AnyLiteral")))
+	t.register("MapLiteral", GenerateGenericType("MapLiteral", GenerateBaseType("AnyLiteral"), GenerateBaseType("AnyLiteral")))
 }
 
 func (t *TypeChecker) error(message string, node ast.Node) lexer.Error {

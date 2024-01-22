@@ -132,8 +132,9 @@ type PropertyExpression struct {
 // * Literal Expressions
 
 type IdentifierExpression struct {
-	Pos   token.TokenPosition
-	Value string
+	Pos           token.TokenPosition
+	Value         string
+	AnnotatedType TypeExpression
 }
 
 type FunctionExpression struct {
