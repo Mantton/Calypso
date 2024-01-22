@@ -36,26 +36,23 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 	// Resolver
 	resolver := resolver.New()
 	resolver.ResolveFile(file)
-	// TODO: Error Check Resolver
 
 	if len(resolver.Errors) != 0 {
 		for _, err := range resolver.Errors {
 			fmt.Println(err)
 		}
+		return 1
 	}
-
-	return 0
 
 	// Type Checker
 	typeChecker := typechecker.New(typechecker.STD)
 	typeChecker.CheckFile(file)
 
-	// TODO: TypeChecker Errors
-
 	if len(typeChecker.Errors) != 0 {
 		for _, err := range typeChecker.Errors {
 			fmt.Println(err)
 		}
+		return 1
 	}
 
 	fmt.Println("Done")

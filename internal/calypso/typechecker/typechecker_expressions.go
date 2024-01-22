@@ -31,7 +31,7 @@ func (t *TypeChecker) evaluateExpression(expr ast.Expression) ExpressionType {
 func (t *TypeChecker) evaluateExpressionList(exprs []ast.Expression) ExpressionType {
 
 	if len(exprs) == 0 {
-		panic("any list")
+		return GenerateBaseType("AnyLiteral")
 	}
 
 	var base ExpressionType

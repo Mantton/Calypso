@@ -55,7 +55,7 @@ func (t *TypeChecker) validate(provided, expected ExpressionType) bool {
 	return true
 }
 
-func (t *TypeChecker) mustValidate(provided, expected ExpressionType) {
+func (t *TypeChecker) mustValidate(provided, expected ExpressionType, node ast.Node) {
 
 	result := t.validate(provided, expected)
 	if !result {
@@ -93,7 +93,7 @@ func (t *TypeChecker) define(ident string, expr ExpressionType) {
 	s.Define(ident, expr)
 }
 
-func (t *TypeChecker) get(ident string) ExpressionType {
+func (t *TypeChecker) get(ident *ast.IdentifierExpression) ExpressionType {
 	if t.scopes.IsEmpty() {
 		panic("unbalanced scopes")
 	}
@@ -105,52 +105,54 @@ func (t *TypeChecker) get(ident string) ExpressionType {
 			panic("unbalanced scope")
 		}
 
-		if v, ok := s.Get(ident); ok {
+		if v, ok := s.Get(ident.Value); ok {
 			return v
 		}
 	}
 
-	fmt.Println(ident)
-	panic("type not found in scope")
+	msg := fmt.Sprintf("type `%s` cannot not be found in the current scope", ident.Value)
+	panic(t.error(msg, ident))
 }
 
 func (t *TypeChecker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpression) ExpressionType {
 
-	gen := t.get(expr.Identifier.Value)
+	gen := t.get(expr.Identifier)
 
-	switch gen.(type) {
+	switch v := gen.(type) {
 
 	case *BaseType:
 		return gen
 	case *GenericType:
-		panic("Generic type requires x type arguments")
+		args := len(v.Params)
+		msg := fmt.Sprintf("Generic type `%s` requires %d arguments", v, args)
+		panic(t.error(msg, expr))
 	}
 
 	panic("bad path")
 }
 
 func (t *TypeChecker) evaluateGenericTypeExpression(expr *ast.GenericTypeExpression) ExpressionType {
-	expectedType := t.get(expr.Identifier.Value)
+	expectedType := t.get(expr.Identifier)
 
 	switch expectedType := expectedType.(type) {
 	case *BaseType:
 		msg := fmt.Sprintf("`%s` is not a generic type", expr.Identifier.Value)
-		panic(msg)
+		panic(t.error(msg, expr))
 	case *GenericType:
 
 		expected := len(expectedType.Params)
 		provided := len(expr.Arguments)
 
 		if expected != provided {
-			msg := fmt.Sprintf("Generic type `%s` requires %d arguments, received %d instead.", expr.Identifier.Value, expected, provided)
-			panic(msg)
+			msg := fmt.Sprintf("Generic type `%s` requires %d arguments, received %d instead.", expectedType, expected, provided)
+			panic(t.error(msg, expr))
 		}
 
 		args := []ExpressionType{}
 		for i, expectedArgument := range expectedType.Params {
 			providedArgument := t.evaluateTypeExpression(expr.Arguments[i])
 
-			t.mustValidate(providedArgument, expectedArgument)
+			t.mustValidate(providedArgument, expectedArgument, expr.Arguments[i])
 			args = append(args, providedArgument)
 		}
 

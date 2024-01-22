@@ -5,6 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/collections"
+	"github.com/mantton/calypso/internal/calypso/lexer"
 )
 
 type Mode byte
@@ -94,4 +95,11 @@ func (t *TypeChecker) registerBaseLiterals() {
 	t.define("VoidLiteral", GenerateBaseType("VoidLiteral"))
 	t.define("ArrayLiteral", GenerateGenericType("ArrayLiteral", GenerateBaseType("AnyLiteral")))
 	t.define("MapLiteral", GenerateGenericType("MapLiteral", GenerateBaseType("AnyLiteral"), GenerateBaseType("AnyLiteral")))
+}
+
+func (t *TypeChecker) error(message string, node ast.Node) lexer.Error {
+	return lexer.Error{
+		Range:   node.Range(),
+		Message: message,
+	}
 }
