@@ -70,7 +70,9 @@ const (
 	RBRACE    // }
 	LBRACKET  // [
 	RBRACKET  // ]
-	op_e      // Operators End
+
+	R_ARROW // ->
+	op_e    // Operators End
 
 	//* KEYWORDS
 	kw_b // Keywords Begin
@@ -164,6 +166,7 @@ var tokens = map[Token]string{
 	RBRACE:    "}",
 	SEMICOLON: ";",
 	COLON:     ":",
+	R_ARROW:   "->",
 
 	CONST:  "const",
 	FUNC:   "func",

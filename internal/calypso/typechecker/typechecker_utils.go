@@ -60,7 +60,7 @@ func (t *TypeChecker) mustValidate(provided, expected ExpressionType, node ast.N
 	result := t.validate(provided, expected)
 	if !result {
 		msg := fmt.Sprintf("Expected `%s`, received `%s` instead", expected, provided)
-		panic(msg)
+		panic(t.error(msg, node))
 	}
 }
 

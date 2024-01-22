@@ -55,6 +55,7 @@ func (p *Parser) expect(t token.Token) token.ScannedToken {
 		return p.currentScannedToken()
 	}
 }
+
 func (p *Parser) next() {
 	if p.isAtEnd() {
 		return

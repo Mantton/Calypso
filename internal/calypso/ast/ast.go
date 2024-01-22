@@ -143,6 +143,7 @@ type FunctionExpression struct {
 	Body       *BlockStatement
 	Params     []*IdentifierExpression
 	RParenPos  token.TokenPosition
+	ReturnType TypeExpression
 }
 
 // * Literals

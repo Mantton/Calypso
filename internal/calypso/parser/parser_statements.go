@@ -116,7 +116,14 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 func (p *Parser) parseReturnStatement() (ast.Statement, error) {
 	start := p.expect(token.RETURN)
 
-	expr := p.parseExpression()
+	var expr ast.Expression
+	if p.currentMatches(token.SEMICOLON) {
+		expr = &ast.VoidLiteral{
+			Pos: p.currentScannedToken().Pos,
+		}
+	} else {
+		expr = p.parseExpression()
+	}
 
 	p.expect(token.SEMICOLON)
 

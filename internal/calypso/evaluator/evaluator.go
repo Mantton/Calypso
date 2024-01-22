@@ -39,7 +39,7 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 
 	if len(resolver.Errors) != 0 {
 		for _, err := range resolver.Errors {
-			fmt.Println(err)
+			fmt.Println(e.ErrorMessage(filepath, err))
 		}
 		return 1
 	}
@@ -47,10 +47,11 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 	// Type Checker
 	typeChecker := typechecker.New(typechecker.STD)
 	typeChecker.CheckFile(file)
+	fmt.Println()
 
 	if len(typeChecker.Errors) != 0 {
 		for _, err := range typeChecker.Errors {
-			fmt.Println(err)
+			fmt.Println(e.ErrorMessage(filepath, err))
 		}
 		return 1
 	}

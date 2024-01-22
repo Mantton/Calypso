@@ -297,6 +297,8 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 	if len(params) > 99 {
 		panic(p.error("too many parameters, maximum of 99"))
 	}
+	// Return Type
+	retType := p.parseFunctionReturnType()
 
 	// Body
 	body := p.parseFunctionBody()
@@ -306,6 +308,7 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 		Identifier: ident,
 		Body:       body,
 		Params:     params,
+		ReturnType: retType,
 	}
 }
 
@@ -320,6 +323,15 @@ func (p *Parser) parseFunctionBody() *ast.BlockStatement {
 		Statements: statements,
 	}
 
+}
+
+func (p *Parser) parseFunctionReturnType() ast.TypeExpression {
+	if p.match(token.R_ARROW) {
+		annotatedType := p.parseTypeExpression()
+		return annotatedType
+	} else {
+		return nil
+	}
 }
 
 func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {

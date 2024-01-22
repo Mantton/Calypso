@@ -17,13 +17,19 @@ func (t *TypeChecker) evaluateExpression(expr ast.Expression) ExpressionType {
 		return GenerateBaseType("StringLiteral")
 	case *ast.BooleanLiteral:
 		return GenerateBaseType("BooleanLiteral")
+	case *ast.VoidLiteral:
+		return GenerateBaseType("VoidLiteral")
+	case *ast.NullLiteral:
+		return GenerateBaseType("NullLiteral")
 	case *ast.ArrayLiteral:
 		return GenerateGenericType("ArrayLiteral", t.evaluateExpressionList(expr.Elements))
 	case *ast.MapLiteral:
 		k, v := t.evaluateExpressionPairs(expr.Pairs)
 		return GenerateGenericType("MapLiteral", k, v)
 	case *ast.FunctionExpression:
-		return GenerateBaseType("AnyLiteral")
+		return t.get(expr.Identifier)
+	case *ast.IdentifierExpression:
+		return t.get(expr)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -99,10 +105,10 @@ func (t *TypeChecker) checkExpression(expr ast.Expression) {
 }
 
 func (t *TypeChecker) checkFunctionExpression(expr *ast.FunctionExpression) {
-	// TODO : Declare Type?
-
+	prevCFS := t.cfs
 	// Enter Function Scope
 	t.enterScope()
+	t.cfs = &CurrentFunctionState{}
 
 	// Declare & Define Parameters
 	for _, param := range expr.Params {
@@ -111,9 +117,41 @@ func (t *TypeChecker) checkFunctionExpression(expr *ast.FunctionExpression) {
 		t.register(param.Value, paramType)
 	}
 
+	// TypeCheck Return Type If Provided
+
+	var retType ExpressionType
+
+	if expr.ReturnType != nil {
+		retType = t.evaluateTypeExpression(expr.ReturnType)
+		t.cfs.AnnotatedReturnType = retType
+	}
+
 	// TypeCheck Function body
 	t.checkStatement(expr.Body)
 
-	// Resolution Complete, leave function scope
+	// Check Function Return Type
+	inferred := t.cfs.InferredReturnType
+	annotated := t.cfs.AnnotatedReturnType
+
+	if inferred == nil && annotated == nil {
+		retType = GenerateBaseType("VoidLiteral")
+	} else if inferred == nil && annotated != nil {
+		// Function Annotated To return Void
+		if t.validate(annotated, GenerateBaseType("VoidLiteral")) {
+			retType = GenerateBaseType("VoidLiteral")
+		} else {
+			msg := fmt.Sprintf("function does not return type `%s`", annotated)
+			panic(t.error(msg, expr.Identifier))
+		}
+
+	} else if inferred != nil && annotated == nil {
+		retType = inferred
+	} else if inferred != nil && annotated != nil {
+		t.mustValidate(inferred, annotated, expr.Identifier)
+	}
+
+	// Resolution Complete, define &  leave function scope
+	t.define(expr.Identifier, retType)
 	t.leaveScope()
+	t.cfs = prevCFS
 }

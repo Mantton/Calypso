@@ -19,37 +19,28 @@ const (
 )
 
 type TypeChecker struct {
-	Errors []string
+	Errors lexer.ErrorList
 	scopes collections.Stack[*Scope]
 	mode   Mode
+	cfs    *CurrentFunctionState
+}
+
+type CurrentFunctionState struct {
+	AnnotatedReturnType ExpressionType
+	InferredReturnType  ExpressionType
 }
 
 func New(mode Mode) *TypeChecker {
 	return &TypeChecker{
-		Errors: []string{},
 		scopes: collections.Stack[*Scope]{},
 		mode:   mode,
+		cfs:    nil,
 	}
-}
-
-// * Scopes
-func (t *TypeChecker) enterScope() {
-	t.scopes.Push(NewScope())
-	t.registerBaseLiterals()
-
-	if t.scopes.Length() > 1000 {
-		panic("exceeded max scope depth") // TODO : Error
-	}
-}
-
-func (t *TypeChecker) leaveScope() {
-	t.scopes.Pop()
 }
 
 // * Checks
 func (t *TypeChecker) CheckFile(file *ast.File) {
 	// TODO: Register STD Types?
-
 	t.enterScope() // global enter
 	if len(file.Constants) != 0 {
 
@@ -69,18 +60,30 @@ func (t *TypeChecker) CheckFile(file *ast.File) {
 }
 
 func (t *TypeChecker) checkDeclaration(decl ast.Declaration) {
-	switch decl := decl.(type) {
-	case *ast.ConstantDeclaration:
-		stmt := decl.Stmt
-		t.checkStatement(stmt)
-	case *ast.FunctionDeclaration:
-		t.checkExpression(decl.Func)
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
 
-	default:
-		msg := fmt.Sprintf("declaration check not implemented, %T", decl)
-		panic(msg)
+				if err, y := r.(lexer.Error); y {
+					t.Errors.Add(err)
+				} else {
+					panic(r)
+				}
+			}
+		}()
+		switch decl := decl.(type) {
+		case *ast.ConstantDeclaration:
+			stmt := decl.Stmt
+			t.checkStatement(stmt)
+		case *ast.FunctionDeclaration:
+			t.checkExpression(decl.Func)
 
-	}
+		default:
+			msg := fmt.Sprintf("declaration check not implemented, %T", decl)
+			panic(msg)
+
+		}
+	}()
 }
 
 func (t *TypeChecker) registerBaseLiterals() {
@@ -105,4 +108,19 @@ func (t *TypeChecker) error(message string, node ast.Node) lexer.Error {
 		Range:   node.Range(),
 		Message: message,
 	}
+}
+
+// * Utils
+// * Scopes
+func (t *TypeChecker) enterScope() {
+	t.scopes.Push(NewScope())
+	t.registerBaseLiterals()
+
+	if t.scopes.Length() > 1000 {
+		panic("exceeded max scope depth") // TODO : Error
+	}
+}
+
+func (t *TypeChecker) leaveScope() {
+	t.scopes.Pop()
 }

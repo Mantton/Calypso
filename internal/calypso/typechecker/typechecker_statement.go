@@ -12,6 +12,9 @@ func (t *TypeChecker) checkStatement(stmt ast.Statement) {
 		t.checkVariableStatement(stmt)
 	case *ast.BlockStatement:
 		t.checkBlockStatement(stmt)
+	case *ast.ReturnStatement:
+		t.checkReturnStatement(stmt)
+
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T", stmt)
 		panic(msg)
@@ -49,4 +52,35 @@ func (t *TypeChecker) checkBlockStatement(blk *ast.BlockStatement) {
 	for _, stmt := range blk.Statements {
 		t.checkStatement(stmt)
 	}
+}
+
+func (t *TypeChecker) checkReturnStatement(stmt *ast.ReturnStatement) {
+	if t.cfs == nil {
+		panic(t.error("cannot use return statement outside function scope.", stmt))
+	}
+
+	retType := t.evaluateExpression(stmt.Value)
+
+	// No Annotated Return Type, Infer Instead
+	if t.cfs.AnnotatedReturnType == nil {
+
+		// Currently No Inferred Type, Set Current
+		if t.cfs.InferredReturnType == nil {
+			t.cfs.InferredReturnType = retType
+		} else {
+			// Inferred Return Type, Validate or Mark As Any
+			if !t.validate(retType, t.cfs.InferredReturnType) {
+				t.cfs.InferredReturnType = GenerateBaseType("AnyLiteral")
+			}
+		}
+
+		return
+	}
+
+	// Annotated Type Exists, Validate & Type Inferred
+	t.mustValidate(retType, t.cfs.AnnotatedReturnType, stmt)
+	if t.cfs.InferredReturnType == nil {
+		t.cfs.InferredReturnType = retType
+	}
+
 }

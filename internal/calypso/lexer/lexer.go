@@ -97,7 +97,11 @@ func (l *Lexer) parseToken() token.ScannedToken {
 
 	// * Operators
 	case '-':
-		tok = l.build(token.SUB)
+		if l.match('>') {
+			tok = l.build(token.R_ARROW)
+		} else {
+			tok = l.build(token.SUB)
+		}
 	case '+':
 		tok = l.build(token.ADD)
 	case '*':
