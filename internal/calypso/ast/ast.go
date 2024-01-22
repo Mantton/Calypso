@@ -6,6 +6,7 @@ import (
 )
 
 type Node interface {
+	Range() token.SyntaxRange
 }
 
 type Expression interface {
@@ -41,16 +42,16 @@ type FunctionDeclaration struct {
 	Func *FunctionExpression
 }
 
-func (d *ConstantDeclaration) declarationNode() {}
-func (d *FunctionDeclaration) declarationNode() {}
-
 // * Statements
 type BlockStatement struct {
+	LBrackPos  token.TokenPosition
+	RBrackPos  token.TokenPosition
 	Statements []Statement
 }
 
 type VariableStatement struct {
-	Identifier     string
+	KeyWPos        token.TokenPosition
+	Identifier     *IdentifierExpression
 	Value          Expression
 	IsConstant     bool
 	TypeAnnotation TypeExpression
@@ -61,16 +62,19 @@ type FunctionStatement struct {
 }
 
 type IfStatement struct {
+	KeyWPos     token.TokenPosition
 	Condition   Expression
 	Action      *BlockStatement
 	Alternative *BlockStatement
 }
 
 type ReturnStatement struct {
-	Value Expression
+	KeyWPos token.TokenPosition
+	Value   Expression
 }
 
 type WhileStatement struct {
+	KeyWPos   token.TokenPosition
 	Condition Expression
 	Action    *BlockStatement
 }
@@ -79,110 +83,107 @@ type ExpressionStatement struct {
 	Expr Expression
 }
 
-func (s *IfStatement) statementNode()         {}
-func (s *ExpressionStatement) statementNode() {}
-func (s *WhileStatement) statementNode()      {}
-func (s *ReturnStatement) statementNode()     {}
-func (s *BlockStatement) statementNode()      {}
-func (s *VariableStatement) statementNode()   {}
-func (s *FunctionStatement) statementNode()   {}
-
 // * Expressions
 
 type GroupedExpression struct {
-	Expr Expression
+	LParenPos token.TokenPosition
+	Expr      Expression
+	RParenPos token.TokenPosition
 }
 type UnaryExpression struct {
-	Op   token.Token
-	Expr Expression
+	Op         token.Token
+	OpPosition token.TokenPosition
+	Expr       Expression
 }
 
 type BinaryExpression struct {
 	Left  Expression
 	Op    token.Token
+	OpPos token.TokenPosition
 	Right Expression
 }
 
 type AssignmentExpression struct {
 	Target Expression
+	OpPos  token.TokenPosition
 	Value  Expression
 }
 
 type CallExpression struct {
 	Target    Expression
 	Arguments []Expression
+	LParenPos token.TokenPosition
+	RParenPos token.TokenPosition
 }
 
 type IndexExpression struct {
-	Target Expression
-	Index  Expression
+	Target      Expression
+	Index       Expression
+	LBracketPos token.TokenPosition
+	RBracketPos token.TokenPosition
 }
 
 type PropertyExpression struct {
 	Target   Expression
 	Property *IdentifierExpression
+	DotPos   token.TokenPosition
 }
-
-func (e *GroupedExpression) expressionNode()    {}
-func (e *CallExpression) expressionNode()       {}
-func (e *UnaryExpression) expressionNode()      {}
-func (e *BinaryExpression) expressionNode()     {}
-func (e *AssignmentExpression) expressionNode() {}
-func (e *IndexExpression) expressionNode()      {}
-func (e *PropertyExpression) expressionNode()   {}
 
 // * Literal Expressions
 
 type IdentifierExpression struct {
+	Pos   token.TokenPosition
 	Value string
 }
 
 type FunctionExpression struct {
-	Name   string
-	Body   *BlockStatement
-	Params []*IdentifierExpression
+	KeyWPos    token.TokenPosition
+	Identifier *IdentifierExpression
+	Body       *BlockStatement
+	Params     []*IdentifierExpression
+	RParenPos  token.TokenPosition
 }
-
-func (e *IdentifierExpression) expressionNode() {}
-func (e *FunctionExpression) expressionNode()   {}
 
 // * Literals
 type IntegerLiteral struct {
+	Pos   token.TokenPosition
 	Value int
 }
 
 type FloatLiteral struct {
+	Pos   token.TokenPosition
 	Value float64
 }
 
 type StringLiteral struct {
+	Pos   token.TokenPosition
 	Value string
 }
 
 type BooleanLiteral struct {
+	Pos   token.TokenPosition
 	Value bool
 }
 
-type NullLiteral struct{}
+type NullLiteral struct {
+	Pos token.TokenPosition
+}
 
-type VoidLiteral struct{}
+type VoidLiteral struct {
+	Pos token.TokenPosition
+}
 
 type ArrayLiteral struct {
-	Elements []Expression
+	LBracketPos token.TokenPosition
+	Elements    []Expression
+	RBracketPos token.TokenPosition
 }
 
 type MapLiteral struct {
-	Pairs map[Expression]Expression
+	LBracePos token.TokenPosition
+	Pairs     map[Expression]Expression
+	RBracePos token.TokenPosition
 }
-
-func (e *IntegerLiteral) expressionNode() {}
-func (e *FloatLiteral) expressionNode()   {}
-func (e *StringLiteral) expressionNode()  {}
-func (e *BooleanLiteral) expressionNode() {}
-func (e *NullLiteral) expressionNode()    {}
-func (e *VoidLiteral) expressionNode()    {}
-func (e *ArrayLiteral) expressionNode()   {}
-func (e *MapLiteral) expressionNode()     {}
 
 // * Types
 
@@ -196,19 +197,20 @@ type IdentifierTypeExpression struct {
 }
 
 type GenericTypeExpression struct {
-	Identifier *IdentifierExpression
-	Arguments  []TypeExpression
+	Identifier  *IdentifierExpression
+	Arguments   []TypeExpression
+	LChevronPos token.TokenPosition
+	RChevronPos token.TokenPosition
 }
 type ArrayTypeExpression struct {
-	Element TypeExpression
+	LBracketPos token.TokenPosition
+	Element     TypeExpression
+	RBracketPos token.TokenPosition
 }
 
 type MapTypeExpression struct {
-	Key   TypeExpression
-	Value TypeExpression
+	Key         TypeExpression
+	Value       TypeExpression
+	LBracketPos token.TokenPosition
+	RBracketPos token.TokenPosition
 }
-
-func (e *IdentifierTypeExpression) typeNode() {}
-func (e *GenericTypeExpression) typeNode()    {}
-func (e *ArrayTypeExpression) typeNode()      {}
-func (e *MapTypeExpression) typeNode()        {}

@@ -31,6 +31,10 @@ func (p *Parser) peakAheadScannedToken() (token.ScannedToken, bool) {
 	return p.tokens[p.cursor+1], true
 }
 
+func (p *Parser) previousScannedToken() token.ScannedToken {
+	return p.tokens[p.cursor-1]
+}
+
 // bool indicating the current token is of the specified type
 func (p *Parser) currentMatches(t token.Token) bool {
 	return p.current() == t

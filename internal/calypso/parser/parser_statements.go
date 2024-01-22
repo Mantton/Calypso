@@ -29,9 +29,9 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	const z :int = `expr`;
 	*/
 	isConst := p.current() == token.CONST
-
-	p.next()                          // Move to next token
-	tok := p.expect(token.IDENTIFIER) // Parse Ident
+	start := p.currentScannedToken().Pos
+	p.next() // Move to next token
+	ident := p.parseIdentifier()
 
 	// Parse Type Expression If Found
 	t := p.parsePossibleTypeExpression()
@@ -43,7 +43,8 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	p.expect(token.SEMICOLON)
 
 	return &ast.VariableStatement{
-		Identifier:     tok.Lit,
+		KeyWPos:        start,
+		Identifier:     ident,
 		Value:          expr,
 		IsConstant:     isConst,
 		TypeAnnotation: t,
@@ -60,13 +61,15 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	*/
 
 	// Opening
-	p.expect(token.LBRACE)
+	start := p.expect(token.LBRACE)
 	statements := p.parseStatementList()
 	// Closing
-	p.expect(token.RBRACE)
+	end := p.expect(token.RBRACE)
 
 	return &ast.BlockStatement{
+		LBrackPos:  start.Pos,
 		Statements: statements,
+		RBrackPos:  end.Pos,
 	}
 
 }
@@ -80,12 +83,14 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	  }
 	*/
 
-	p.expect(token.IF)
+	start := p.expect(token.IF)
 
 	// Condition
 	p.expect(token.LPAREN)
 
-	stmt := &ast.IfStatement{}
+	stmt := &ast.IfStatement{
+		KeyWPos: start.Pos,
+	}
 	condition := p.parseExpression()
 
 	stmt.Condition = condition
@@ -109,24 +114,27 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 }
 
 func (p *Parser) parseReturnStatement() (ast.Statement, error) {
-	p.expect(token.RETURN)
+	start := p.expect(token.RETURN)
 
 	expr := p.parseExpression()
 
 	p.expect(token.SEMICOLON)
 
 	return &ast.ReturnStatement{
-		Value: expr,
+		Value:   expr,
+		KeyWPos: start.Pos,
 	}, nil
 
 }
 
 func (p *Parser) parseWhileStatement() (ast.Statement, error) {
-	p.expect(token.WHILE)
+	start := p.expect(token.WHILE)
 	// Condition
 	p.expect(token.LPAREN)
 
-	stmt := &ast.WhileStatement{}
+	stmt := &ast.WhileStatement{
+		KeyWPos: start.Pos,
+	}
 	condition := p.parseExpression()
 
 	stmt.Condition = condition

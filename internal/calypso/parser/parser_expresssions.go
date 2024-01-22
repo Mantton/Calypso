@@ -22,11 +22,13 @@ func (p *Parser) parseAssignmentExpression() ast.Expression {
 	expr := p.parseEqualityExpression()
 
 	if p.match(token.ASSIGN) {
+		pos := p.previousScannedToken().Pos
 		value := p.parseAssignmentExpression()
 
 		return &ast.AssignmentExpression{
 			Target: expr,
 			Value:  value,
+			OpPos:  pos,
 		}
 	}
 
@@ -37,12 +39,13 @@ func (p *Parser) parseEqualityExpression() ast.Expression {
 	expr := p.parseComparisonExpression()
 
 	for p.match(token.NEQ, token.EQL) {
-		op := p.previous()
+		op := p.previousScannedToken()
 		right := p.parseComparisonExpression()
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
-			Op:    op,
+			Op:    op.Tok,
+			OpPos: op.Pos,
 			Right: right,
 		}
 	}
@@ -54,12 +57,13 @@ func (p *Parser) parseComparisonExpression() ast.Expression {
 	expr := p.parseTermExpression()
 
 	for p.match(token.GTR, token.GEQ, token.LEQ, token.LSS) {
-		op := p.previous()
+		op := p.previousScannedToken()
 		right := p.parseTermExpression()
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
-			Op:    op,
+			Op:    op.Tok,
+			OpPos: op.Pos,
 			Right: right,
 		}
 	}
@@ -71,12 +75,13 @@ func (p *Parser) parseTermExpression() ast.Expression {
 	expr := p.parseFactorExpression()
 
 	for p.match(token.SUB, token.ADD) {
-		op := p.previous()
+		op := p.previousScannedToken()
 		right := p.parseFactorExpression()
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
-			Op:    op,
+			Op:    op.Tok,
+			OpPos: op.Pos,
 			Right: right,
 		}
 	}
@@ -88,12 +93,13 @@ func (p *Parser) parseFactorExpression() ast.Expression {
 	expr := p.parseUnaryExpression()
 
 	for p.match(token.QUO, token.MUL) {
-		op := p.previous()
+		op := p.previousScannedToken()
 		right := p.parseUnaryExpression()
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
-			Op:    op,
+			Op:    op.Tok,
+			OpPos: op.Pos,
 			Right: right,
 		}
 	}
@@ -104,12 +110,13 @@ func (p *Parser) parseFactorExpression() ast.Expression {
 func (p *Parser) parseUnaryExpression() ast.Expression {
 
 	if p.match(token.NOT, token.SUB) {
-		op := p.previous()
+		op := p.previousScannedToken()
 		right := p.parseUnaryExpression()
 
 		return &ast.UnaryExpression{
-			Op:   op,
-			Expr: right,
+			Op:         op.Tok,
+			OpPosition: op.Pos,
+			Expr:       right,
 		}
 	}
 	return p.parseCallExpression()
@@ -120,11 +127,13 @@ func (p *Parser) parseCallExpression() ast.Expression {
 
 	if p.currentMatches(token.LPAREN) {
 
-		list := p.parseExpressionList(token.LPAREN, token.RPAREN)
+		list, start, end := p.parseExpressionList(token.LPAREN, token.RPAREN)
 
 		return &ast.CallExpression{
 			Target:    expr,
 			Arguments: list,
+			LParenPos: start,
+			RParenPos: end,
 		}
 	}
 
@@ -135,11 +144,13 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 	expr := p.parseIndexExpression()
 
 	if p.match(token.PERIOD) {
+		opPos := p.previousScannedToken().Pos
 		prop := p.parseIdentifier()
 
 		return &ast.PropertyExpression{
 			Target:   expr,
 			Property: prop,
+			DotPos:   opPos,
 		}
 	}
 
@@ -150,15 +161,17 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 func (p *Parser) parseIndexExpression() ast.Expression {
 	expr := p.parsePrimaryExpression()
 
-	if p.currentMatches(token.LBRACKET) {
-		p.expect(token.LBRACKET)
+	if p.match(token.LBRACKET) {
+		lbrackPos := p.previousScannedToken().Pos
 		idx := p.parseExpression()
 
-		p.expect(token.RBRACKET)
+		rbrackPos := p.expect(token.RBRACKET).Pos
 
 		return &ast.IndexExpression{
-			Target: expr,
-			Index:  idx,
+			Target:      expr,
+			Index:       idx,
+			LBracketPos: lbrackPos,
+			RBracketPos: rbrackPos,
 		}
 	}
 
@@ -169,13 +182,23 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 	var expr ast.Expression
 	switch p.current() {
 	case token.FALSE:
-		expr = &ast.BooleanLiteral{Value: false}
+		expr = &ast.BooleanLiteral{
+			Value: false,
+			Pos:   p.currentScannedToken().Pos,
+		}
 	case token.TRUE:
-		expr = &ast.BooleanLiteral{Value: true}
+		expr = &ast.BooleanLiteral{
+			Value: true,
+			Pos:   p.currentScannedToken().Pos,
+		}
 	case token.NULL:
-		expr = &ast.NullLiteral{}
+		expr = &ast.NullLiteral{
+			Pos: p.currentScannedToken().Pos,
+		}
 	case token.VOID:
-		expr = &ast.VoidLiteral{}
+		expr = &ast.VoidLiteral{
+			Pos: p.currentScannedToken().Pos,
+		}
 	case token.INTEGER:
 		v, err := strconv.ParseInt(p.currentScannedToken().Lit, 10, 64)
 
@@ -184,6 +207,7 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		}
 		expr = &ast.IntegerLiteral{
 			Value: int(v),
+			Pos:   p.currentScannedToken().Pos,
 		}
 	case token.FLOAT:
 		v, err := strconv.ParseFloat(p.currentScannedToken().Lit, 64)
@@ -192,23 +216,28 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		}
 		expr = &ast.FloatLiteral{
 			Value: v,
+			Pos:   p.currentScannedToken().Pos,
 		}
 	case token.STRING:
 		expr = &ast.StringLiteral{
 			Value: p.currentScannedToken().Lit,
+			Pos:   p.currentScannedToken().Pos,
 		}
 	case token.IDENTIFIER:
 		expr = &ast.IdentifierExpression{
 			Value: p.currentScannedToken().Lit,
+			Pos:   p.currentScannedToken().Pos,
 		}
 
 	case token.LPAREN:
-		p.next() // Move to next token
+		start := p.expect(token.LPAREN).Pos
 		expr := p.parseExpression()
 
-		p.expect(token.RPAREN)
+		end := p.expect(token.RPAREN).Pos
 		return &ast.GroupedExpression{
-			Expr: expr,
+			LParenPos: start,
+			Expr:      expr,
+			RParenPos: end,
 		}
 
 	case token.LBRACKET:
@@ -227,15 +256,16 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 	panic(p.error(msg))
 }
 
-func (p *Parser) parseExpressionList(start, end token.Token) []ast.Expression {
+func (p *Parser) parseExpressionList(start, end token.Token) ([]ast.Expression, token.TokenPosition, token.TokenPosition) {
 	list := []ast.Expression{}
 
 	// expect start token
-	p.expect(start)
+	s := p.expect(start)
 
 	// if immediately followed by end token, return
-	if p.match(end) {
-		return list
+	if p.currentMatches(end) {
+		e := p.expect(end)
+		return list, s.Pos, e.Pos
 	}
 
 	expr := p.parseExpression()
@@ -250,16 +280,16 @@ func (p *Parser) parseExpressionList(start, end token.Token) []ast.Expression {
 		list = append(list, expr)
 	}
 
-	p.expect(end)
+	e := p.expect(end)
 
-	return list
+	return list, s.Pos, e.Pos
 }
 
 func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
-	p.expect(token.FUNC) // Expect current to be `func`, consume
+	start := p.expect(token.FUNC) // Expect current to be `func`, consume
 
 	// Name
-	name := p.expect(token.IDENTIFIER).Lit // Function Name
+	ident := p.parseIdentifier()
 
 	// Parameters
 	params := p.parseFunctionParameters()
@@ -272,9 +302,10 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 	body := p.parseFunctionBody()
 
 	return &ast.FunctionExpression{
-		Name:   name,
-		Body:   body,
-		Params: params,
+		KeyWPos:    start.Pos,
+		Identifier: ident,
+		Body:       body,
+		Params:     params,
 	}
 }
 
@@ -326,10 +357,12 @@ func (p *Parser) parseIdentifier() *ast.IdentifierExpression {
 
 func (p *Parser) parseArrayLit() *ast.ArrayLiteral {
 
-	elements := p.parseExpressionList(token.LBRACKET, token.RBRACKET)
+	elements, start, end := p.parseExpressionList(token.LBRACKET, token.RBRACKET)
 
 	return &ast.ArrayLiteral{
-		Elements: elements,
+		Elements:    elements,
+		LBracketPos: start,
+		RBracketPos: end,
 	}
 }
 
@@ -337,10 +370,12 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 	lit := &ast.MapLiteral{
 		Pairs: make(map[ast.Expression]ast.Expression),
 	}
-	p.expect(token.LBRACE)
-
+	start := p.expect(token.LBRACE)
+	lit.LBracePos = start.Pos
 	// closes immediately
-	if p.match(token.RBRACE) {
+	if p.currentMatches(token.RBRACE) {
+		end := p.expect(token.RBRACE)
+		lit.RBracePos = end.Pos
 		return lit
 	}
 	// Loop until match with RBRACE
@@ -367,7 +402,7 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 	}
 
 	// expect closing brace
-	p.expect(token.RBRACE)
-
+	end := p.expect(token.RBRACE)
+	lit.RBracePos = end.Pos
 	return lit
 }

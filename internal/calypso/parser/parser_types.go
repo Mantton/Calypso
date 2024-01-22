@@ -27,26 +27,30 @@ func (p *Parser) parseTypeExpression() ast.TypeExpression {
 }
 
 func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
-	p.expect(token.LBRACKET)
+	start := p.expect(token.LBRACKET)
 	expr := p.parseTypeExpression()
-
+	var end token.TokenPosition
 	switch p.current() {
 	case token.COLON:
 		p.expect(token.COLON)
 		value := p.parseTypeExpression()
-		p.expect(token.RBRACKET)
+		end := p.expect(token.RBRACKET)
 
 		return &ast.MapTypeExpression{
-			Key:   expr,
-			Value: value,
+			Key:         expr,
+			Value:       value,
+			LBracketPos: start.Pos,
+			RBracketPos: end.Pos,
 		}
 
 	default:
-		p.expect(token.RBRACKET)
+		end = p.expect(token.RBRACKET).Pos
 	}
 
 	return &ast.ArrayTypeExpression{
-		Element: expr,
+		Element:     expr,
+		LBracketPos: start.Pos,
+		RBracketPos: end,
 	}
 }
 
@@ -54,15 +58,17 @@ func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
 	ident := p.parseIdentifier()
 	args := []ast.TypeExpression{}
+	var start, end token.TokenPosition
 	if p.currentMatches(token.LSS) {
-		args = p.parseGenericArgumentClauseExpression()
-
+		args, start, end = p.parseGenericArgumentClauseExpression()
 	}
 
 	if len(args) != 0 {
 		return &ast.GenericTypeExpression{
-			Identifier: ident,
-			Arguments:  args,
+			Identifier:  ident,
+			Arguments:   args,
+			LChevronPos: start,
+			RChevronPos: end,
 		}
 	}
 
@@ -72,10 +78,10 @@ func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
 }
 
-func (p *Parser) parseGenericArgumentClauseExpression() []ast.TypeExpression {
+func (p *Parser) parseGenericArgumentClauseExpression() ([]ast.TypeExpression, token.TokenPosition, token.TokenPosition) {
 
 	args := []ast.TypeExpression{}
-	p.expect(token.LSS)
+	start := p.expect(token.LSS)
 
 	if p.match(token.GTR) {
 		panic("expected at least 1 argument")
@@ -97,11 +103,11 @@ func (p *Parser) parseGenericArgumentClauseExpression() []ast.TypeExpression {
 		args = append(args, expr)
 	}
 
-	p.expect(token.GTR)
+	end := p.expect(token.GTR)
 
 	if len(args) == 0 {
 		panic("expected arguments")
 	}
 
-	return args
+	return args, start.Pos, end.Pos
 }

@@ -5,16 +5,16 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/collections"
+	"github.com/mantton/calypso/internal/calypso/lexer"
 )
 
 type Resolver struct {
-	Errors []string
+	Errors lexer.ErrorList
 	scopes collections.Stack[*Scope]
 }
 
 func New() *Resolver {
 	return &Resolver{
-		Errors: []string{},
 		scopes: collections.Stack[*Scope]{},
 	}
 }
@@ -44,6 +44,10 @@ func (r *Resolver) Define(ident string) {
 		panic("unbalanced scopes")
 	}
 
+	if _, ok := s.Get(ident); !ok {
+		panic("variable is not declared in scope")
+	}
+
 	s.Define(ident)
 }
 
@@ -57,6 +61,10 @@ func (r *Resolver) Declare(ident string) {
 	// No Scope
 	if !ok {
 		panic("unbalanced scopes")
+	}
+
+	if s.Has(ident) {
+		panic("variable is already declared in scope")
 	}
 
 	s.Declare(ident)
@@ -103,18 +111,29 @@ func (r *Resolver) ResolveFile(file *ast.File) {
 }
 
 func (r *Resolver) resolveDeclaration(decl ast.Declaration) {
-	switch decl := decl.(type) {
-	case *ast.ConstantDeclaration:
-		stmt := decl.Stmt
-		r.resolveStatement(stmt)
-	case *ast.FunctionDeclaration:
-		expr := decl.Func
-		r.resolveExpression(expr)
-	default:
-		msg := fmt.Sprintf("expression declaration not implemented, %T", decl)
-		panic(msg)
 
-	}
+	func() {
+		defer func() {
+			if err := recover(); err != nil {
+				if err, y := err.(lexer.Error); y {
+					r.Errors.Add(err)
+				} else {
+					panic(r)
+				}
+			}
+		}()
+		switch decl := decl.(type) {
+		case *ast.ConstantDeclaration:
+			stmt := decl.Stmt
+			r.resolveStatement(stmt)
+		case *ast.FunctionDeclaration:
+			expr := decl.Func
+			r.resolveExpression(expr)
+		default:
+			msg := fmt.Sprintf("expression declaration not implemented, %T", decl)
+			panic(msg)
+		}
+	}()
 
 }
 

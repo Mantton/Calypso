@@ -29,11 +29,11 @@ func (t *TypeChecker) checkVariableStatement(stmt *ast.VariableStatement) {
 	// Infer Variable Type From Initializer if no annotation is provided
 	if stmt.TypeAnnotation == nil {
 		// Define In Scope
-		t.define(stmt.Identifier, initializer)
+		t.define(stmt.Identifier.Value, initializer)
 		return
 	}
 
 	// Define In Scope
 	t.mustValidate(initializer, annotation)
-	t.define(stmt.Identifier, annotation)
+	t.define(stmt.Identifier.Value, annotation)
 }

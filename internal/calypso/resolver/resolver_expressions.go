@@ -32,8 +32,8 @@ func (r *Resolver) resolveIdentifierExpression(expr *ast.IdentifierExpression) {
 }
 
 func (r *Resolver) resolveFunctionExpression(expr *ast.FunctionExpression) {
-	r.Declare(expr.Name)
-	r.Define(expr.Name)
+	r.Declare(expr.Identifier.Value)
+	r.Define(expr.Identifier.Value)
 
 	// Enter Function Scope
 	r.enterScope()

@@ -44,6 +44,8 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 		}
 	}
 
+	return 0
+
 	// Type Checker
 	typeChecker := typechecker.New(typechecker.STD)
 	typeChecker.CheckFile(file)

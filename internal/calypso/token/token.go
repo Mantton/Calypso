@@ -19,6 +19,11 @@ type TokenPosition struct {
 	End    int
 }
 
+type SyntaxRange struct {
+	Start TokenPosition
+	End   TokenPosition
+}
+
 func (p TokenPosition) Length() int {
 	return p.End - p.Start
 }
