@@ -26,12 +26,7 @@ func (s *Scope) Define(ident string) {
 }
 
 func (s *Scope) Has(ident string) bool {
-	sc, ok := s.Get(ident)
-
-	if ok && sc == DECLARED {
-		panic("declared but not defined")
-	}
-
+	_, ok := s.Get(ident)
 	return ok
 }
 

@@ -63,5 +63,6 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 }
 
 func (e *Evaluator) ErrorMessage(filepath string, error *lexer.Error) string {
-	return fmt.Sprintf("\n%s:%d:%d\n\t%s", filepath, error.Start.Line, error.Start.Offset, error.Message)
+	panic("FIX")
+	// return fmt.Sprintf("\n%s:%d:%d\n\t%s", filepath, error.Start.Line, error.Start.Offset, error.Message)
 }

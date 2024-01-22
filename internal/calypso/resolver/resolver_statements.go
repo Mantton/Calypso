@@ -4,9 +4,9 @@ import "github.com/mantton/calypso/internal/calypso/ast"
 
 // * Statements
 func (r *Resolver) resolveVariableStatement(stmt *ast.VariableStatement) {
-	r.Declare(stmt.Identifier.Value)
+	r.Declare(stmt.Identifier)
 	r.resolveExpression(stmt.Value)
-	r.Define(stmt.Identifier.Value)
+	r.Define(stmt.Identifier)
 }
 
 func (r *Resolver) resolveBlockStatement(block *ast.BlockStatement) {

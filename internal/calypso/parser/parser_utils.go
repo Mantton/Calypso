@@ -88,8 +88,10 @@ func (p *Parser) error(message string) lexer.Error {
 		end = p.currentScannedToken()
 	}
 	return lexer.Error{
-		Start:   p.currentScannedToken().Pos,
-		End:     end.Pos,
+		Range: token.SyntaxRange{
+			Start: p.currentScannedToken().Pos,
+			End:   end.Pos,
+		},
 		Message: message,
 	}
 

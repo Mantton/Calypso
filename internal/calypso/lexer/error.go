@@ -3,8 +3,7 @@ package lexer
 import "github.com/mantton/calypso/internal/calypso/token"
 
 type Error struct {
-	Start   token.TokenPosition
-	End     token.TokenPosition
+	Range   token.SyntaxRange
 	Message string
 }
 

@@ -32,7 +32,7 @@ func (r *Resolver) leaveScope() {
 	r.scopes.Pop()
 }
 
-func (r *Resolver) Define(ident string) {
+func (r *Resolver) Define(ident *ast.IdentifierExpression) {
 	if r.scopes.IsEmpty() {
 		return
 	}
@@ -44,14 +44,16 @@ func (r *Resolver) Define(ident string) {
 		panic("unbalanced scopes")
 	}
 
-	if _, ok := s.Get(ident); !ok {
-		panic("variable is not declared in scope")
+	if _, ok := s.Get(ident.Value); !ok {
+
+		msg := fmt.Sprintf("Variable `%s` is not declared in current scope", ident.Value)
+		panic(r.error(msg, ident))
 	}
 
-	s.Define(ident)
+	s.Define(ident.Value)
 }
 
-func (r *Resolver) Declare(ident string) {
+func (r *Resolver) Declare(ident *ast.IdentifierExpression) {
 	if r.scopes.IsEmpty() {
 		return
 	}
@@ -63,14 +65,15 @@ func (r *Resolver) Declare(ident string) {
 		panic("unbalanced scopes")
 	}
 
-	if s.Has(ident) {
-		panic("variable is already declared in scope")
+	if s.Has(ident.Value) {
+		msg := fmt.Sprintf("Variable `%s` is already declared in current scope", ident.Value)
+		panic(r.error(msg, ident))
 	}
 
-	s.Declare(ident)
+	s.Declare(ident.Value)
 }
 
-func (r *Resolver) ExpectInFile(ident string) {
+func (r *Resolver) ExpectInFile(ident *ast.IdentifierExpression) {
 	if r.scopes.IsEmpty() {
 		panic("unbalanced scopes")
 	}
@@ -81,13 +84,13 @@ func (r *Resolver) ExpectInFile(ident string) {
 			panic("unbalanced scope")
 		}
 
-		if s.Has(ident) {
+		if s.Has(ident.Value) {
 			return
 		}
 	}
 
-	fmt.Println(ident)
-	panic("ident not found in scope")
+	msg := fmt.Sprintf("Variable `%s` cannot be found in the current scope", ident.Value)
+	panic(r.error(msg, ident))
 }
 
 // * Resolvers
@@ -188,4 +191,11 @@ func (r *Resolver) resolveExpression(expr ast.Expression) {
 		panic(msg)
 	}
 
+}
+
+func (r *Resolver) error(message string, expr ast.Expression) lexer.Error {
+	return lexer.Error{
+		Range:   expr.Range(),
+		Message: message,
+	}
 }

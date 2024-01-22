@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 )
 
@@ -17,7 +19,7 @@ func (r *Resolver) resolveIdentifierExpression(expr *ast.IdentifierExpression) {
 
 	// Value Not in Scope
 	if !ok {
-		r.ExpectInFile(expr.Value)
+		r.ExpectInFile(expr)
 		return
 	}
 
@@ -25,23 +27,24 @@ func (r *Resolver) resolveIdentifierExpression(expr *ast.IdentifierExpression) {
 
 	// Value in Scope But is Just Declared
 	if state == DECLARED {
-		panic("cannot read local variable in its own definition")
+		msg := fmt.Sprintf("`%s` cannot be used in it's own definition", expr.Value)
+		panic(r.error(msg, expr))
 	}
 
 	// Value IN Scope & Is Defined, do nothing
 }
 
 func (r *Resolver) resolveFunctionExpression(expr *ast.FunctionExpression) {
-	r.Declare(expr.Identifier.Value)
-	r.Define(expr.Identifier.Value)
+	r.Declare(expr.Identifier)
+	r.Define(expr.Identifier)
 
 	// Enter Function Scope
 	r.enterScope()
 
 	// Declare & Define Parameters
 	for _, param := range expr.Params {
-		r.Declare(param.Value)
-		r.Define(param.Value)
+		r.Declare(param)
+		r.Define(param)
 	}
 
 	// Resolve Function Body
@@ -58,10 +61,10 @@ func (r *Resolver) resolveAssignmentExpression(expr *ast.AssignmentExpression) {
 	target, ok := expr.Target.(*ast.IdentifierExpression)
 
 	if !ok {
-		panic("expected identifier")
+		panic(r.error("expected identifier expression", expr.Value))
 	}
 
-	r.ExpectInFile(target.Value)
+	r.ExpectInFile(target)
 
 }
 
