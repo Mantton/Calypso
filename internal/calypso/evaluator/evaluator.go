@@ -65,7 +65,7 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 
 func (e *Evaluator) ErrorMessage(filepath string, err *lexer.Error, lines []string) string {
 	msg := fmt.Sprintf("\n%s:%d:%d -> %s", filepath, err.Range.Start.Line, err.Range.Start.Offset, err.Message)
-	msg += fmt.Sprintf("\n\t%s", lines[err.Range.Start.Line-1])
+	msg += fmt.Sprintf("\n\t%s", lines[max(0, err.Range.Start.Line-1)])
 	// TODO: Arrow
 	return msg
 }

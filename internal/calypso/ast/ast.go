@@ -216,3 +216,9 @@ type MapTypeExpression struct {
 	LBracketPos token.TokenPosition
 	RBracketPos token.TokenPosition
 }
+
+type FunctionTypeExpression struct {
+	Identifier *IdentifierExpression
+	Arguments  []TypeExpression
+	ReturnType TypeExpression
+}

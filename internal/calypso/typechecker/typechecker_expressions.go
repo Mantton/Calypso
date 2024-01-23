@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/token"
 )
 
 func (t *TypeChecker) evaluateExpression(expr ast.Expression) ExpressionType {
@@ -30,10 +31,107 @@ func (t *TypeChecker) evaluateExpression(expr ast.Expression) ExpressionType {
 		return t.get(expr.Identifier)
 	case *ast.IdentifierExpression:
 		return t.get(expr)
+	case *ast.UnaryExpression:
+		return t.evaluateUnaryExpression(expr)
+	case *ast.AssignmentExpression:
+		return t.evaluateAssignmentExpression(expr)
+	case *ast.GroupedExpression:
+		return t.evaluateGroupedExpression(expr)
+	case *ast.BinaryExpression:
+		return t.evaluateBinaryExpression(expr)
+	case *ast.CallExpression:
+		return t.evaluateCallExpression(expr)
+	case *ast.IndexExpression:
+		return t.evaluateIndexExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
 	}
+}
+
+func (t *TypeChecker) evaluateUnaryExpression(expr *ast.UnaryExpression) ExpressionType {
+	op := expr.Op
+	provided := t.evaluateExpression(expr.Expr)
+	switch op {
+	case token.NOT:
+		panic("TODO: NOT Operator")
+		// Returns a boolean type for sure.
+	case token.SUB:
+		expected := GenerateBaseType("IntegerLiteral")
+		if !t.validate(provided, expected) {
+			msg := fmt.Sprintf("expected `%s`, received `%s`", expected, provided)
+			panic(t.error(msg, expr.Expr))
+		}
+
+	default:
+		panic("Bad Logic Path")
+	}
+
+	return provided
+}
+
+func (t *TypeChecker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) ExpressionType {
+
+	expected := t.evaluateExpression(expr.Target)
+	provided := t.evaluateExpression(expr.Value)
+
+	t.mustValidate(provided, expected, expr.Value)
+	return GenerateBaseType("VoidLiteral")
+}
+
+func (t *TypeChecker) evaluateGroupedExpression(expr *ast.GroupedExpression) ExpressionType {
+	return t.evaluateExpression(expr.Expr)
+}
+
+func (t *TypeChecker) evaluateBinaryExpression(expr *ast.BinaryExpression) ExpressionType {
+
+	left := t.evaluateExpression(expr.Left)
+	right := t.evaluateExpression(expr.Right)
+	t.mustValidate(left, right, expr.Right)
+
+	op := expr.Op
+	// TODO: Further checks
+	switch op {
+	case token.ADD, token.SUB, token.MUL, token.REM:
+		return left
+
+	case token.LSS, token.GTR, token.LEQ, token.GEQ, token.EQL, token.NEQ:
+		return GenerateBaseType("BooleanLiteral")
+	}
+
+	return left
+}
+
+func (t *TypeChecker) evaluateCallExpression(expr *ast.CallExpression) ExpressionType {
+	target := t.evaluateExpression(expr.Target)
+
+	switch target := target.(type) {
+	case *FunctionType:
+		// Check Arguments are of correct type
+		expectedArgCount := len(target.Params)
+		providedArgCount := len(expr.Arguments)
+
+		if expectedArgCount != providedArgCount {
+			msg := fmt.Sprintf("expected %d arguments, provided %d instead", expectedArgCount, providedArgCount)
+			panic(t.error(msg, expr.Target))
+		}
+
+		for idx, arg := range expr.Arguments {
+			provided := t.evaluateExpression(arg)
+			expected := target.Params[idx]
+			t.mustValidate(provided, expected, arg)
+		}
+
+		return target.Return
+
+	default:
+		panic("TODO: handle call expression")
+
+	}
+}
+
+func (t *TypeChecker) evaluateIndexExpression(expr *ast.IndexExpression) ExpressionType {
+	panic("TODO: standards")
 }
 
 func (t *TypeChecker) evaluateExpressionList(exprs []ast.Expression) ExpressionType {
@@ -106,6 +204,7 @@ func (t *TypeChecker) checkExpression(expr ast.Expression) {
 
 func (t *TypeChecker) checkFunctionExpression(expr *ast.FunctionExpression) {
 	prevCFS := t.cfs
+	params := []ExpressionType{}
 	// Enter Function Scope
 	t.enterScope()
 	t.cfs = &CurrentFunctionState{}
@@ -115,6 +214,7 @@ func (t *TypeChecker) checkFunctionExpression(expr *ast.FunctionExpression) {
 
 		paramType := t.evaluateTypeExpression(param.AnnotatedType)
 		t.register(param.Value, paramType)
+		params = append(params, paramType)
 	}
 
 	// TypeCheck Return Type If Provided
@@ -151,7 +251,8 @@ func (t *TypeChecker) checkFunctionExpression(expr *ast.FunctionExpression) {
 	}
 
 	// Resolution Complete, define &  leave function scope
-	t.define(expr.Identifier, retType)
+	fnType := GenerateFunctionType(expr.Identifier.Value, retType, params...)
 	t.leaveScope()
+	t.define(expr.Identifier, fnType)
 	t.cfs = prevCFS
 }
