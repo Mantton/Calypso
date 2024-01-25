@@ -42,5 +42,9 @@ func (r *Resolver) resolveWhileStatement(stmt *ast.WhileStatement) {
 }
 
 func (r *Resolver) resolveAliasStatement(stmt *ast.AliasStatement) {
-	// TODO: Does the resolver have to do anything here ?
+	// TODO: resolve alias identifier
+}
+
+func (r *Resolver) resolveStructStatement(stmt *ast.StructStatement) {
+	// TODO: resolve struct identifier
 }

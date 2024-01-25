@@ -5,16 +5,6 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-func (p *Parser) parsePossibleTypeExpression() ast.TypeExpression {
-	if !p.match(token.COLON) {
-		return nil
-	}
-	// have matched colon, on type expression
-
-	return p.parseTypeExpression()
-
-}
-
 func (p *Parser) parseTypeExpression() ast.TypeExpression {
 
 	switch p.current() {
@@ -56,7 +46,7 @@ func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
 
 func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
-	ident := p.parseIdentifier()
+	ident := p.parseIdentifier(false)
 	var args *ast.GenericArgumentsClause
 	if p.currentMatches(token.LSS) {
 		args = p.parseGenericArgumentsClause()
@@ -170,6 +160,6 @@ It will parse the `T : Foo & Bar & Baz` Parameter
 func (p *Parser) parseGenericParameterExpression() *ast.GenericParameterExpression {
 	// TODO: Parse Standards
 	return &ast.GenericParameterExpression{
-		Identifier: p.parseIdentifier(),
+		Identifier: p.parseIdentifier(true),
 	}
 }

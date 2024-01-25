@@ -67,11 +67,10 @@ type BlockStatement struct {
 }
 
 type VariableStatement struct {
-	KeyWPos        token.TokenPosition
-	Identifier     *IdentifierExpression
-	Value          Expression
-	IsConstant     bool
-	TypeAnnotation TypeExpression
+	KeyWPos    token.TokenPosition
+	Identifier *IdentifierExpression
+	Value      Expression
+	IsConstant bool
 }
 
 type FunctionStatement struct {
@@ -101,11 +100,19 @@ type ExpressionStatement struct {
 }
 
 type AliasStatement struct {
-	KewWPos       token.TokenPosition
+	KeyWPos       token.TokenPosition
 	EqPos         token.TokenPosition
 	Target        TypeExpression
 	Identifier    *IdentifierExpression
 	GenericParams *GenericParametersClause
+}
+
+type StructStatement struct {
+	KeyWPos    token.TokenPosition
+	Identifier *IdentifierExpression
+	LBracePos  token.TokenPosition
+	RBracePos  token.TokenPosition
+	Properties []*IdentifierExpression
 }
 
 // * Expressions

@@ -91,6 +91,7 @@ const (
 	ALIAS
 	STANDARD
 	TYPE
+	STRUCT
 	kw_e // Keywords End
 )
 
@@ -115,6 +116,7 @@ var keywords = map[string]Token{
 	"alias":    ALIAS,
 	"standard": STANDARD,
 	"type":     TYPE,
+	"struct":   STRUCT,
 }
 
 func LookupIdent(ident string) Token {
@@ -134,7 +136,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT:
 		return true
 	}
 
@@ -182,6 +184,7 @@ var tokens = map[Token]string{
 	ALIAS:    "alias",
 	STANDARD: "standard",
 	TYPE:     "type",
+	STRUCT:   "struct",
 
 	IDENTIFIER: "IDENTIFIER",
 }

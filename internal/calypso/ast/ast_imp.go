@@ -196,8 +196,15 @@ func (e *FunctionStatement) Range() token.SyntaxRange {
 
 func (e *AliasStatement) Range() token.SyntaxRange {
 	return token.SyntaxRange{
-		Start: e.KewWPos,
+		Start: e.KeyWPos,
 		End:   e.Target.Range().End,
+	}
+}
+
+func (e *StructStatement) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.RBracePos,
 	}
 }
 
@@ -209,6 +216,7 @@ func (s *BlockStatement) statementNode()      {}
 func (s *VariableStatement) statementNode()   {}
 func (s *FunctionStatement) statementNode()   {}
 func (s *AliasStatement) statementNode()      {}
+func (s *StructStatement) statementNode()     {}
 
 // * Declarations
 func (e *ConstantDeclaration) Range() token.SyntaxRange {

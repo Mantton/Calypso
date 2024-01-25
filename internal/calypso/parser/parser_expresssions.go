@@ -145,7 +145,7 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 
 	if p.match(token.PERIOD) {
 		opPos := p.previousScannedToken().Pos
-		prop := p.parseIdentifier()
+		prop := p.parseIdentifier(false)
 
 		return &ast.PropertyExpression{
 			Target:   expr,
@@ -289,7 +289,7 @@ func (p *Parser) parseFunctionExpression(requiresBody bool) *ast.FunctionExpress
 	start := p.expect(token.FUNC) // Expect current to be `func`, consume
 
 	// Name
-	ident := p.parseIdentifier()
+	ident := p.parseIdentifier(false)
 
 	var genParams *ast.GenericParametersClause
 
@@ -360,27 +360,12 @@ func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {
 		return identifiers
 	}
 
-	expr := p.parseIdentifier()
-	if p.match(token.COLON) {
-		exprType := p.parseTypeExpression()
-		expr.AnnotatedType = exprType
-	} else {
-		p.reverse()
-		panic(p.error("expected type expression"))
-	}
+	expr := p.parseIdentifier(true)
 
 	identifiers = append(identifiers, expr)
 
 	for p.match(token.COMMA) {
-		expr := p.parseIdentifier()
-
-		if p.match(token.COLON) {
-			exprType := p.parseTypeExpression()
-			expr.AnnotatedType = exprType
-		} else {
-			panic(p.error("expected type expression"))
-		}
-
+		expr := p.parseIdentifier(true)
 		identifiers = append(identifiers, expr)
 	}
 
@@ -389,13 +374,23 @@ func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {
 	return identifiers
 }
 
-func (p *Parser) parseIdentifier() *ast.IdentifierExpression {
+func (p *Parser) parseIdentifier(expectAnnotation bool) *ast.IdentifierExpression {
 
 	tok := p.expect(token.IDENTIFIER)
+	var annotation ast.TypeExpression
+
+	if p.match(token.COLON) {
+		annotation = p.parseTypeExpression()
+	}
+
+	if expectAnnotation && annotation == nil {
+		panic(p.error("expected type annotation"))
+	}
 
 	return &ast.IdentifierExpression{
-		Value: tok.Lit,
-		Pos:   tok.Pos,
+		Value:         tok.Lit,
+		Pos:           tok.Pos,
+		AnnotatedType: annotation,
 	}
 }
 

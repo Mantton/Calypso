@@ -44,11 +44,12 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 func (p *Parser) parseStatementDeclaration() *ast.StatementDeclaration {
 
 	switch p.current() {
-	case token.ALIAS:
+	case token.ALIAS, token.STRUCT:
 		stmt := p.parseStatement()
 		return &ast.StatementDeclaration{
 			Stmt: stmt,
 		}
+
 	default:
 		msg := fmt.Sprintf("expected declaration, `%s` does not start a declaration", p.currentScannedToken().Lit)
 		panic(p.error(msg))
@@ -92,7 +93,7 @@ func (p *Parser) parseStatementList() []ast.Statement {
 func (p *Parser) parseStandardDeclaration() *ast.StandardDeclaration {
 
 	keyw := p.expect(token.STANDARD)
-	ident := p.parseIdentifier()
+	ident := p.parseIdentifier(false)
 
 	/*
 		TODO:
@@ -115,7 +116,7 @@ func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
 
 	// Consume TypeExpression
 
-	ident := p.parseIdentifier()
+	ident := p.parseIdentifier(false)
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause

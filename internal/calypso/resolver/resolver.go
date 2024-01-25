@@ -156,6 +156,8 @@ func (r *Resolver) resolveStatement(stmt ast.Statement) {
 		r.resolveWhileStatement(stmt)
 	case *ast.AliasStatement:
 		r.resolveAliasStatement(stmt)
+	case *ast.StructStatement:
+		r.resolveStructStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement resolution not implemented, %T", stmt)
 		panic(msg)

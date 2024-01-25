@@ -23,6 +23,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return &ast.FunctionStatement{
 			Func: p.parseFunctionExpression(false),
 		}
+	case token.STRUCT:
+		return p.parseStructStatement()
 
 	}
 
@@ -38,10 +40,9 @@ func (p *Parser) parseVariableStatement() *ast.VariableStatement {
 	isConst := p.current() == token.CONST
 	start := p.currentScannedToken().Pos
 	p.next() // Move to next token
-	ident := p.parseIdentifier()
+	ident := p.parseIdentifier(false)
 
 	// Parse Type Expression If Found
-	t := p.parsePossibleTypeExpression()
 
 	p.expect(token.ASSIGN)
 
@@ -50,11 +51,10 @@ func (p *Parser) parseVariableStatement() *ast.VariableStatement {
 	p.expect(token.SEMICOLON)
 
 	return &ast.VariableStatement{
-		KeyWPos:        start,
-		Identifier:     ident,
-		Value:          expr,
-		IsConstant:     isConst,
-		TypeAnnotation: t,
+		KeyWPos:    start,
+		Identifier: ident,
+		Value:      expr,
+		IsConstant: isConst,
 	}
 
 }
@@ -185,11 +185,7 @@ func (p *Parser) parseAliasStatement() *ast.AliasStatement {
 
 	// Consume TypeExpression
 
-	if !p.currentMatches(token.IDENTIFIER) {
-		panic(p.error("expected identifier"))
-	}
-
-	ident := p.parseIdentifier()
+	ident := p.parseIdentifier(false)
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause
@@ -204,11 +200,39 @@ func (p *Parser) parseAliasStatement() *ast.AliasStatement {
 	p.expect(token.SEMICOLON)
 
 	return &ast.AliasStatement{
-		KewWPos:       kwPos,
+		KeyWPos:       kwPos,
 		EqPos:         eqPos,
 		Identifier:    ident,
 		Target:        target,
 		GenericParams: params,
 	}
 
+}
+
+func (p *Parser) parseStructStatement() *ast.StructStatement {
+
+	keyw := p.expect(token.STRUCT)
+
+	ident := p.parseIdentifier(false)
+
+	lBrace := p.expect(token.LBRACE)
+
+	properties := []*ast.IdentifierExpression{}
+
+	for p.current() != token.RBRACE {
+		properties = append(properties, p.parseIdentifier(true))
+		p.expect(token.SEMICOLON)
+	}
+
+	rBrace := p.expect(token.RBRACE)
+
+	p.expect(token.SEMICOLON)
+
+	return &ast.StructStatement{
+		KeyWPos:    keyw.Pos,
+		Identifier: ident,
+		LBracePos:  lBrace.Pos,
+		RBracePos:  rBrace.Pos,
+		Properties: properties,
+	}
 }
