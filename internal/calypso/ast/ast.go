@@ -45,6 +45,12 @@ type StatementDeclaration struct {
 	Stmt Statement
 }
 
+type StandardDeclaration struct {
+	KeyWPos    token.TokenPosition
+	Identifier *IdentifierExpression
+	Block      *BlockStatement
+}
+
 // * Statements
 type BlockStatement struct {
 	LBrackPos  token.TokenPosition

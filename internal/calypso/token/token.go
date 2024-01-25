@@ -89,6 +89,7 @@ const (
 	RETURN
 	WHILE
 	ALIAS
+	STANDARD
 	kw_e // Keywords End
 )
 
@@ -98,19 +99,20 @@ func (t ScannedToken) String() string {
 }
 
 var keywords = map[string]Token{
-	"func":   FUNC,
-	"let":    LET,
-	"const":  CONST,
-	"module": MODULE,
-	"true":   TRUE,
-	"false":  FALSE,
-	"null":   NULL,
-	"void":   VOID,
-	"if":     IF,
-	"else":   ELSE,
-	"return": RETURN,
-	"while":  WHILE,
-	"alias":  ALIAS,
+	"func":     FUNC,
+	"let":      LET,
+	"const":    CONST,
+	"module":   MODULE,
+	"true":     TRUE,
+	"false":    FALSE,
+	"null":     NULL,
+	"void":     VOID,
+	"if":       IF,
+	"else":     ELSE,
+	"return":   RETURN,
+	"while":    WHILE,
+	"alias":    ALIAS,
+	"standard": STANDARD,
 }
 
 func LookupIdent(ident string) Token {
@@ -122,7 +124,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE:
+	case FUNC, CONST, MODULE, STANDARD:
 		return true
 	}
 	return false
@@ -130,7 +132,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS:
 		return true
 	}
 

@@ -285,7 +285,7 @@ func (p *Parser) parseExpressionList(start, end token.Token) ([]ast.Expression, 
 	return list, s.Pos, e.Pos
 }
 
-func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
+func (p *Parser) parseFunctionExpression(requiresBody bool) *ast.FunctionExpression {
 	start := p.expect(token.FUNC) // Expect current to be `func`, consume
 
 	// Name
@@ -307,7 +307,16 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 	retType := p.parseFunctionReturnType()
 
 	// Body
-	body := p.parseFunctionBody()
+
+	var body *ast.BlockStatement
+
+	if p.currentMatches(token.LBRACE) {
+		body = p.parseFunctionBody()
+	} else if requiresBody {
+		panic(p.error("expected function body"))
+	} else {
+		p.expect(token.SEMICOLON)
+	}
 
 	return &ast.FunctionExpression{
 		KeyWPos:       start.Pos,

@@ -19,6 +19,10 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseExpressionStatement()
 	case token.ALIAS:
 		return p.parseAliasStatement()
+	case token.FUNC:
+		return &ast.FunctionStatement{
+			Func: p.parseFunctionExpression(false),
+		}
 
 	}
 

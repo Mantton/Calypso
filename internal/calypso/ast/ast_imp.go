@@ -223,9 +223,17 @@ func (e *StatementDeclaration) Range() token.SyntaxRange {
 	return e.Stmt.Range()
 }
 
+func (e *StandardDeclaration) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.Block.RBrackPos,
+	}
+}
+
 func (d *ConstantDeclaration) declarationNode()  {}
 func (d *StatementDeclaration) declarationNode() {}
 func (d *FunctionDeclaration) declarationNode()  {}
+func (d *StandardDeclaration) declarationNode()  {}
 
 // * Types
 func (e *IdentifierTypeExpression) Range() token.SyntaxRange {

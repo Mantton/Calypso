@@ -19,6 +19,8 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 
 	case token.FUNC:
 		return p.parseFunctionDeclaration()
+	case token.STANDARD:
+		return p.parseStandardDeclaration()
 	default:
 		return p.parseStatementDeclaration()
 	}
@@ -26,7 +28,11 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 
-	fn := p.parseFunctionExpression()
+	fn := p.parseFunctionExpression(true)
+
+	if fn.Body == nil {
+		panic(p.error("expected body in function declaration"))
+	}
 
 	return &ast.FunctionDeclaration{
 		Func: fn,
@@ -79,4 +85,24 @@ func (p *Parser) parseStatementList() []ast.Statement {
 
 	return list
 
+}
+
+func (p *Parser) parseStandardDeclaration() *ast.StandardDeclaration {
+
+	keyw := p.expect(token.STANDARD)
+	ident := p.parseIdentifier()
+
+	/*
+		TODO:
+			Standards should behave similarly to rust traits,
+			They should have constants, methods & types
+	*/
+
+	block := p.parseBlockStatement()
+
+	return &ast.StandardDeclaration{
+		KeyWPos:    keyw.Pos,
+		Identifier: ident,
+		Block:      block,
+	}
 }
