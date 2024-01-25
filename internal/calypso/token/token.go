@@ -92,6 +92,7 @@ const (
 	STANDARD
 	TYPE
 	STRUCT
+	EXTENSION
 	kw_e // Keywords End
 )
 
@@ -101,22 +102,23 @@ func (t ScannedToken) String() string {
 }
 
 var keywords = map[string]Token{
-	"func":     FUNC,
-	"let":      LET,
-	"const":    CONST,
-	"module":   MODULE,
-	"true":     TRUE,
-	"false":    FALSE,
-	"null":     NULL,
-	"void":     VOID,
-	"if":       IF,
-	"else":     ELSE,
-	"return":   RETURN,
-	"while":    WHILE,
-	"alias":    ALIAS,
-	"standard": STANDARD,
-	"type":     TYPE,
-	"struct":   STRUCT,
+	"func":      FUNC,
+	"let":       LET,
+	"const":     CONST,
+	"module":    MODULE,
+	"true":      TRUE,
+	"false":     FALSE,
+	"null":      NULL,
+	"void":      VOID,
+	"if":        IF,
+	"else":      ELSE,
+	"return":    RETURN,
+	"while":     WHILE,
+	"alias":     ALIAS,
+	"standard":  STANDARD,
+	"type":      TYPE,
+	"struct":    STRUCT,
+	"extension": EXTENSION,
 }
 
 func LookupIdent(ident string) Token {
@@ -128,7 +130,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE, STANDARD, TYPE:
+	case FUNC, CONST, MODULE, STANDARD, TYPE, EXTENSION:
 		return true
 	}
 	return false
@@ -174,17 +176,18 @@ var tokens = map[Token]string{
 	COLON:     ":",
 	R_ARROW:   "->",
 
-	CONST:    "const",
-	FUNC:     "func",
-	LET:      "let",
-	IF:       "if",
-	ELSE:     "else",
-	RETURN:   "return",
-	WHILE:    "while",
-	ALIAS:    "alias",
-	STANDARD: "standard",
-	TYPE:     "type",
-	STRUCT:   "struct",
+	CONST:     "const",
+	FUNC:      "func",
+	LET:       "let",
+	IF:        "if",
+	ELSE:      "else",
+	RETURN:    "return",
+	WHILE:     "while",
+	ALIAS:     "alias",
+	STANDARD:  "standard",
+	TYPE:      "type",
+	STRUCT:    "struct",
+	EXTENSION: "extension",
 
 	IDENTIFIER: "IDENTIFIER",
 }

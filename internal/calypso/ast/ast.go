@@ -59,6 +59,14 @@ type TypeDeclaration struct {
 	Value         TypeExpression
 }
 
+type ExtensionDeclaration struct {
+	KeyWPos    token.TokenPosition
+	Identifier *IdentifierExpression
+	LBracePos  token.TokenPosition
+	Content    []*FunctionStatement
+	RBracePos  token.TokenPosition
+}
+
 // * Statements
 type BlockStatement struct {
 	LBrackPos  token.TokenPosition

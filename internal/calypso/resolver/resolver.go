@@ -129,9 +129,10 @@ func (r *Resolver) resolveDeclaration(decl ast.Declaration) {
 		case *ast.StatementDeclaration:
 			stmt := decl.Stmt
 			r.resolveStatement(stmt)
-		case *ast.StandardDeclaration, *ast.TypeDeclaration:
+		case *ast.StandardDeclaration, *ast.TypeDeclaration, *ast.ExtensionDeclaration:
 			// TODO: Add To Scope
 			break
+
 		default:
 			msg := fmt.Sprintf("expression declaration not implemented, %T", decl)
 			panic(msg)

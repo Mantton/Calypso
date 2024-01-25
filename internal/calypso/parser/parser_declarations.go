@@ -23,6 +23,8 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 		return p.parseStandardDeclaration()
 	case token.TYPE:
 		return p.parseTypeDeclaration()
+	case token.EXTENSION:
+		return p.parseExtensionDeclaration()
 	default:
 		return p.parseStatementDeclaration()
 	}
@@ -138,4 +140,36 @@ func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
 		Value:         value,
 		Identifier:    ident,
 	}
+}
+
+func (p *Parser) parseExtensionDeclaration() *ast.ExtensionDeclaration {
+
+	kw := p.expect(token.EXTENSION)
+
+	ident := p.parseIdentifier(false)
+
+	lBrace := p.expect(token.LBRACE)
+
+	// Parse Functions in Extension
+
+	content := []*ast.FunctionStatement{}
+
+	for p.current() != token.RBRACE {
+
+		f := &ast.FunctionStatement{
+			Func: p.parseFunctionExpression(true),
+		}
+		content = append(content, f)
+	}
+
+	rBrace := p.expect(token.RBRACE)
+
+	return &ast.ExtensionDeclaration{
+		KeyWPos:    kw.Pos,
+		Identifier: ident,
+		LBracePos:  lBrace.Pos,
+		Content:    content,
+		RBracePos:  rBrace.Pos,
+	}
+
 }
