@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
@@ -9,11 +11,7 @@ import (
 func (p *Parser) parseDeclaration() ast.Declaration {
 	switch p.current() {
 	case token.CONST:
-		stmt, err := p.parseVariableStatement()
-
-		if err != nil {
-			panic(err)
-		}
+		stmt := p.parseVariableStatement()
 
 		return &ast.ConstantDeclaration{
 			Stmt: stmt,
@@ -21,9 +19,9 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 
 	case token.FUNC:
 		return p.parseFunctionDeclaration()
+	default:
+		return p.parseStatementDeclaration()
 	}
-
-	panic(p.error("expected declaration"))
 }
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
@@ -32,6 +30,20 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 
 	return &ast.FunctionDeclaration{
 		Func: fn,
+	}
+}
+
+func (p *Parser) parseStatementDeclaration() *ast.StatementDeclaration {
+
+	switch p.current() {
+	case token.ALIAS:
+		stmt := p.parseStatement()
+		return &ast.StatementDeclaration{
+			Stmt: stmt,
+		}
+	default:
+		msg := fmt.Sprintf("expected declaration, `%s` does not start a declaration", p.currentScannedToken().Lit)
+		panic(p.error(msg))
 	}
 }
 
@@ -58,11 +70,7 @@ func (p *Parser) parseStatementList() []ast.Statement {
 				}
 			}()
 
-			statement, err := p.parseStatement()
-
-			if err != nil {
-				panic(err)
-			}
+			statement := p.parseStatement()
 
 			list = append(list, statement)
 		}()

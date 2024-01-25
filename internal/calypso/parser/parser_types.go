@@ -57,34 +57,32 @@ func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
 func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
 	ident := p.parseIdentifier()
-	args := []ast.TypeExpression{}
-	var start, end token.TokenPosition
+	var args *ast.GenericArgumentsClause
 	if p.currentMatches(token.LSS) {
-		args, start, end = p.parseGenericArgumentClauseExpression()
-	}
-
-	if len(args) != 0 {
-		return &ast.GenericTypeExpression{
-			Identifier:  ident,
-			Arguments:   args,
-			LChevronPos: start,
-			RChevronPos: end,
-		}
+		args = p.parseGenericArgumentsClause()
 	}
 
 	return &ast.IdentifierTypeExpression{
 		Identifier: ident,
+		Arguments:  args,
 	}
 
 }
 
-func (p *Parser) parseGenericArgumentClauseExpression() ([]ast.TypeExpression, token.TokenPosition, token.TokenPosition) {
+/*
+This parses a generic argument clause
+
+# Example
+
+`const foo: GenericType<int, string>`
+*/
+func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
 
 	args := []ast.TypeExpression{}
 	start := p.expect(token.LSS)
 
 	if p.match(token.GTR) {
-		panic("expected at least 1 argument")
+		panic(p.error("expected at least 1 generic argument"))
 	}
 
 	// First Argument
@@ -109,5 +107,69 @@ func (p *Parser) parseGenericArgumentClauseExpression() ([]ast.TypeExpression, t
 		panic("expected arguments")
 	}
 
-	return args, start.Pos, end.Pos
+	return &ast.GenericArgumentsClause{
+		LChevronPos: start.Pos,
+		RChevronPos: end.Pos,
+		Arguments:   args,
+	}
+}
+
+/*
+This parses a generic parameter clause
+
+# Example
+
+`alias set<T : Foo> = set<T>`
+*/
+func (p *Parser) parseGenericParameterClause() *ast.GenericParametersClause {
+	params := []*ast.GenericParameterExpression{}
+	start := p.expect(token.LSS)
+
+	if p.match(token.GTR) {
+		panic("expected at least 1 generic parameter")
+	}
+
+	// First Argument
+	param := p.parseGenericParameterExpression()
+	params = append(params, param)
+
+	// Check For Others
+	for p.match(token.COMMA) {
+
+		if p.match(token.GTR) {
+			panic(p.error("expected generic parameter"))
+		}
+
+		param := p.parseGenericParameterExpression()
+
+		params = append(params, param)
+	}
+
+	end := p.expect(token.GTR)
+
+	if len(params) == 0 {
+		panic(p.error("expected at least 1 generic parameter"))
+	}
+
+	return &ast.GenericParametersClause{
+		Parameters:  params,
+		LChevronPos: start.Pos,
+		RChevronPos: end.Pos,
+	}
+}
+
+/*
+Parses A Generic Parameter
+
+# Example
+
+`alias set<T : Foo & Bar & Baz> = set<T>`
+
+It will parse the `T : Foo & Bar & Baz` Parameter
+*/
+func (p *Parser) parseGenericParameterExpression() *ast.GenericParameterExpression {
+	// TODO: Parse Standards
+	return &ast.GenericParameterExpression{
+		Identifier: p.parseIdentifier(),
+	}
 }

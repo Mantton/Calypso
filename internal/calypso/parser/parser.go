@@ -30,8 +30,7 @@ func (p *Parser) Parse() *ast.File {
 	// Imports
 
 	// Declarations
-	var functions []*ast.FunctionDeclaration
-	var constants []*ast.ConstantDeclaration
+	var declarations []ast.Declaration
 
 	for p.current() != token.EOF {
 
@@ -55,23 +54,15 @@ func (p *Parser) Parse() *ast.File {
 
 			decl := p.parseDeclaration()
 
-			switch decl := decl.(type) {
-			case *ast.ConstantDeclaration:
-				constants = append(constants, decl)
-			case *ast.FunctionDeclaration:
-				functions = append(functions, decl)
-			default:
-				panic(p.error("unknown declaration"))
-			}
+			declarations = append(declarations, decl)
 		}()
 
 	}
 
 	return &ast.File{
-		ModuleName: moduleName,
-		Errors:     p.errors,
-		Functions:  functions,
-		Constants:  constants,
+		ModuleName:   moduleName,
+		Errors:       p.errors,
+		Declarations: declarations,
 	}
 
 }

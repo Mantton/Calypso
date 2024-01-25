@@ -40,3 +40,7 @@ func (r *Resolver) resolveWhileStatement(stmt *ast.WhileStatement) {
 	r.resolveExpression(stmt.Condition)
 	r.resolveStatement(stmt.Action)
 }
+
+func (r *Resolver) resolveAliasStatement(stmt *ast.AliasStatement) {
+	// TODO: Does the resolver have to do anything here ?
+}

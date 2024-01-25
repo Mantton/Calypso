@@ -5,7 +5,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-func (p *Parser) parseStatement() (ast.Statement, error) {
+func (p *Parser) parseStatement() ast.Statement {
 	switch p.current() {
 	case token.CONST, token.LET:
 		return p.parseVariableStatement()
@@ -17,12 +17,15 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		return p.parseWhileStatement()
 	case token.IDENTIFIER:
 		return p.parseExpressionStatement()
+	case token.ALIAS:
+		return p.parseAliasStatement()
+
 	}
 
 	panic(p.error("expected statement"))
 }
 
-func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
+func (p *Parser) parseVariableStatement() *ast.VariableStatement {
 	/**
 	let x = `expr`;
 	const y = `expr`;
@@ -48,7 +51,7 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 		Value:          expr,
 		IsConstant:     isConst,
 		TypeAnnotation: t,
-	}, nil
+	}
 
 }
 
@@ -74,7 +77,7 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 
 }
 
-func (p *Parser) parseIfStatement() (ast.Statement, error) {
+func (p *Parser) parseIfStatement() ast.Statement {
 	/**
 	  if (true) {
 		return false;
@@ -109,11 +112,11 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 		stmt.Alternative = alt
 	}
 
-	return stmt, nil
+	return stmt
 
 }
 
-func (p *Parser) parseReturnStatement() (ast.Statement, error) {
+func (p *Parser) parseReturnStatement() ast.Statement {
 	start := p.expect(token.RETURN)
 
 	var expr ast.Expression
@@ -130,11 +133,11 @@ func (p *Parser) parseReturnStatement() (ast.Statement, error) {
 	return &ast.ReturnStatement{
 		Value:   expr,
 		KeyWPos: start.Pos,
-	}, nil
+	}
 
 }
 
-func (p *Parser) parseWhileStatement() (ast.Statement, error) {
+func (p *Parser) parseWhileStatement() ast.Statement {
 	start := p.expect(token.WHILE)
 	// Condition
 	p.expect(token.LPAREN)
@@ -152,10 +155,10 @@ func (p *Parser) parseWhileStatement() (ast.Statement, error) {
 	block := p.parseBlockStatement()
 	stmt.Action = block
 
-	return stmt, nil
+	return stmt
 }
 
-func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
+func (p *Parser) parseExpressionStatement() ast.Statement {
 
 	expr := p.parseExpression()
 
@@ -164,9 +167,44 @@ func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
 		p.expect(token.SEMICOLON)
 		return &ast.ExpressionStatement{
 			Expr: expr,
-		}, nil
+		}
 	default:
 		panic(p.error("expected statement, not expression"))
+	}
+
+}
+
+func (p *Parser) parseAliasStatement() *ast.AliasStatement {
+
+	// Consume Keyword
+	kwPos := p.expect(token.ALIAS).Pos
+
+	// Consume TypeExpression
+
+	if !p.currentMatches(token.IDENTIFIER) {
+		panic(p.error("expected identifier"))
+	}
+
+	ident := p.parseIdentifier()
+
+	// Has Generic Parameters
+	var params *ast.GenericParametersClause
+	if p.currentMatches(token.LSS) {
+		params = p.parseGenericParameterClause()
+	}
+
+	// Assign
+	eqPos := p.expect(token.ASSIGN).Pos
+
+	target := p.parseTypeExpression()
+	p.expect(token.SEMICOLON)
+
+	return &ast.AliasStatement{
+		KewWPos:       kwPos,
+		EqPos:         eqPos,
+		Identifier:    ident,
+		Target:        target,
+		GenericParams: params,
 	}
 
 }

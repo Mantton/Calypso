@@ -291,6 +291,12 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 	// Name
 	ident := p.parseIdentifier()
 
+	var genParams *ast.GenericParametersClause
+
+	if p.currentMatches(token.LSS) {
+		genParams = p.parseGenericParameterClause()
+	}
+
 	// Parameters
 	params := p.parseFunctionParameters()
 
@@ -304,11 +310,12 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 	body := p.parseFunctionBody()
 
 	return &ast.FunctionExpression{
-		KeyWPos:    start.Pos,
-		Identifier: ident,
-		Body:       body,
-		Params:     params,
-		ReturnType: retType,
+		KeyWPos:       start.Pos,
+		Identifier:    ident,
+		Body:          body,
+		Params:        params,
+		ReturnType:    retType,
+		GenericParams: genParams,
 	}
 }
 
@@ -379,6 +386,7 @@ func (p *Parser) parseIdentifier() *ast.IdentifierExpression {
 
 	return &ast.IdentifierExpression{
 		Value: tok.Lit,
+		Pos:   tok.Pos,
 	}
 }
 

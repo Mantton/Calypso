@@ -25,10 +25,9 @@ type Declaration interface {
 }
 
 type File struct {
-	ModuleName string
-	Constants  []*ConstantDeclaration
-	Functions  []*FunctionDeclaration
-	Errors     lexer.ErrorList
+	ModuleName   string
+	Declarations []Declaration
+	Errors       lexer.ErrorList
 }
 
 // * Declarations
@@ -40,6 +39,10 @@ type ConstantDeclaration struct {
 
 type FunctionDeclaration struct {
 	Func *FunctionExpression
+}
+
+type StatementDeclaration struct {
+	Stmt Statement
 }
 
 // * Statements
@@ -81,6 +84,14 @@ type WhileStatement struct {
 
 type ExpressionStatement struct {
 	Expr Expression
+}
+
+type AliasStatement struct {
+	KewWPos       token.TokenPosition
+	EqPos         token.TokenPosition
+	Target        TypeExpression
+	Identifier    *IdentifierExpression
+	GenericParams *GenericParametersClause
 }
 
 // * Expressions
@@ -138,12 +149,13 @@ type IdentifierExpression struct {
 }
 
 type FunctionExpression struct {
-	KeyWPos    token.TokenPosition
-	Identifier *IdentifierExpression
-	Body       *BlockStatement
-	Params     []*IdentifierExpression
-	RParenPos  token.TokenPosition
-	ReturnType TypeExpression
+	KeyWPos       token.TokenPosition
+	Identifier    *IdentifierExpression
+	Body          *BlockStatement
+	Params        []*IdentifierExpression
+	GenericParams *GenericParametersClause
+	RParenPos     token.TokenPosition
+	ReturnType    TypeExpression
 }
 
 // * Literals
@@ -196,14 +208,15 @@ type TypeExpression interface {
 
 type IdentifierTypeExpression struct {
 	Identifier *IdentifierExpression
+	Arguments  *GenericArgumentsClause
 }
 
-type GenericTypeExpression struct {
-	Identifier  *IdentifierExpression
+type GenericArgumentsClause struct {
 	Arguments   []TypeExpression
 	LChevronPos token.TokenPosition
 	RChevronPos token.TokenPosition
 }
+
 type ArrayTypeExpression struct {
 	LBracketPos token.TokenPosition
 	Element     TypeExpression
@@ -221,4 +234,18 @@ type FunctionTypeExpression struct {
 	Identifier *IdentifierExpression
 	Arguments  []TypeExpression
 	ReturnType TypeExpression
+	// Generic Params
+	Params *GenericParametersClause
+}
+
+// * Misc
+type GenericParametersClause struct {
+	Parameters  []*GenericParameterExpression
+	LChevronPos token.TokenPosition
+	RChevronPos token.TokenPosition
+}
+
+type GenericParameterExpression struct {
+	Identifier *IdentifierExpression
+	// TODO: Standards
 }

@@ -194,6 +194,13 @@ func (e *FunctionStatement) Range() token.SyntaxRange {
 	return e.Func.Range()
 }
 
+func (e *AliasStatement) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KewWPos,
+		End:   e.Target.Range().End,
+	}
+}
+
 func (s *IfStatement) statementNode()         {}
 func (s *ExpressionStatement) statementNode() {}
 func (s *WhileStatement) statementNode()      {}
@@ -201,6 +208,7 @@ func (s *ReturnStatement) statementNode()     {}
 func (s *BlockStatement) statementNode()      {}
 func (s *VariableStatement) statementNode()   {}
 func (s *FunctionStatement) statementNode()   {}
+func (s *AliasStatement) statementNode()      {}
 
 // * Declarations
 func (e *ConstantDeclaration) Range() token.SyntaxRange {
@@ -211,8 +219,13 @@ func (e *FunctionDeclaration) Range() token.SyntaxRange {
 	return e.Func.Range()
 }
 
-func (d *ConstantDeclaration) declarationNode() {}
-func (d *FunctionDeclaration) declarationNode() {}
+func (e *StatementDeclaration) Range() token.SyntaxRange {
+	return e.Stmt.Range()
+}
+
+func (d *ConstantDeclaration) declarationNode()  {}
+func (d *StatementDeclaration) declarationNode() {}
+func (d *FunctionDeclaration) declarationNode()  {}
 
 // * Types
 func (e *IdentifierTypeExpression) Range() token.SyntaxRange {
@@ -233,7 +246,7 @@ func (e *MapTypeExpression) Range() token.SyntaxRange {
 	}
 }
 
-func (e *GenericTypeExpression) Range() token.SyntaxRange {
+func (e *GenericArgumentsClause) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.LChevronPos,
 		End:   e.RChevronPos,
@@ -241,6 +254,5 @@ func (e *GenericTypeExpression) Range() token.SyntaxRange {
 }
 
 func (e *IdentifierTypeExpression) typeNode() {}
-func (e *GenericTypeExpression) typeNode()    {}
 func (e *ArrayTypeExpression) typeNode()      {}
 func (e *MapTypeExpression) typeNode()        {}

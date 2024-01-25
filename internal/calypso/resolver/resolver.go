@@ -97,19 +97,13 @@ func (r *Resolver) ExpectInFile(ident *ast.IdentifierExpression) {
 func (r *Resolver) ResolveFile(file *ast.File) {
 
 	r.enterScope()
-	if len(file.Constants) != 0 {
 
-		for _, decl := range file.Constants {
-			r.resolveDeclaration(decl)
-		}
-
-	}
-
-	if len(file.Functions) != 0 {
-		for _, decl := range file.Functions {
+	if len(file.Declarations) != 0 {
+		for _, decl := range file.Declarations {
 			r.resolveDeclaration(decl)
 		}
 	}
+
 	r.leaveScope()
 }
 
@@ -132,6 +126,9 @@ func (r *Resolver) resolveDeclaration(decl ast.Declaration) {
 		case *ast.FunctionDeclaration:
 			expr := decl.Func
 			r.resolveExpression(expr)
+		case *ast.StatementDeclaration:
+			stmt := decl.Stmt
+			r.resolveStatement(stmt)
 		default:
 			msg := fmt.Sprintf("expression declaration not implemented, %T", decl)
 			panic(msg)
@@ -154,6 +151,8 @@ func (r *Resolver) resolveStatement(stmt ast.Statement) {
 		r.resolveReturnStatement(stmt)
 	case *ast.WhileStatement:
 		r.resolveWhileStatement(stmt)
+	case *ast.AliasStatement:
+		r.resolveAliasStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement resolution not implemented, %T", stmt)
 		panic(msg)
