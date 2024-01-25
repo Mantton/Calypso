@@ -51,6 +51,14 @@ type StandardDeclaration struct {
 	Block      *BlockStatement
 }
 
+type TypeDeclaration struct {
+	KeyWPos       token.TokenPosition
+	Identifier    *IdentifierExpression
+	EqPos         token.TokenPosition
+	GenericParams *GenericParametersClause
+	Value         TypeExpression
+}
+
 // * Statements
 type BlockStatement struct {
 	LBrackPos  token.TokenPosition

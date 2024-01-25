@@ -90,6 +90,7 @@ const (
 	WHILE
 	ALIAS
 	STANDARD
+	TYPE
 	kw_e // Keywords End
 )
 
@@ -113,6 +114,7 @@ var keywords = map[string]Token{
 	"while":    WHILE,
 	"alias":    ALIAS,
 	"standard": STANDARD,
+	"type":     TYPE,
 }
 
 func LookupIdent(ident string) Token {
@@ -124,7 +126,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE, STANDARD:
+	case FUNC, CONST, MODULE, STANDARD, TYPE:
 		return true
 	}
 	return false
@@ -170,14 +172,16 @@ var tokens = map[Token]string{
 	COLON:     ":",
 	R_ARROW:   "->",
 
-	CONST:  "const",
-	FUNC:   "func",
-	LET:    "let",
-	IF:     "if",
-	ELSE:   "else",
-	RETURN: "return",
-	WHILE:  "while",
-	ALIAS:  "alias",
+	CONST:    "const",
+	FUNC:     "func",
+	LET:      "let",
+	IF:       "if",
+	ELSE:     "else",
+	RETURN:   "return",
+	WHILE:    "while",
+	ALIAS:    "alias",
+	STANDARD: "standard",
+	TYPE:     "type",
 
 	IDENTIFIER: "IDENTIFIER",
 }

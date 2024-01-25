@@ -21,6 +21,8 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 		return p.parseFunctionDeclaration()
 	case token.STANDARD:
 		return p.parseStandardDeclaration()
+	case token.TYPE:
+		return p.parseTypeDeclaration()
 	default:
 		return p.parseStatementDeclaration()
 	}
@@ -104,5 +106,35 @@ func (p *Parser) parseStandardDeclaration() *ast.StandardDeclaration {
 		KeyWPos:    keyw.Pos,
 		Identifier: ident,
 		Block:      block,
+	}
+}
+
+func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
+	// Consume Keyword
+	kwPos := p.expect(token.TYPE).Pos
+
+	// Consume TypeExpression
+
+	ident := p.parseIdentifier()
+
+	// Has Generic Parameters
+	var params *ast.GenericParametersClause
+	if p.currentMatches(token.LSS) {
+		params = p.parseGenericParameterClause()
+	}
+
+	// Assign
+	eqPos := p.expect(token.ASSIGN).Pos
+
+	value := p.parseTypeExpression()
+
+	p.expect(token.SEMICOLON)
+
+	return &ast.TypeDeclaration{
+		KeyWPos:       kwPos,
+		EqPos:         eqPos,
+		GenericParams: params,
+		Value:         value,
+		Identifier:    ident,
 	}
 }
