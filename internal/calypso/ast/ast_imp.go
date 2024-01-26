@@ -44,12 +44,20 @@ func (e *VoidLiteral) Range() token.SyntaxRange {
 	}
 }
 
-func (e *IntegerLiteral) expressionNode() {}
-func (e *FloatLiteral) expressionNode()   {}
-func (e *StringLiteral) expressionNode()  {}
-func (e *BooleanLiteral) expressionNode() {}
-func (e *NullLiteral) expressionNode()    {}
-func (e *VoidLiteral) expressionNode()    {}
+func (e *CompositeLiteral) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.Identifier.Pos,
+		End:   e.RBracePos,
+	}
+}
+
+func (e *IntegerLiteral) expressionNode()   {}
+func (e *FloatLiteral) expressionNode()     {}
+func (e *StringLiteral) expressionNode()    {}
+func (e *BooleanLiteral) expressionNode()   {}
+func (e *NullLiteral) expressionNode()      {}
+func (e *VoidLiteral) expressionNode()      {}
+func (e *CompositeLiteral) expressionNode() {}
 
 // * Generic Literals
 func (e *ArrayLiteral) Range() token.SyntaxRange {
@@ -136,6 +144,13 @@ func (e *PropertyExpression) Range() token.SyntaxRange {
 	}
 }
 
+func (e *KeyValueExpression) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.Key.Range().Start,
+		End:   e.Value.Range().End,
+	}
+}
+
 func (e *GroupedExpression) expressionNode()    {}
 func (e *CallExpression) expressionNode()       {}
 func (e *UnaryExpression) expressionNode()      {}
@@ -143,6 +158,7 @@ func (e *BinaryExpression) expressionNode()     {}
 func (e *AssignmentExpression) expressionNode() {}
 func (e *IndexExpression) expressionNode()      {}
 func (e *PropertyExpression) expressionNode()   {}
+func (e *KeyValueExpression) expressionNode()   {}
 
 // * Statements
 func (e *IfStatement) Range() token.SyntaxRange {

@@ -189,6 +189,8 @@ func (r *Resolver) resolveExpression(expr ast.Expression) {
 		r.resolveArrayLiteral(expr)
 	case *ast.MapLiteral:
 		r.resolveMapLiteral(expr)
+	case *ast.CompositeLiteral:
+		r.resolveCompositeLiteral(expr)
 	case *ast.IntegerLiteral, *ast.StringLiteral, *ast.FloatLiteral, *ast.BooleanLiteral, *ast.NullLiteral, *ast.VoidLiteral:
 		return // Do nothing, no expressions to parse
 	default:

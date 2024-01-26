@@ -185,11 +185,14 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 			Value: false,
 			Pos:   p.currentScannedToken().Pos,
 		}
+		p.next()
 	case token.TRUE:
 		expr = &ast.BooleanLiteral{
 			Value: true,
 			Pos:   p.currentScannedToken().Pos,
 		}
+		p.next()
+
 	case token.NULL:
 		expr = &ast.NullLiteral{
 			Pos: p.currentScannedToken().Pos,
@@ -198,34 +201,50 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		expr = &ast.VoidLiteral{
 			Pos: p.currentScannedToken().Pos,
 		}
+		p.next()
+
 	case token.INTEGER:
 		v, err := strconv.ParseInt(p.currentScannedToken().Lit, 10, 64)
 
 		if err != nil {
-			return nil
+			panic(p.error(err.Error()))
 		}
 		expr = &ast.IntegerLiteral{
 			Value: int(v),
 			Pos:   p.currentScannedToken().Pos,
 		}
+		p.next()
+
 	case token.FLOAT:
 		v, err := strconv.ParseFloat(p.currentScannedToken().Lit, 64)
 		if err != nil {
-			return nil
+			panic(p.error(err.Error()))
 		}
 		expr = &ast.FloatLiteral{
 			Value: v,
 			Pos:   p.currentScannedToken().Pos,
 		}
+		p.next()
+
 	case token.STRING:
 		expr = &ast.StringLiteral{
 			Value: p.currentScannedToken().Lit,
 			Pos:   p.currentScannedToken().Pos,
 		}
+		p.next()
+
 	case token.IDENTIFIER:
-		expr = &ast.IdentifierExpression{
-			Value: p.currentScannedToken().Lit,
-			Pos:   p.currentScannedToken().Pos,
+
+		// is identifier, but token is `{` or `<`
+		if tok, ok := p.peakAheadScannedToken(); ok && (tok.Tok == token.LBRACE || tok.Tok == token.LSS) {
+			expr = p.parseCompositeLiteral()
+
+		} else {
+			expr = &ast.IdentifierExpression{
+				Value: p.currentScannedToken().Lit,
+				Pos:   p.currentScannedToken().Pos,
+			}
+			p.next()
 		}
 
 	case token.LPAREN:
@@ -246,9 +265,7 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 	}
 
 	if expr != nil {
-		p.next()
 		return expr
-
 	}
 
 	msg := fmt.Sprintf("expected expression, got `%s`", p.currentScannedToken().Lit)
@@ -424,9 +441,7 @@ func (p *Parser) parseArrayLit() *ast.ArrayLiteral {
 }
 
 func (p *Parser) parseMapLiteral() *ast.MapLiteral {
-	lit := &ast.MapLiteral{
-		Pairs: make(map[ast.Expression]ast.Expression),
-	}
+	lit := &ast.MapLiteral{}
 	start := p.expect(token.LBRACE)
 	lit.LBracePos = start.Pos
 	// closes immediately
@@ -442,13 +457,19 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 		key := p.parseExpression()
 
 		// Parse Colon Divider
-		p.expect(token.COLON)
+		colon := p.expect(token.COLON)
 
 		// Parse Value
 
 		value := p.parseExpression()
 
-		lit.Pairs[key] = value
+		expr := &ast.KeyValueExpression{
+			Key:      key,
+			Value:    value,
+			ColonPos: colon.Pos,
+		}
+
+		lit.Pairs = append(lit.Pairs, expr)
 
 		if p.currentMatches(token.RBRACE) {
 			break
@@ -462,4 +483,50 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 	end := p.expect(token.RBRACE)
 	lit.RBracePos = end.Pos
 	return lit
+}
+
+func (p *Parser) parseCompositeLiteral() *ast.CompositeLiteral {
+	ident := p.parseIdentifierWithOptionalAnnotation()
+
+	lBrace := p.expect(token.LBRACE)
+
+	pairs := []*ast.KeyValueExpression{}
+	// Loop until match with RBRACE
+	for !p.match(token.RBRACE) {
+
+		// Parse Key
+		key := p.parseIdentifierWithoutAnnotation()
+
+		// Parse Colon Divider
+		colon := p.expect(token.COLON)
+
+		// Parse Value
+
+		value := p.parseExpression()
+
+		expr := &ast.KeyValueExpression{
+			Key:      key,
+			Value:    value,
+			ColonPos: colon.Pos,
+		}
+
+		pairs = append(pairs, expr)
+
+		if p.currentMatches(token.RBRACE) {
+			break
+		} else {
+			p.expect(token.COMMA)
+		}
+
+	}
+
+	// parse kv expression
+	rBrace := p.expect(token.RBRACE)
+
+	return &ast.CompositeLiteral{
+		Identifier: ident,
+		LBracePos:  lBrace.Pos,
+		Pairs:      pairs,
+		RBracePos:  rBrace.Pos,
+	}
 }

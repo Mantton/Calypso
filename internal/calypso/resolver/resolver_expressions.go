@@ -107,10 +107,20 @@ func (r *Resolver) resolveArrayLiteral(expr *ast.ArrayLiteral) {
 
 func (r *Resolver) resolveMapLiteral(expr *ast.MapLiteral) {
 
-	for key, value := range expr.Pairs {
-		r.resolveExpression(value)
-		r.resolveExpression(key)
+	for _, pairs := range expr.Pairs {
+		r.resolveExpression(pairs.Key)
+		r.resolveExpression(pairs.Value)
 
 	}
 
+}
+
+func (r *Resolver) resolveCompositeLiteral(expr *ast.CompositeLiteral) {
+
+	r.resolveIdentifierExpression(expr.Identifier)
+
+	for _, pair := range expr.Pairs {
+		r.resolveExpression(pair.Key)
+		r.resolveExpression(pair.Value)
+	}
 }

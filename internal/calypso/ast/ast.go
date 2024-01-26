@@ -178,6 +178,12 @@ type PropertyExpression struct {
 	DotPos   token.TokenPosition
 }
 
+type KeyValueExpression struct {
+	Key      Expression
+	Value    Expression
+	ColonPos token.TokenPosition
+}
+
 // * Literal Expressions
 
 type IdentifierExpression struct {
@@ -233,8 +239,15 @@ type ArrayLiteral struct {
 
 type MapLiteral struct {
 	LBracePos token.TokenPosition
-	Pairs     map[Expression]Expression
+	Pairs     []*KeyValueExpression
 	RBracePos token.TokenPosition
+}
+
+type CompositeLiteral struct {
+	Identifier *IdentifierExpression
+	LBracePos  token.TokenPosition
+	RBracePos  token.TokenPosition
+	Pairs      []*KeyValueExpression
 }
 
 // * Types
