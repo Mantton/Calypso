@@ -40,7 +40,7 @@ func (p *Parser) parseVariableStatement() *ast.VariableStatement {
 	isConst := p.current() == token.CONST
 	start := p.currentScannedToken().Pos
 	p.next() // Move to next token
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithOptionalAnnotation()
 
 	// Parse Type Expression If Found
 
@@ -185,7 +185,7 @@ func (p *Parser) parseAliasStatement() *ast.AliasStatement {
 
 	// Consume TypeExpression
 
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithOptionalAnnotation()
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause
@@ -213,20 +213,18 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 
 	keyw := p.expect(token.STRUCT)
 
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithOptionalAnnotation()
 
 	lBrace := p.expect(token.LBRACE)
 
 	properties := []*ast.IdentifierExpression{}
 
 	for p.current() != token.RBRACE {
-		properties = append(properties, p.parseIdentifier(true))
+		properties = append(properties, p.parseIdentifierWithRequiredAnnotation())
 		p.expect(token.SEMICOLON)
 	}
 
 	rBrace := p.expect(token.RBRACE)
-
-	p.expect(token.SEMICOLON)
 
 	return &ast.StructStatement{
 		KeyWPos:    keyw.Pos,

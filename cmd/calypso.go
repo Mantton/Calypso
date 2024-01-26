@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-	fmt.Println("calypso")
 
 	// panicMode := flag.Bool("panic", false, "go panics will not be handled")
 	// flag.Parse()

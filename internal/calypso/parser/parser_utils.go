@@ -58,6 +58,7 @@ func (p *Parser) expect(t token.Token) token.ScannedToken {
 
 func (p *Parser) next() {
 	if p.isAtEnd() {
+		fmt.Println("parser is at end")
 		return
 	}
 	p.cursor++
@@ -75,12 +76,6 @@ func (p *Parser) advance(check token.NodeChecker) bool {
 	}
 
 	return moves != 0
-}
-
-func (p *Parser) reverse() {
-	if p.cursor-1 >= 0 {
-		p.cursor -= 1
-	}
 }
 
 func (p *Parser) error(message string) lexer.Error {

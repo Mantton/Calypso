@@ -25,6 +25,8 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 		return p.parseTypeDeclaration()
 	case token.EXTENSION:
 		return p.parseExtensionDeclaration()
+	case token.CONFORM:
+		return p.parseConformanceDeclaration()
 	default:
 		return p.parseStatementDeclaration()
 	}
@@ -95,7 +97,8 @@ func (p *Parser) parseStatementList() []ast.Statement {
 func (p *Parser) parseStandardDeclaration() *ast.StandardDeclaration {
 
 	keyw := p.expect(token.STANDARD)
-	ident := p.parseIdentifier(false)
+
+	ident := p.parseIdentifierWithoutAnnotation()
 
 	/*
 		TODO:
@@ -118,7 +121,7 @@ func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
 
 	// Consume TypeExpression
 
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithoutAnnotation()
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause
@@ -146,7 +149,7 @@ func (p *Parser) parseExtensionDeclaration() *ast.ExtensionDeclaration {
 
 	kw := p.expect(token.EXTENSION)
 
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithoutAnnotation()
 
 	lBrace := p.expect(token.LBRACE)
 
@@ -170,6 +173,43 @@ func (p *Parser) parseExtensionDeclaration() *ast.ExtensionDeclaration {
 		LBracePos:  lBrace.Pos,
 		Content:    content,
 		RBracePos:  rBrace.Pos,
+	}
+
+}
+
+func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
+
+	kw := p.expect(token.CONFORM)
+
+	standard := p.parseIdentifierWithoutAnnotation()
+
+	p.expect(token.FOR)
+
+	target := p.parseIdentifierWithoutAnnotation()
+
+	lBrace := p.expect(token.LBRACE)
+
+	// Parse Functions in Extension
+
+	content := []*ast.FunctionStatement{}
+
+	for p.current() != token.RBRACE {
+
+		f := &ast.FunctionStatement{
+			Func: p.parseFunctionExpression(true),
+		}
+		content = append(content, f)
+	}
+
+	rBrace := p.expect(token.RBRACE)
+
+	return &ast.ConformanceDeclaration{
+		KeyWPos:   kw.Pos,
+		Standard:  standard,
+		Target:    target,
+		LBracePos: lBrace.Pos,
+		Content:   content,
+		RBracePos: rBrace.Pos,
 	}
 
 }

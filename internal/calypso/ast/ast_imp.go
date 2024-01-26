@@ -251,12 +251,20 @@ func (e *ExtensionDeclaration) Range() token.SyntaxRange {
 	}
 }
 
-func (d *ConstantDeclaration) declarationNode()  {}
-func (d *StatementDeclaration) declarationNode() {}
-func (d *FunctionDeclaration) declarationNode()  {}
-func (d *StandardDeclaration) declarationNode()  {}
-func (d *TypeDeclaration) declarationNode()      {}
-func (d *ExtensionDeclaration) declarationNode() {}
+func (e *ConformanceDeclaration) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.RBracePos,
+	}
+}
+
+func (d *ConstantDeclaration) declarationNode()    {}
+func (d *StatementDeclaration) declarationNode()   {}
+func (d *FunctionDeclaration) declarationNode()    {}
+func (d *StandardDeclaration) declarationNode()    {}
+func (d *TypeDeclaration) declarationNode()        {}
+func (d *ExtensionDeclaration) declarationNode()   {}
+func (d *ConformanceDeclaration) declarationNode() {}
 
 // * Types
 func (e *IdentifierTypeExpression) Range() token.SyntaxRange {

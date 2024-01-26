@@ -129,7 +129,7 @@ func (r *Resolver) resolveDeclaration(decl ast.Declaration) {
 		case *ast.StatementDeclaration:
 			stmt := decl.Stmt
 			r.resolveStatement(stmt)
-		case *ast.StandardDeclaration, *ast.TypeDeclaration, *ast.ExtensionDeclaration:
+		case *ast.StandardDeclaration, *ast.TypeDeclaration, *ast.ExtensionDeclaration, *ast.ConformanceDeclaration:
 			// TODO: Add To Scope
 			break
 

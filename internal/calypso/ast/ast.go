@@ -67,6 +67,15 @@ type ExtensionDeclaration struct {
 	RBracePos  token.TokenPosition
 }
 
+type ConformanceDeclaration struct {
+	KeyWPos   token.TokenPosition
+	Standard  *IdentifierExpression
+	Target    *IdentifierExpression
+	LBracePos token.TokenPosition
+	Content   []*FunctionStatement
+	RBracePos token.TokenPosition
+}
+
 // * Statements
 type BlockStatement struct {
 	LBrackPos  token.TokenPosition

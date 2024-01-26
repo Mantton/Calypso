@@ -145,7 +145,7 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 
 	if p.match(token.PERIOD) {
 		opPos := p.previousScannedToken().Pos
-		prop := p.parseIdentifier(false)
+		prop := p.parseIdentifierWithoutAnnotation()
 
 		return &ast.PropertyExpression{
 			Target:   expr,
@@ -289,7 +289,7 @@ func (p *Parser) parseFunctionExpression(requiresBody bool) *ast.FunctionExpress
 	start := p.expect(token.FUNC) // Expect current to be `func`, consume
 
 	// Name
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithoutAnnotation()
 
 	var genParams *ast.GenericParametersClause
 
@@ -360,12 +360,12 @@ func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {
 		return identifiers
 	}
 
-	expr := p.parseIdentifier(true)
+	expr := p.parseIdentifierWithRequiredAnnotation()
 
 	identifiers = append(identifiers, expr)
 
 	for p.match(token.COMMA) {
-		expr := p.parseIdentifier(true)
+		expr := p.parseIdentifierWithRequiredAnnotation()
 		identifiers = append(identifiers, expr)
 	}
 
@@ -374,8 +374,7 @@ func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {
 	return identifiers
 }
 
-func (p *Parser) parseIdentifier(expectAnnotation bool) *ast.IdentifierExpression {
-
+func (p *Parser) parseIdentifierWithOptionalAnnotation() *ast.IdentifierExpression {
 	tok := p.expect(token.IDENTIFIER)
 	var annotation ast.TypeExpression
 
@@ -383,14 +382,34 @@ func (p *Parser) parseIdentifier(expectAnnotation bool) *ast.IdentifierExpressio
 		annotation = p.parseTypeExpression()
 	}
 
-	if expectAnnotation && annotation == nil {
-		panic(p.error("expected type annotation"))
+	return &ast.IdentifierExpression{
+		Value:         tok.Lit,
+		Pos:           tok.Pos,
+		AnnotatedType: annotation,
 	}
+
+}
+func (p *Parser) parseIdentifierWithRequiredAnnotation() *ast.IdentifierExpression {
+	tok := p.expect(token.IDENTIFIER)
+	var annotation ast.TypeExpression
+
+	p.expect(token.COLON)
+
+	annotation = p.parseTypeExpression()
 
 	return &ast.IdentifierExpression{
 		Value:         tok.Lit,
 		Pos:           tok.Pos,
 		AnnotatedType: annotation,
+	}
+
+}
+func (p *Parser) parseIdentifierWithoutAnnotation() *ast.IdentifierExpression {
+	tok := p.expect(token.IDENTIFIER)
+
+	return &ast.IdentifierExpression{
+		Value: tok.Lit,
+		Pos:   tok.Pos,
 	}
 }
 

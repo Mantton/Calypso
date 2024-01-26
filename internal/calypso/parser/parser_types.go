@@ -46,7 +46,7 @@ func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
 
 func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
-	ident := p.parseIdentifier(false)
+	ident := p.parseIdentifierWithOptionalAnnotation()
 	var args *ast.GenericArgumentsClause
 	if p.currentMatches(token.LSS) {
 		args = p.parseGenericArgumentsClause()
@@ -160,6 +160,6 @@ It will parse the `T : Foo & Bar & Baz` Parameter
 func (p *Parser) parseGenericParameterExpression() *ast.GenericParameterExpression {
 	// TODO: Parse Standards
 	return &ast.GenericParameterExpression{
-		Identifier: p.parseIdentifier(true),
+		Identifier: p.parseIdentifierWithOptionalAnnotation(),
 	}
 }

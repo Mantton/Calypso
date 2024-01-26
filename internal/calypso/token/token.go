@@ -93,6 +93,8 @@ const (
 	TYPE
 	STRUCT
 	EXTENSION
+	CONFORM
+	FOR
 	kw_e // Keywords End
 )
 
@@ -119,6 +121,8 @@ var keywords = map[string]Token{
 	"type":      TYPE,
 	"struct":    STRUCT,
 	"extension": EXTENSION,
+	"conform":   CONFORM,
+	"for":       FOR,
 }
 
 func LookupIdent(ident string) Token {
@@ -130,7 +134,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE, STANDARD, TYPE, EXTENSION:
+	case FUNC, CONST, MODULE, STANDARD, TYPE, EXTENSION, CONFORM:
 		return true
 	}
 	return false
@@ -138,7 +142,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR:
 		return true
 	}
 
@@ -188,6 +192,8 @@ var tokens = map[Token]string{
 	TYPE:      "type",
 	STRUCT:    "struct",
 	EXTENSION: "extension",
+	CONFORM:   "conform",
+	FOR:       "for",
 
 	IDENTIFIER: "IDENTIFIER",
 }
