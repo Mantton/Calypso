@@ -174,7 +174,7 @@ type IndexExpression struct {
 
 type PropertyExpression struct {
 	Target   Expression
-	Property *IdentifierExpression
+	Property Expression
 	DotPos   token.TokenPosition
 }
 

@@ -143,31 +143,30 @@ func (p *Parser) parseCallExpression() ast.Expression {
 func (p *Parser) parsePropertyExpression() ast.Expression {
 	expr := p.parseIndexExpression()
 
-	if p.match(token.PERIOD) {
-		opPos := p.previousScannedToken().Pos
-		prop := p.parseIdentifierWithoutAnnotation()
+	for p.match(token.PERIOD) {
+		dotPos := p.previousScannedToken().Pos
 
-		return &ast.PropertyExpression{
+		property := p.parseIndexExpression()
+		expr = &ast.PropertyExpression{
 			Target:   expr,
-			Property: prop,
-			DotPos:   opPos,
+			Property: property,
+			DotPos:   dotPos,
 		}
 	}
 
 	return expr
-
 }
 
 func (p *Parser) parseIndexExpression() ast.Expression {
 	expr := p.parsePrimaryExpression()
 
-	if p.match(token.LBRACKET) {
+	for p.match(token.LBRACKET) {
 		lbrackPos := p.previousScannedToken().Pos
 		idx := p.parseExpression()
 
 		rbrackPos := p.expect(token.RBRACKET).Pos
 
-		return &ast.IndexExpression{
+		expr = &ast.IndexExpression{
 			Target:      expr,
 			Index:       idx,
 			LBracketPos: lbrackPos,
