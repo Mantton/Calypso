@@ -6,56 +6,74 @@ import (
 	"github.com/mantton/calypso/internal/calypso/ast"
 )
 
+func (r *Resolver) resolveExpression(expr ast.Expression) {
+	switch expr := expr.(type) {
+	case *ast.IdentifierExpression:
+		r.resolveIdentifierExpression(expr)
+	case *ast.FunctionExpression:
+		r.resolveFunctionExpression(expr)
+	case *ast.AssignmentExpression:
+		r.resolveAssignmentExpression(expr)
+	case *ast.BinaryExpression:
+		r.resolveBinaryExpression(expr)
+	case *ast.UnaryExpression:
+		r.resolveUnaryExpression(expr)
+	case *ast.CallExpression:
+		r.resolveCallExpression(expr)
+	case *ast.GroupedExpression:
+		r.resolveGroupedExpression(expr)
+	case *ast.PropertyExpression:
+		r.resolvePropertyExpression(expr)
+	case *ast.IndexExpression:
+		r.resolveIndexExpression(expr)
+	case *ast.ArrayLiteral:
+		r.resolveArrayLiteral(expr)
+	case *ast.MapLiteral:
+		r.resolveMapLiteral(expr)
+	case *ast.CompositeLiteral:
+		r.resolveCompositeLiteral(expr)
+	case *ast.IntegerLiteral, *ast.StringLiteral, *ast.FloatLiteral, *ast.BooleanLiteral, *ast.NullLiteral, *ast.VoidLiteral:
+		return // Do nothing, no expressions to parse
+	default:
+		msg := fmt.Sprintf("expression resolution not implemented, %T", expr)
+		panic(msg)
+	}
+
+}
+
 // * Expressions
 func (r *Resolver) resolveIdentifierExpression(expr *ast.IdentifierExpression) {
-	s, ok := r.scopes.Head()
+	s := r.expect(expr)
 
-	// No Scope
-	if !ok {
-		panic("unbalanced scopes")
+	if s.State == SymbolDeclared {
+		panic("use of variable before definition")
 	}
-
-	state, ok := s.Get(expr.Value)
-
-	// Value Not in Scope
-	if !ok {
-		r.ExpectInFile(expr)
-		return
-	}
-
-	// Value in Scope
-
-	// Value in Scope But is Just Declared
-	if state == DECLARED {
-		msg := fmt.Sprintf("`%s` cannot be used in it's own definition", expr.Value)
-		panic(r.error(msg, expr))
-	}
-
-	// Value IN Scope & Is Defined, do nothing
 }
 
 func (r *Resolver) resolveFunctionExpression(expr *ast.FunctionExpression) {
-	r.Declare(expr.Identifier)
-	r.Define(expr.Identifier)
+
+	s := newSymbolInfo(expr.Identifier.Value, FunctionSymbol)
+	r.declare(s, expr.Identifier)
+	r.define(s, expr.Identifier)
 
 	// Enter Function Scope
 	r.enterScope()
 
 	// Declare & Define Parameters
 	for _, param := range expr.Params {
-		r.Declare(param)
-		r.Define(param)
+		p := newSymbolInfo(param.Value, VariableSymbol)
+		r.declare(p, param)
+		r.define(p, param)
 	}
 
 	// Resolve Function Body
 	r.resolveStatement(expr.Body)
 
 	// Resolution Complete, leave function scope
-	r.leaveScope()
+	r.leaveScope(false)
 }
 
 func (r *Resolver) resolveAssignmentExpression(expr *ast.AssignmentExpression) {
-	// TODO: what if you're assigning a property or an index
 	r.resolveExpression(expr.Value)
 
 	target, ok := expr.Target.(*ast.IdentifierExpression)
@@ -64,7 +82,7 @@ func (r *Resolver) resolveAssignmentExpression(expr *ast.AssignmentExpression) {
 		panic(r.error("expected identifier expression", expr.Value))
 	}
 
-	r.ExpectInFile(target)
+	r.expect(target)
 
 }
 
@@ -93,10 +111,12 @@ func (r *Resolver) resolveGroupedExpression(expr *ast.GroupedExpression) {
 
 func (r *Resolver) resolvePropertyExpression(expr *ast.PropertyExpression) {
 	r.resolveExpression(expr.Target)
+	r.resolveExpression(expr.Property)
 }
 
 func (r *Resolver) resolveIndexExpression(expr *ast.IndexExpression) {
 	r.resolveExpression(expr.Target)
+	r.resolveExpression(expr.Index)
 }
 
 func (r *Resolver) resolveArrayLiteral(expr *ast.ArrayLiteral) {
@@ -120,7 +140,7 @@ func (r *Resolver) resolveCompositeLiteral(expr *ast.CompositeLiteral) {
 	r.resolveIdentifierExpression(expr.Identifier)
 
 	for _, pair := range expr.Pairs {
-		r.resolveExpression(pair.Key)
+		// r.resolveExpression(pair.Key) // TODO: Sure we don't want to resolve this?
 		r.resolveExpression(pair.Value)
 	}
 }

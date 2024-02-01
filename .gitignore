@@ -1,8 +1,6 @@
 # Development
 *.test.cly
-calypso
-./calypso
-
+bin/
 # Core
 # General
 .DS_Store
