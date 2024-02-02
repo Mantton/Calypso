@@ -12,9 +12,6 @@ const (
 	TypeSymbol                       // Types
 )
 
-// Visibility Contants
-type SymbolVisibility byte
-
 // Definition State
 type SymbolState byte
 

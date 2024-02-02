@@ -7,6 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
+	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
 type Evaluator struct {
@@ -49,6 +50,16 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 	}
 	fmt.Println("[Resolver] Complete")
 
+	checker := typechecker.New(typechecker.STD)
+	checker.CheckFile(file)
+
+	if len(checker.Errors) != 0 {
+		for _, err := range checker.Errors {
+			fmt.Println(e.ErrorMessage(filepath, err, lines))
+		}
+		return 1
+	}
+	fmt.Println("[TypeChecker] Complete")
 	fmt.Println("Done")
 	return 0
 }

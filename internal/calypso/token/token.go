@@ -51,6 +51,7 @@ const (
 	MUL  // *
 	QUO  // /
 	REM  // %
+	AMP  // &
 
 	LSS // <
 	GTR // >
@@ -158,6 +159,7 @@ var tokens = map[Token]string{
 	MUL: "*",
 	QUO: "/",
 	REM: "%",
+	AMP: "&",
 
 	EQL:    "==",
 	LSS:    "<",

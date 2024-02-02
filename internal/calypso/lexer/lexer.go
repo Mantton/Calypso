@@ -150,6 +150,9 @@ func (l *Lexer) parseToken() token.ScannedToken {
 	// * Literals
 	case '"':
 		tok = l.string()
+	case '&':
+		// TODO: &&
+		tok = l.build(token.AMP)
 
 	default:
 		if isDigit(c) {

@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
@@ -46,7 +48,7 @@ func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
 
 func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
-	ident := p.parseIdentifierWithOptionalAnnotation()
+	ident := p.parseIdentifierWithoutAnnotation()
 	var args *ast.GenericArgumentsClause
 	if p.currentMatches(token.LSS) {
 		args = p.parseGenericArgumentsClause()
@@ -77,6 +79,7 @@ func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
 
 	// First Argument
 	expr := p.parseTypeExpression()
+	fmt.Println(expr)
 	args = append(args, expr)
 
 	// Check For Others
@@ -116,7 +119,7 @@ func (p *Parser) parseGenericParameterClause() *ast.GenericParametersClause {
 	start := p.expect(token.LSS)
 
 	if p.match(token.GTR) {
-		panic("expected at least 1 generic parameter")
+		panic(p.error("expected at least 1 generic parameter"))
 	}
 
 	// First Argument
@@ -158,8 +161,23 @@ Parses A Generic Parameter
 It will parse the `T : Foo & Bar & Baz` Parameter
 */
 func (p *Parser) parseGenericParameterExpression() *ast.GenericParameterExpression {
-	// TODO: Parse Standards
+	ident := p.parseIdentifierWithoutAnnotation()
+	standards := []*ast.IdentifierExpression{}
+
+	// parse standards
+	if p.match(token.COLON) {
+		// First standard
+		standard := p.parseIdentifierWithoutAnnotation()
+		standards = append(standards, standard)
+
+		// Others
+		for p.match(token.AMP) {
+			standard := p.parseIdentifierWithoutAnnotation()
+			standards = append(standards, standard)
+		}
+	}
 	return &ast.GenericParameterExpression{
-		Identifier: p.parseIdentifierWithOptionalAnnotation(),
+		Identifier: ident,
+		Standards:  standards,
 	}
 }

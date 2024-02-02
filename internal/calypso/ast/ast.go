@@ -298,5 +298,5 @@ type GenericParametersClause struct {
 
 type GenericParameterExpression struct {
 	Identifier *IdentifierExpression
-	// TODO: Standards
+	Standards  []*IdentifierExpression
 }
