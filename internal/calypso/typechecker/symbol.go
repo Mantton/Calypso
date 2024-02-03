@@ -26,8 +26,10 @@ var (
 
 // FunctionDescriptor describes the signature of a function, including parameters and return type.
 type FunctionDescriptor struct {
-	Parameters []*SymbolInfo
-	ReturnType *SymbolInfo
+	Parameters          []*SymbolInfo
+	AnnotatedReturnType *SymbolInfo
+	InferredReturnType  *SymbolInfo
+	ValidatedReturnType *SymbolInfo
 }
 
 type SymbolInfo struct {
@@ -43,6 +45,7 @@ type SymbolInfo struct {
 	ConcreteOf *SymbolInfo
 	FuncDesc   *FunctionDescriptor // For functions, describes the function's signature
 	IsPrivate  bool                // if this symbol is a private property
+	Mutable    bool
 
 	GenericParams    []*SymbolInfo          // Generic Params with this symbol
 	GenericArguments []*SymbolInfo          // generic arguments with this symbol

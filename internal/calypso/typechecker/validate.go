@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-type SpecializationTable map[*SymbolInfo]*SymbolInfo
+type specializationTable map[*SymbolInfo]*SymbolInfo
 
 // validates that two types
 func (c *Checker) validate(expected, provided *SymbolInfo) error {
-	fmt.Printf("\nValidating `%s`(provided) |> `%s`(expected)\n", provided.Name, expected.Name)
+	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided.Name, expected.Name)
 	// Provided is unresolved
 	if expected == unresolved {
 		return fmt.Errorf("`%s` is unresolved", expected.Name)
@@ -42,7 +42,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 	// TODO: This should account for packages/modules
 	hasError := false
 
-	specializations := make(SpecializationTable)
+	specializations := make(specializationTable)
 	// Resolve Specializations, and get map containing the specialized types
 	rExpected, err := c.resolveSpecialization(expected, specializations)
 
@@ -122,7 +122,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 
 	// At this point, the expected is not a generic so both resolved types should be the exact same, with only checks of the arguments left
 	if rExpected != rProvided {
-		return fmt.Errorf("cannot assign `%s` to `%s`", rProvided.Name, rExpected.Name)
+		return fmt.Errorf("expected `%s`, received `%s`", rExpected.Name, rProvided.Name)
 	}
 
 	// Both Types are the same, check arguments
@@ -180,7 +180,7 @@ func (c *Checker) resolveAlias(s *SymbolInfo) (*SymbolInfo, map[string]*SymbolIn
 }
 
 // Resolves Specializations of Generic Types.
-func (c *Checker) resolveSpecialization(s *SymbolInfo, t SpecializationTable) (*SymbolInfo, error) {
+func (c *Checker) resolveSpecialization(s *SymbolInfo, t specializationTable) (*SymbolInfo, error) {
 
 	generic := s.ConcreteOf
 
@@ -208,7 +208,7 @@ func (c *Checker) resolveSpecialization(s *SymbolInfo, t SpecializationTable) (*
 	return generic, nil
 }
 
-func (c *Checker) add(t SpecializationTable, k, v *SymbolInfo) error {
+func (c *Checker) add(t specializationTable, k, v *SymbolInfo) error {
 
 	// If generic, find all where key
 	if v.Type == GenericTypeSymbol {
@@ -261,7 +261,7 @@ func (c *Checker) add(t SpecializationTable, k, v *SymbolInfo) error {
 	return nil
 }
 
-func (t SpecializationTable) get(s *SymbolInfo) (*SymbolInfo, bool) {
+func (t specializationTable) get(s *SymbolInfo) (*SymbolInfo, bool) {
 
 	if s.Type != GenericTypeSymbol {
 		return s, true

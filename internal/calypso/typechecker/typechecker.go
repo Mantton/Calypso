@@ -66,7 +66,13 @@ func (c *Checker) define(s *SymbolInfo) bool {
 	result := c.symbols.Define(s)
 
 	if result {
-		fmt.Println("Defined", s.Name)
+		switch s.Type {
+		case VariableSymbol:
+			fmt.Println("Defined Variable", s.Name, "As Type", s.TypeDesc.Name)
+		default:
+			fmt.Println("Defined", s.Name)
+
+		}
 	}
 	return result
 }

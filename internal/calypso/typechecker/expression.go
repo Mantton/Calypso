@@ -11,7 +11,8 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 	switch expr := expr.(type) {
 	case *ast.FunctionExpression:
 		c.checkFunctionExpression(expr)
-
+	case *ast.AssignmentExpression:
+		c.checkAssignmentExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression check not implemented, %T", expr)
 		panic(msg)
@@ -21,10 +22,52 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 	c.enterScope()
 
-	// TODO: Params
+	sym := newSymbolInfo(expr.Identifier.Value, TypeSymbol)
+	sym.FuncDesc = &FunctionDescriptor{}
 
+	prev := c.currentSym
+	c.currentSym = sym
+
+	// Evaluate Generic Parameters
+	if expr.GenericParams != nil {
+		c.evaluateGenericParameters(sym, expr.GenericParams)
+	}
+
+	// Evaluate Annotated Return Type
+	if expr.ReturnType != nil {
+		sym.FuncDesc.AnnotatedReturnType = c.evaluateTypeExpression(expr.ReturnType)
+	}
+
+	// Params
+	for _, param := range expr.Params {
+		pSym := newSymbolInfo(param.Value, VariableSymbol)
+		t := c.evaluateTypeExpression(param.AnnotatedType)
+		pSym.TypeDesc = t
+		c.define(pSym)
+		sym.FuncDesc.Parameters = append(sym.FuncDesc.Parameters, t)
+	}
+
+	// Body
 	c.checkStatement(expr.Body)
+	c.currentSym = prev
 	c.leaveScope(false)
+
+	if sym.FuncDesc.AnnotatedReturnType != nil {
+		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.AnnotatedReturnType
+	} else if sym.FuncDesc.InferredReturnType != nil {
+		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.InferredReturnType
+	} else {
+		sym.FuncDesc.ValidatedReturnType = c.resolveLiteral(VOID)
+	}
+
+	fn := newSymbolInfo(sym.Name, FunctionSymbol)
+	fn.TypeDesc = sym
+	c.define(fn)
+}
+
+func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
+	// TODO: Check Mutability
+	c.evaluateAssignmentExpression(expr)
 }
 
 func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
@@ -54,6 +97,10 @@ func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
 		return c.evaluateGroupedExpression(expr)
 	case *ast.BinaryExpression:
 		return c.evaluateBinaryExpression(expr)
+	case *ast.AssignmentExpression:
+		return c.evaluateAssignmentExpression(expr)
+	case *ast.CallExpression:
+		return c.evaluateCallExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -254,4 +301,114 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo 
 
 	c.addError(err.Error(), e.Range())
 	return unresolved
+}
+
+func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) *SymbolInfo {
+
+	lhs := c.evaluateExpression(expr.Target)
+	rhs := c.evaluateExpression(expr.Value)
+
+	err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+	}
+
+	// Assignment Calls are void
+	return c.resolveLiteral(VOID)
+}
+
+func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
+
+	target := c.evaluateExpression(expr.Target)
+
+	if target.FuncDesc == nil {
+		c.addError(
+			fmt.Sprintf("`%s` is not a function", target.Name),
+			expr.Target.Range(),
+		)
+		return unresolved
+	}
+
+	// Check Argument Count Matches function parameter count
+	if len(expr.Arguments) != len(target.FuncDesc.Parameters) {
+		c.addError(
+			fmt.Sprintf("expected %d arguments, provided %d",
+				len(target.FuncDesc.Parameters),
+				len(expr.Arguments)),
+			expr.Range(),
+		)
+		return target.FuncDesc.ValidatedReturnType
+
+	}
+
+	// Specialize Generics
+	if len(target.GenericParams) != 0 {
+		fmt.Println("Resolve Generic Parameters")
+	}
+	t := make(specializationTable)
+
+	for i, arg := range expr.Arguments {
+		provided := c.evaluateExpression(arg)
+		expected := target.FuncDesc.Parameters[i]
+
+		if expected.Type == GenericTypeSymbol {
+			// Generic, First Find Specialization
+			v, ok := t.get(expected)
+
+			// If not found add
+			if !ok {
+				// Expected is a generic type, specialize
+				err := c.add(t, expected, provided)
+
+				if err != nil {
+					c.addError(
+						err.Error(),
+						arg.Range(),
+					)
+					continue
+				}
+			} else {
+				// specialization found, validate
+				err := c.validate(v, provided)
+
+				if err != nil {
+					c.addError(
+						err.Error(),
+						arg.Range(),
+					)
+					continue
+				}
+			}
+
+		} else {
+			// Expected is not a generic, ensure strict conformance
+			err := c.validate(expected, provided)
+
+			if err != nil {
+				c.addError(
+					err.Error(),
+					arg.Range(),
+				)
+			}
+
+		}
+	}
+
+	if target.FuncDesc.ValidatedReturnType.Type == GenericTypeSymbol {
+		v, ok := t.get(target.FuncDesc.ValidatedReturnType)
+
+		if !ok {
+			c.addError(
+				fmt.Sprintf("unable to infer return type of generic `%s`", target.FuncDesc.ValidatedReturnType.Name),
+				expr.Range(),
+			)
+		}
+
+		return v
+
+	} else {
+		return target.FuncDesc.ValidatedReturnType
+	}
+
 }
