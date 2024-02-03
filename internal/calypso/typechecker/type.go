@@ -62,11 +62,15 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		arg := providedArguments[i]
 		providedArg := c.evaluateTypeExpression(arg)
 
-		ok := c.validate(expectedArg, providedArg)
+		err := c.validate(expectedArg, providedArg)
 
-		if !ok {
+		if err != nil {
 			c.addError(
-				fmt.Sprintf("cannot pass `%s` expression as generic argument for `%s` of `%s`", providedArg.Name, expectedArg.Name, sym.Name),
+				fmt.Sprintf("cannot pass `%s` expression as generic argument for `%s` of `%s`. %s",
+					providedArg.Name,
+					expectedArg.Name,
+					sym.Name,
+					err.Error()),
 				arg.Range(),
 			)
 

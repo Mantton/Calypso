@@ -124,10 +124,13 @@ func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
 
 		provided := c.evaluateExpression(expr)
 
-		// TODO: This will add errors, should not be the case here
-		if !c.validate(expected, provided) {
+		err := c.validate(expected, provided)
+
+		// If Unable to validate type, simple set list type as any
+		if err != nil {
 			return c.resolveLiteral(ANY)
 		}
+
 	}
 
 	return expected

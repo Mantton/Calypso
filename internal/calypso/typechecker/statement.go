@@ -47,13 +47,13 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 
 	// Annotation Present, Ensure Annotated Type Matches the provided Type
-	ok := c.validate(annotation, initializer)
+	err := c.validate(annotation, initializer)
 
-	if !ok {
-		// c.addError(
-		// 	fmt.Sprintf("cannot assign `%s` to `%s`", initializer.Name, annotation.Name),
-		// 	stmt.Identifier.Range(),
-		// )
+	if err != nil {
+		c.addError(
+			err.Error(),
+			stmt.Identifier.Range(),
+		)
 
 		s := newSymbolInfo(stmt.Identifier.Value, VariableSymbol)
 		s.TypeDesc = unresolved
