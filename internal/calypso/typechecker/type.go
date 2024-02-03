@@ -53,6 +53,9 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return sym
 	}
 
+	specialized := newSymbolInfo(sym.Name, TypeSymbol)
+	specialized.ConcreteOf = sym
+
 	// Ensure each argument are valid
 	hasError := false
 	for i, expectedArg := range sym.GenericArguments {
@@ -66,11 +69,17 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 				fmt.Sprintf("cannot pass `%s` expression as generic argument for `%s` of `%s`", providedArg.Name, expectedArg.Name, sym.Name),
 				arg.Range(),
 			)
+
+			specialized.addGenericArgument(unresolved)
+			continue
 		}
+
+		specialized.addGenericArgument(providedArg)
 	}
 
 	if hasError {
 		return unresolved
 	}
-	return sym
+
+	return specialized
 }

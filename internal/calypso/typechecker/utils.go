@@ -54,7 +54,8 @@ func (c *Checker) injectLiterals() {
 	c.define(anyLit)
 
 	arrayLit := newSymbolInfo("ArrayLiteral", TypeSymbol)
-	err := arrayLit.addGenericArgument(anyLit)
+	genericVal := newSymbolInfo("T", GenericTypeSymbol)
+	err := arrayLit.addGenericArgument(genericVal)
 
 	if err != nil {
 		panic(err)
@@ -82,6 +83,8 @@ func (c *Checker) resolveLiteral(l Literal) *SymbolInfo {
 			name = "void"
 		case ANY:
 			name = "any"
+		case ARRAY:
+			name = "ArrayLiteral"
 		default:
 			panic("unresolved literal")
 		}

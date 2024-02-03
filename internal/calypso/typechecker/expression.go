@@ -44,6 +44,8 @@ func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
 		return c.resolveLiteral(NULL)
 	case *ast.VoidLiteral:
 		return c.resolveLiteral(VOID)
+	case *ast.ArrayLiteral:
+		return c.evaluateArrayLiteral(expr)
 	case *ast.IdentifierExpression:
 		return c.evaluateIdentifierExpression(expr)
 	case *ast.UnaryExpression:
@@ -94,4 +96,40 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo
 
 func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) *SymbolInfo {
 	return c.evaluateExpression(expr.Expr)
+}
+
+func (c *Checker) evaluateArrayLiteral(expr *ast.ArrayLiteral) *SymbolInfo {
+	conc := c.resolveLiteral(ARRAY)
+	symbol := newSymbolInfo(conc.Name, TypeSymbol)
+	elementType := c.evaluateExpressionList(expr.Elements)
+	symbol.ConcreteOf = conc
+	symbol.addGenericArgument(elementType)
+	return symbol
+}
+
+func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
+
+	if len(exprs) == 0 {
+		// No Elements, Array Can Contain Any Element
+		return c.resolveLiteral(ANY)
+	}
+
+	var expected *SymbolInfo
+
+	for _, expr := range exprs {
+		if expected == nil {
+			expected = c.evaluateExpression(expr)
+			continue
+		}
+
+		provided := c.evaluateExpression(expr)
+
+		// TODO: This will add errors, should not be the case here
+		if !c.validate(expected, provided) {
+			return c.resolveLiteral(ANY)
+		}
+	}
+
+	return expected
+
 }

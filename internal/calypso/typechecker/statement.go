@@ -47,15 +47,13 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 
 	// Annotation Present, Ensure Annotated Type Matches the provided Type
-
-	fmt.Println(annotation, initializer)
 	ok := c.validate(annotation, initializer)
 
 	if !ok {
-		c.addError(
-			fmt.Sprintf("cannot assign `%s` to `%s`", initializer.Name, annotation.Name),
-			stmt.Identifier.Range(),
-		)
+		// c.addError(
+		// 	fmt.Sprintf("cannot assign `%s` to `%s`", initializer.Name, annotation.Name),
+		// 	stmt.Identifier.Range(),
+		// )
 
 		s := newSymbolInfo(stmt.Identifier.Value, VariableSymbol)
 		s.TypeDesc = unresolved
@@ -91,7 +89,6 @@ func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 	hasErrors := false
 
 	c.currentSym = s
-	s.TypeDesc = unresolved
 
 	ok := c.define(s)
 
@@ -173,8 +170,8 @@ func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 
 	if !hasErrors {
 		s.AliasOf = expected
-		s.TypeDesc = nil
 		s.convertGenericParamsToArguments()
+		fmt.Println(s.Name, "is alias of", expected.Name)
 	}
 
 	c.currentSym = nil

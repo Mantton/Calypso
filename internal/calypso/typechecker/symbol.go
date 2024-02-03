@@ -3,6 +3,7 @@ package typechecker
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // Symbol Constants
@@ -16,6 +17,11 @@ const (
 	AliasSymbol                         // Aliases
 	TypeSymbol                          // Types
 	GenericTypeSymbol                   //Generic Arguments / Params
+)
+
+var (
+	nextSymbolId int
+	idLock       sync.Mutex // Ensures that ID assignment is thread-safe
 )
 
 // FunctionDescriptor describes the signature of a function, including parameters and return type.
@@ -41,7 +47,8 @@ type SymbolInfo struct {
 	GenericParams    []*SymbolInfo          // Generic Params with this symbol
 	GenericArguments []*SymbolInfo          // generic arguments with this symbol
 	Constraints      map[string]*SymbolInfo // For Types & Structs, points to the Standards being conformed to.
-
+	ID               int
+	// TODO: Keep Track of Specializations
 }
 
 type SymbolTable struct {
@@ -81,11 +88,16 @@ func (t *SymbolTable) Resolve(name string) (*SymbolInfo, bool) {
 
 // * Symbol Info
 func newSymbolInfo(name string, t SymbolType) *SymbolInfo {
+	idLock.Lock()         // Lock the mutex before modifying the counter
+	defer idLock.Unlock() // Unlock the mutex after modifying the counter
+	nextSymbolId++        // Increment the global ID counter
+
 	return &SymbolInfo{
 		Name:        name,
 		Type:        t,
 		Properties:  make(map[string]*SymbolInfo),
 		Constraints: make(map[string]*SymbolInfo),
+		ID:          nextSymbolId,
 	}
 }
 
@@ -102,8 +114,6 @@ func (s *SymbolInfo) addProperty(it *SymbolInfo) bool {
 	}
 
 	s.Properties[it.Name] = it
-	msg := fmt.Sprintf("\tAdded Property `%s` to `%s`", it.Name, s.Name)
-	fmt.Println(msg)
 	return true
 }
 
@@ -114,8 +124,6 @@ func (s *SymbolInfo) addConstraint(c *SymbolInfo) error {
 	}
 
 	s.Constraints[c.Identifier()] = c
-	msg := fmt.Sprintf("\tAdded Constraint `%s` to `%s`", c.Name, s.Name)
-	fmt.Println(msg)
 	return nil
 }
 
@@ -125,8 +133,6 @@ func (s *SymbolInfo) addGenericArgument(a *SymbolInfo) error {
 	}
 
 	s.GenericArguments = append(s.GenericArguments, a)
-	msg := fmt.Sprintf("\tAdded Generic Argument `%s` to `%s`", a.Name, s.Name)
-	fmt.Println(msg)
 	return nil
 }
 
@@ -138,8 +144,6 @@ func (s *SymbolInfo) addGenericParameter(p *SymbolInfo) error {
 	}
 
 	s.GenericParams = append(s.GenericParams, p)
-	msg := fmt.Sprintf("\tAdded Generic Parameter `%s` to `%s`", p.Name, s.Name)
-	fmt.Println(msg)
 	return nil
 }
 
