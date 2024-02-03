@@ -52,6 +52,8 @@ func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
 		return c.evaluateUnaryExpression(expr)
 	case *ast.GroupedExpression:
 		return c.evaluateGroupedExpression(expr)
+	case *ast.BinaryExpression:
+		return c.evaluateBinaryExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -77,18 +79,40 @@ func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) *
 func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo {
 	op := expr.Op
 
-	provided := c.evaluateExpression(expr.Expr)
-	fmt.Println("[Unary]", provided)
-
+	rhs := c.evaluateExpression(expr.Expr)
+	var err error
+	// TODO: Operand Standards
 	switch op {
 	case token.NOT:
-		// returns a boolean
+		err = c.validate(rhs, c.resolveLiteral(BOOLEAN))
+
+		if err == nil {
+			return c.resolveLiteral(BOOLEAN)
+		}
+
+		// NOT Operand Standard
+
 	case token.SUB:
-		// return the same type
+		err := c.validate(rhs, c.resolveLiteral(INTEGER))
+		if err == nil {
+			return c.resolveLiteral(INTEGER)
+		}
+
+		err = c.validate(rhs, c.resolveLiteral(FLOAT))
+
+		if err == nil {
+			return c.resolveLiteral(FLOAT)
+		}
 
 	default:
-		c.addError("Unsupported Unary Operand", expr.Expr.Range())
+		err = fmt.Errorf("unsupported unary operand `%s`", token.LookUp(op))
 	}
+
+	if err != nil {
+		panic("there should be an error here")
+	}
+
+	c.addError(err.Error(), expr.Range())
 
 	return unresolved
 
@@ -135,4 +159,99 @@ func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
 
 	return expected
 
+}
+
+func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo {
+
+	lhs := c.evaluateExpression(e.Left)
+	rhs := c.evaluateExpression(e.Right)
+	op := e.Op
+
+	err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), e.Range())
+		return unresolved
+	}
+
+	// TODO: Operator Standards
+	switch op {
+	case token.ADD:
+		// Integers, Floats, Operator Standards
+		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		if err == nil {
+			return c.resolveLiteral(INTEGER)
+		}
+
+		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+
+		if err == nil {
+			return c.resolveLiteral(FLOAT)
+		}
+	case token.SUB:
+		// Integers, Floats, Operator Standards
+		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		if err == nil {
+			return c.resolveLiteral(INTEGER)
+		}
+
+		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+
+		if err == nil {
+			return c.resolveLiteral(FLOAT)
+		}
+	case token.QUO, token.MUL:
+		// Integers, Floats
+		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		if err == nil {
+			return c.resolveLiteral(INTEGER)
+		}
+
+		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+
+		if err == nil {
+			return c.resolveLiteral(FLOAT)
+		}
+
+	case token.LSS, token.GTR, token.LEQ, token.GEQ:
+		// Integers, Floats, Operator Standards
+		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		if err == nil {
+			return c.resolveLiteral(INTEGER)
+		}
+
+		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+
+		if err == nil {
+			return c.resolveLiteral(FLOAT)
+		}
+	case token.EQL, token.NEQ:
+		// Integers, Floats, Booleans
+		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		if err == nil {
+			return c.resolveLiteral(INTEGER)
+		}
+
+		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+
+		if err == nil {
+			return c.resolveLiteral(FLOAT)
+		}
+
+		err = c.validate(lhs, c.resolveLiteral(BOOLEAN))
+
+		if err == nil {
+			return c.resolveLiteral(BOOLEAN)
+		}
+	default:
+		err = fmt.Errorf("unsupported binary operand `%s`", token.LookUp(op))
+
+	}
+
+	if err != nil {
+		panic("there should be an error here")
+	}
+
+	c.addError(err.Error(), e.Range())
+	return unresolved
 }

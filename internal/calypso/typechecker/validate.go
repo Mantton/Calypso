@@ -122,7 +122,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 
 	// At this point, the expected is not a generic so both resolved types should be the exact same, with only checks of the arguments left
 	if rExpected != rProvided {
-		return fmt.Errorf("Cannot assign `%s` to `%s`", rProvided.Name, rExpected.Name)
+		return fmt.Errorf("cannot assign `%s` to `%s`", rProvided.Name, rExpected.Name)
 	}
 
 	// Both Types are the same, check arguments
@@ -208,12 +208,6 @@ func (c *Checker) resolveSpecialization(s *SymbolInfo, t SpecializationTable) (*
 	return generic, nil
 }
 
-func (c *Checker) debugPrintArguments(s *SymbolInfo) {
-	for _, arg := range s.GenericArguments {
-		fmt.Println("[DEBUG]", arg.Name, "For", s.Name)
-	}
-}
-
 func (c *Checker) add(t SpecializationTable, k, v *SymbolInfo) error {
 
 	// If generic, find all where key
@@ -274,4 +268,10 @@ func (t SpecializationTable) get(s *SymbolInfo) (*SymbolInfo, bool) {
 	}
 	v, ok := t[s]
 	return v, ok
+}
+
+func (c *Checker) debugPrintArguments(s *SymbolInfo) {
+	for _, arg := range s.GenericArguments {
+		fmt.Println("[DEBUG]", arg.Name, "For", s.Name)
+	}
 }

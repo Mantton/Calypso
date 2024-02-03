@@ -23,6 +23,18 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 
 func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
+	s := newSymbolInfo(stmt.Identifier.Value, VariableSymbol)
+	s.TypeDesc = unresolved
+	ok := c.define(s)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined", s.Name),
+			stmt.Identifier.Range(),
+		)
+		return
+	}
+
 	var annotation *SymbolInfo
 
 	// Check Annotation
@@ -33,16 +45,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	initializer := c.evaluateExpression(stmt.Value)
 
 	if annotation == nil {
-		s := newSymbolInfo(stmt.Identifier.Value, VariableSymbol)
 		s.TypeDesc = initializer
-		ok := c.define(s)
-
-		if !ok {
-			c.addError(
-				fmt.Sprintf("`%s` is already defined", s.Name),
-				stmt.Identifier.Range(),
-			)
-		}
 		return
 	}
 
@@ -68,8 +71,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 		}
 	}
 
-	// c.declareUnresolved(stmt.Identifier.Value, VariableSymbol)
-
+	s.TypeDesc = annotation
 }
 
 func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
