@@ -8,6 +8,12 @@ import (
 )
 
 func (c *Checker) checkExpression(expr ast.Expression) {
+
+	fmt.Printf(
+		"\nChecking Expression: %T @ Line %d\n",
+		expr,
+		expr.Range().Start.Line,
+	)
 	switch expr := expr.(type) {
 	case *ast.FunctionExpression:
 		c.checkFunctionExpression(expr)
@@ -20,10 +26,20 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 }
 
 func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
-	c.enterScope()
 
-	sym := newSymbolInfo(expr.Identifier.Value, TypeSymbol)
+	sym := newSymbolInfo(expr.Identifier.Value, FunctionSymbol)
 	sym.FuncDesc = &FunctionDescriptor{}
+	ok := c.define(sym)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined", sym.Name),
+			expr.Identifier.Range(),
+		)
+		return
+	}
+
+	c.enterScope()
 
 	prev := c.currentSym
 	c.currentSym = sym
@@ -44,7 +60,7 @@ func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 		t := c.evaluateTypeExpression(param.AnnotatedType)
 		pSym.TypeDesc = t
 		c.define(pSym)
-		sym.FuncDesc.Parameters = append(sym.FuncDesc.Parameters, t)
+		sym.FuncDesc.Parameters = append(sym.FuncDesc.Parameters, pSym)
 	}
 
 	// Body
@@ -54,15 +70,13 @@ func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 
 	if sym.FuncDesc.AnnotatedReturnType != nil {
 		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.AnnotatedReturnType
+		fmt.Println()
 	} else if sym.FuncDesc.InferredReturnType != nil {
 		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.InferredReturnType
 	} else {
 		sym.FuncDesc.ValidatedReturnType = c.resolveLiteral(VOID)
 	}
 
-	fn := newSymbolInfo(sym.Name, FunctionSymbol)
-	fn.TypeDesc = sym
-	c.define(fn)
 }
 
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
@@ -101,6 +115,8 @@ func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
 		return c.evaluateAssignmentExpression(expr)
 	case *ast.CallExpression:
 		return c.evaluateCallExpression(expr)
+	case *ast.CompositeLiteral:
+		return c.evaluateCompositeLiteral(expr)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -120,7 +136,12 @@ func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) *
 		return unresolved
 	}
 
-	return s.TypeDesc
+	switch s.Type {
+	case VariableSymbol:
+		return s.TypeDesc
+	default:
+		return s
+	}
 }
 
 func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo {
@@ -131,7 +152,7 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo
 	// TODO: Operand Standards
 	switch op {
 	case token.NOT:
-		err = c.validate(rhs, c.resolveLiteral(BOOLEAN))
+		err = c.validate(rhs, c.resolveLiteral(BOOLEAN), nil)
 
 		if err == nil {
 			return c.resolveLiteral(BOOLEAN)
@@ -140,12 +161,12 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo
 		// NOT Operand Standard
 
 	case token.SUB:
-		err := c.validate(rhs, c.resolveLiteral(INTEGER))
+		err := c.validate(rhs, c.resolveLiteral(INTEGER), nil)
 		if err == nil {
 			return c.resolveLiteral(INTEGER)
 		}
 
-		err = c.validate(rhs, c.resolveLiteral(FLOAT))
+		err = c.validate(rhs, c.resolveLiteral(FLOAT), nil)
 
 		if err == nil {
 			return c.resolveLiteral(FLOAT)
@@ -173,8 +194,9 @@ func (c *Checker) evaluateArrayLiteral(expr *ast.ArrayLiteral) *SymbolInfo {
 	conc := c.resolveLiteral(ARRAY)
 	symbol := newSymbolInfo(conc.Name, TypeSymbol)
 	elementType := c.evaluateExpressionList(expr.Elements)
-	symbol.ConcreteOf = conc
-	symbol.addGenericArgument(elementType)
+	symbol.SpecializedOf = conc
+	// Specialize Array Generic With Element Type
+	c.specialize(symbol.Specializations, conc.GenericParams[0], elementType)
 	return symbol
 }
 
@@ -195,7 +217,7 @@ func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
 
 		provided := c.evaluateExpression(expr)
 
-		err := c.validate(expected, provided)
+		err := c.validate(expected, provided, nil)
 
 		// If Unable to validate type, simple set list type as any
 		if err != nil {
@@ -214,7 +236,15 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo 
 	rhs := c.evaluateExpression(e.Right)
 	op := e.Op
 
-	err := c.validate(lhs, rhs)
+	if lhs.Type == GenericTypeSymbol || rhs.Type == GenericTypeSymbol {
+		c.addError(
+			"unable to perform binary operation on generic types",
+			e.Range(),
+		)
+		return unresolved
+	}
+
+	err := c.validate(lhs, rhs, nil)
 
 	if err != nil {
 		c.addError(err.Error(), e.Range())
@@ -225,36 +255,36 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo 
 	switch op {
 	case token.ADD:
 		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
 		if err == nil {
 			return c.resolveLiteral(INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
 
 		if err == nil {
 			return c.resolveLiteral(FLOAT)
 		}
 	case token.SUB:
 		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
 		if err == nil {
 			return c.resolveLiteral(INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
 
 		if err == nil {
 			return c.resolveLiteral(FLOAT)
 		}
 	case token.QUO, token.MUL:
 		// Integers, Floats
-		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
 		if err == nil {
 			return c.resolveLiteral(INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
 
 		if err == nil {
 			return c.resolveLiteral(FLOAT)
@@ -262,30 +292,30 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo 
 
 	case token.LSS, token.GTR, token.LEQ, token.GEQ:
 		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
 		if err == nil {
 			return c.resolveLiteral(INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
 
 		if err == nil {
 			return c.resolveLiteral(FLOAT)
 		}
 	case token.EQL, token.NEQ:
 		// Integers, Floats, Booleans
-		err = c.validate(lhs, c.resolveLiteral(INTEGER))
+		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
 		if err == nil {
 			return c.resolveLiteral(INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT))
+		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
 
 		if err == nil {
 			return c.resolveLiteral(FLOAT)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(BOOLEAN))
+		err = c.validate(lhs, c.resolveLiteral(BOOLEAN), nil)
 
 		if err == nil {
 			return c.resolveLiteral(BOOLEAN)
@@ -308,7 +338,7 @@ func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) *
 	lhs := c.evaluateExpression(expr.Target)
 	rhs := c.evaluateExpression(expr.Value)
 
-	err := c.validate(lhs, rhs)
+	err := c.validate(lhs, rhs, nil)
 
 	if err != nil {
 		c.addError(err.Error(), expr.Range())
@@ -322,7 +352,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 
 	target := c.evaluateExpression(expr.Target)
 
-	if target.FuncDesc == nil {
+	// Ensure Target is Callable
+	if target.FuncDesc == nil || target.Type != FunctionSymbol {
 		c.addError(
 			fmt.Sprintf("`%s` is not a function", target.Name),
 			expr.Target.Range(),
@@ -342,25 +373,25 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 
 	}
 
-	// Specialize Generics
-	if len(target.GenericParams) != 0 {
-		fmt.Println("Resolve Generic Parameters")
-	}
-	t := make(specializationTable)
+	sym := newSymbolInfo(target.Name, FunctionSymbol)
+	sym.SpecializedOf = target
 
 	for i, arg := range expr.Arguments {
 		provided := c.evaluateExpression(arg)
-		expected := target.FuncDesc.Parameters[i]
+		expected := target.FuncDesc.Parameters[i].TypeDesc
+
+		if expected == nil {
+			panic("[CallExpression] Parameter Type Should not be nil")
+		}
 
 		if expected.Type == GenericTypeSymbol {
 			// Generic, First Find Specialization
-			v, ok := t.get(expected)
+			v, ok := sym.Specializations.get(expected)
 
 			// If not found add
 			if !ok {
 				// Expected is a generic type, specialize
-				err := c.add(t, expected, provided)
-
+				err := c.specialize(sym.Specializations, expected, provided)
 				if err != nil {
 					c.addError(
 						err.Error(),
@@ -370,7 +401,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 				}
 			} else {
 				// specialization found, validate
-				err := c.validate(v, provided)
+				err := c.validate(v, provided, nil)
 
 				if err != nil {
 					c.addError(
@@ -383,7 +414,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 
 		} else {
 			// Expected is not a generic, ensure strict conformance
-			err := c.validate(expected, provided)
+			err := c.validate(expected, provided, nil)
 
 			if err != nil {
 				c.addError(
@@ -396,7 +427,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 	}
 
 	if target.FuncDesc.ValidatedReturnType.Type == GenericTypeSymbol {
-		v, ok := t.get(target.FuncDesc.ValidatedReturnType)
+		v, ok := sym.Specializations.get(target.FuncDesc.ValidatedReturnType)
 
 		if !ok {
 			c.addError(
@@ -411,4 +442,108 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 		return target.FuncDesc.ValidatedReturnType
 	}
 
+}
+
+func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *SymbolInfo {
+
+	base, ok := c.find(lit.Identifier.Value)
+
+	if base.Type != StructSymbol {
+		c.addError(
+			fmt.Sprintf("`%s` is not a struct", lit.Identifier.Value),
+			lit.Identifier.Range(),
+		)
+		return unresolved
+	}
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is not defined", lit.Identifier.Value),
+			lit.Range(),
+		)
+
+		return unresolved
+	}
+
+	sym := newSymbolInfo(base.Name, StructSymbol)
+	sym.SpecializedOf = base
+
+	seen := make(map[string]bool)
+
+	for _, pair := range lit.Pairs {
+		key := pair.Key.Value
+
+		expectedProperty, ok := base.Properties[key]
+
+		// Property is not defined in struct
+		if !ok {
+			c.addError(
+				fmt.Sprintf("`%s` is not a valid property", key),
+				pair.Range(),
+			)
+			continue
+		}
+
+		expected := expectedProperty.TypeDesc
+
+		// Ensure there is a provided type description
+		if expected == nil {
+			panic("[CompositeLiteral] Property Type Should not be nil")
+		}
+
+		_, ok = seen[key]
+
+		// Property has already been evaluated
+		if ok {
+			c.addError(
+				fmt.Sprintf("`%s` has already been provided", key),
+				pair.Range(),
+			)
+			continue
+		}
+
+		provided := c.evaluateExpression(pair.Value)
+
+		var err error
+		if expected.Type == GenericTypeSymbol {
+			_, ok := sym.Specializations[expected]
+			if !ok {
+				fmt.Println("[DEBUG] Struct Specialize")
+				err = c.specialize(sym.Specializations, expected, provided)
+			}
+		} else {
+			err = c.validate(expected, provided, sym.Specializations)
+		}
+
+		if err != nil {
+			c.addError(
+				err.Error(),
+				pair.Range(),
+			)
+			continue
+		}
+		// Mark As seen
+		seen[key] = true
+	}
+
+	// No Generic Arguments
+	if len(base.GenericParams) == 0 {
+		return base
+	} else {
+		// Ensure All Generic Params Have been Specialized
+		sym.Specializations.Debug()
+		fmt.Println(base.GenericParams)
+		for _, param := range base.GenericParams {
+			_, ok := sym.Specializations[param]
+
+			if !ok {
+				c.addError(
+					fmt.Sprintf("unable to infer type of `%s`", param),
+					lit.Range(),
+				)
+			}
+		}
+
+		return sym
+	}
 }

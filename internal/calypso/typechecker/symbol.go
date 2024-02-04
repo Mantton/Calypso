@@ -16,7 +16,7 @@ const (
 	StandardSymbol                      // Standards
 	AliasSymbol                         // Aliases
 	TypeSymbol                          // Types
-	GenericTypeSymbol                   //Generic Arguments / Params
+	GenericTypeSymbol                   // Generic Arguments / Params
 )
 
 var (
@@ -42,22 +42,24 @@ type SymbolInfo struct {
 	Properties map[string]*SymbolInfo // For complex types like structs, this holds property types
 	AliasOf    *SymbolInfo            // For aliases, points to the original type
 	ChildOf    *SymbolInfo            // For defined types, points to the original/base type
-	ConcreteOf *SymbolInfo
-	FuncDesc   *FunctionDescriptor // For functions, describes the function's signature
-	IsPrivate  bool                // if this symbol is a private property
+	FuncDesc   *FunctionDescriptor    // For functions, describes the function's signature
+	IsPrivate  bool                   // if this symbol is a private property
 	Mutable    bool
 
-	GenericParams    []*SymbolInfo          // Generic Params with this symbol
-	GenericArguments []*SymbolInfo          // generic arguments with this symbol
-	Constraints      map[string]*SymbolInfo // For Types & Structs, points to the Standards being conformed to.
-	ID               int
-	// TODO: Keep Track of Specializations
+	GenericParams []*SymbolInfo          // Generic Params with this symbol
+	Constraints   map[string]*SymbolInfo // For Types & Structs, points to the Standards being conformed to.
+	ID            int
+
+	Specializations SpecializationTable
+	SpecializedOf   *SymbolInfo
 }
 
 type SymbolTable struct {
 	Parent  *SymbolTable
 	Symbols map[string]*SymbolInfo
 }
+
+type SpecializationTable map[*SymbolInfo]*SymbolInfo
 
 // NewSymbolTable creates a new symbol table with an optional parent scope.
 func newSymbolTable(parent *SymbolTable) *SymbolTable {
@@ -96,11 +98,12 @@ func newSymbolInfo(name string, t SymbolType) *SymbolInfo {
 	nextSymbolId++        // Increment the global ID counter
 
 	return &SymbolInfo{
-		Name:        name,
-		Type:        t,
-		Properties:  make(map[string]*SymbolInfo),
-		Constraints: make(map[string]*SymbolInfo),
-		ID:          nextSymbolId,
+		Name:            name,
+		Type:            t,
+		Properties:      make(map[string]*SymbolInfo),
+		Constraints:     make(map[string]*SymbolInfo),
+		Specializations: make(SpecializationTable),
+		ID:              nextSymbolId,
 	}
 }
 
@@ -117,6 +120,8 @@ func (s *SymbolInfo) addProperty(it *SymbolInfo) bool {
 	}
 
 	s.Properties[it.Name] = it
+
+	fmt.Printf("Adding Property %s of type %s to %s\n", it, it.TypeDesc, s)
 	return true
 }
 
@@ -127,15 +132,6 @@ func (s *SymbolInfo) addConstraint(c *SymbolInfo) error {
 	}
 
 	s.Constraints[c.Identifier()] = c
-	return nil
-}
-
-func (s *SymbolInfo) addGenericArgument(a *SymbolInfo) error {
-	if a.Type != TypeSymbol && a.Type != AliasSymbol && a.Type != GenericTypeSymbol {
-		return fmt.Errorf(fmt.Sprintf("`%s` is not a type", a.Name))
-	}
-
-	s.GenericArguments = append(s.GenericArguments, a)
 	return nil
 }
 
@@ -150,7 +146,59 @@ func (s *SymbolInfo) addGenericParameter(p *SymbolInfo) error {
 	return nil
 }
 
-func (s *SymbolInfo) convertGenericParamsToArguments() {
-	s.GenericArguments = s.GenericParams
-	s.GenericParams = nil
+func (s *SymbolInfo) String() string {
+	return fmt.Sprintf("%s(%d)", s.Name, s.ID)
+}
+
+func (s *SymbolInfo) Info() string {
+	out := "\n==========================\n"
+	out += fmt.Sprintf("Module: `%s`\n", s.ModuleName)
+	out += fmt.Sprintf("Package: `%s`\n", s.PackageName)
+	out += fmt.Sprintf("Name: `%s`\n", s.Name)
+	out += fmt.Sprintf("ID: `%d`\n", s.ID)
+	out += fmt.Sprintf("Type: `%s`\n", LookUpNameOfSymbolType(s.Type))
+
+	if s.TypeDesc != nil {
+		out += fmt.Sprintf("\t%s\n", s.TypeDesc.String())
+	}
+
+	if s.AliasOf != nil {
+		out += fmt.Sprintf("Alias of: `%s`\n", s.AliasOf.String())
+	}
+
+	if s.SpecializedOf != nil {
+		out += fmt.Sprintf("Specialization of: `%s`\n", s.SpecializedOf.String())
+		out += fmt.Sprintf("%d Specs\n", len(s.Specializations))
+	}
+
+	for gen, spec := range s.Specializations {
+		out += fmt.Sprintf("Specializes %s for %s\n", gen, spec)
+	}
+
+	for _, param := range s.GenericParams {
+		out += fmt.Sprintf("Generic Param\n%s", param.String())
+	}
+
+	out += "==========================\n"
+
+	return out
+}
+
+func LookUpNameOfSymbolType(t SymbolType) string {
+	switch t {
+	case VariableSymbol:
+		return "Variable"
+	case StructSymbol:
+		return "Struct"
+	case StandardSymbol:
+		return "Standard"
+	case AliasSymbol:
+		return "Alias"
+	case TypeSymbol:
+		return "Type"
+	case GenericTypeSymbol:
+		return "Generic Type"
+	default:
+		return "UNDEFINED SYMBOL"
+	}
 }

@@ -125,11 +125,12 @@ type AliasStatement struct {
 }
 
 type StructStatement struct {
-	KeyWPos    token.TokenPosition
-	Identifier *IdentifierExpression
-	LBracePos  token.TokenPosition
-	RBracePos  token.TokenPosition
-	Properties []*IdentifierExpression
+	KeyWPos       token.TokenPosition
+	Identifier    *IdentifierExpression
+	GenericParams *GenericParametersClause
+	LBracePos     token.TokenPosition
+	RBracePos     token.TokenPosition
+	Properties    []*IdentifierExpression
 }
 
 // * Expressions
@@ -247,7 +248,13 @@ type CompositeLiteral struct {
 	Identifier *IdentifierExpression
 	LBracePos  token.TokenPosition
 	RBracePos  token.TokenPosition
-	Pairs      []*KeyValueExpression
+	Pairs      []*CompositeLiteralBodyClause
+}
+
+type CompositeLiteralBodyClause struct {
+	Key      *IdentifierExpression
+	Value    Expression
+	ColonPos token.TokenPosition
 }
 
 // * Types

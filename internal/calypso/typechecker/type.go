@@ -36,49 +36,53 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	}
 
 	// Validate Types
-	symbolArgCount := len(sym.GenericArguments)
+	expectedArgumentCount := len(sym.GenericParams)
 	var providedArguments []ast.TypeExpression
 
 	if expr.Arguments != nil {
 		providedArguments = expr.Arguments.Arguments
 	}
-	if symbolArgCount != len(providedArguments) {
-		msg := fmt.Sprintf("`%s` expects %d generic argument(s) got %d", sym.Name, symbolArgCount, len(providedArguments))
+	if expectedArgumentCount != len(providedArguments) {
+		msg := fmt.Sprintf("`%s` expects %d generic argument(s) got %d", sym.Name, expectedArgumentCount, len(providedArguments))
 		c.addError(msg, expr.Range())
 		return unresolved
 	}
 
 	// Return early if there are no generic parameters
-	if symbolArgCount == 0 {
+	if expectedArgumentCount == 0 {
 		return sym
 	}
 
 	specialized := newSymbolInfo(sym.Name, TypeSymbol)
-	specialized.ConcreteOf = sym
+	specialized.SpecializedOf = sym
 
 	// Ensure each argument are valid
 	hasError := false
-	for i, expectedArg := range sym.GenericArguments {
+	for i, expected := range sym.GenericParams {
 		arg := providedArguments[i]
-		providedArg := c.evaluateTypeExpression(arg)
+		provided := c.evaluateTypeExpression(arg)
 
-		err := c.validate(expectedArg, providedArg)
+		var err error
+		if expected.Type == GenericTypeSymbol {
+			_, ok := sym.Specializations[expected]
+			if !ok {
+				err = c.specialize(specialized.Specializations, expected, provided)
+			}
+		} else {
+			err = c.validate(expected, provided, specialized.Specializations)
+		}
 
 		if err != nil {
 			c.addError(
-				fmt.Sprintf("cannot pass `%s` expression as generic argument for `%s` of `%s`. %s",
-					providedArg.Name,
-					expectedArg.Name,
+				fmt.Sprintf("cannot pass `%s` expression as argument for `%s` of `%s`. %s",
+					provided.Name,
+					expected.Name,
 					sym.Name,
 					err.Error()),
 				arg.Range(),
 			)
-
-			specialized.addGenericArgument(unresolved)
 			continue
 		}
-
-		specialized.addGenericArgument(providedArg)
 	}
 
 	if hasError {

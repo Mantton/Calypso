@@ -490,7 +490,7 @@ func (p *Parser) parseCompositeLiteral() *ast.CompositeLiteral {
 
 	lBrace := p.expect(token.LBRACE)
 
-	pairs := []*ast.KeyValueExpression{}
+	pairs := []*ast.CompositeLiteralBodyClause{}
 	// Loop until match with RBRACE
 	for !p.match(token.RBRACE) {
 
@@ -504,7 +504,7 @@ func (p *Parser) parseCompositeLiteral() *ast.CompositeLiteral {
 
 		value := p.parseExpression()
 
-		expr := &ast.KeyValueExpression{
+		expr := &ast.CompositeLiteralBodyClause{
 			Key:      key,
 			Value:    value,
 			ColonPos: colon.Pos,

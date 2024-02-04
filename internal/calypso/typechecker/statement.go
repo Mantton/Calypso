@@ -7,6 +7,11 @@ import (
 )
 
 func (c *Checker) checkStatement(stmt ast.Statement) {
+	fmt.Printf(
+		"\nChecking Statement: %T @ Line %d\n",
+		stmt,
+		stmt.Range().Start.Line,
+	)
 	c.currentNode = stmt
 	switch stmt := stmt.(type) {
 	case *ast.VariableStatement:
@@ -19,6 +24,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkReturnStatement(stmt)
 	case *ast.ExpressionStatement:
 		c.checkExpression(stmt.Expr)
+	case *ast.StructStatement:
+		c.checkStructStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T", stmt)
 		panic(msg)
@@ -55,7 +62,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 
 	// Annotation Present, Ensure Annotated Type Matches the provided Type
-	err := c.validate(annotation, initializer)
+	err := c.validate(annotation, initializer, annotation.Specializations)
 
 	if err != nil {
 		c.addError(
@@ -82,10 +89,11 @@ func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
 func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 
 	s := newSymbolInfo(stmt.Identifier.Value, AliasSymbol)
-	hasErrors := false
-
 	prev := c.currentSym
 	c.currentSym = s
+	defer func() {
+		c.currentSym = prev
+	}()
 
 	ok := c.define(s)
 
@@ -94,13 +102,10 @@ func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 			fmt.Sprintf("`%s` is already defined", stmt.Identifier.Value),
 			stmt.Identifier.Range(),
 		)
-		hasErrors = true
+		return
 	}
 
-	// TODO: Check Generics
 	// alias Foo<T: Hashing> = Array<T>
-	// expectedArguments := len(expected.GenericArguments)
-
 	genericParams := stmt.GenericParams
 
 	if genericParams != nil {
@@ -108,23 +113,7 @@ func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 	}
 
 	expected := c.evaluateTypeExpression(stmt.Target)
-
-	// Ensure LHS & RHS have the same number of arguments
-	if len(expected.GenericArguments) != len(s.GenericParams) {
-		c.addError(
-			fmt.Sprintf("`%s` expected %d arguments, provided %d", expected.Name, len(expected.GenericArguments), len(s.GenericParams)),
-			stmt.Range(),
-		)
-		hasErrors = true
-	}
-
-	if !hasErrors {
-		s.AliasOf = expected
-		s.convertGenericParamsToArguments()
-		fmt.Println(s.Name, "is alias of", expected.Name)
-	}
-
-	c.currentSym = prev
+	s.AliasOf = expected
 }
 
 func (c *Checker) evaluateGenericParameters(s *SymbolInfo, clause *ast.GenericParametersClause) bool {
@@ -201,7 +190,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 
 	// Has Expected Return Type
 	if expected != nil {
-		err := c.validate(expected, provided)
+		err := c.validate(expected, provided, nil)
 
 		if err != nil {
 			c.addError(err.Error(), stmt.Range())
@@ -214,7 +203,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 	inferred := c.currentSym.FuncDesc.InferredReturnType
 
 	if inferred != nil {
-		err := c.validate(inferred, provided)
+		err := c.validate(inferred, provided, nil)
 		// Types Do not match, set to any
 		if err != nil {
 			c.currentSym.FuncDesc.InferredReturnType = c.resolveLiteral(ANY)
@@ -225,4 +214,39 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 		c.currentSym.FuncDesc.InferredReturnType = provided
 	}
 
+}
+
+func (c *Checker) checkStructStatement(stmt *ast.StructStatement) {
+
+	sym := newSymbolInfo(stmt.Identifier.Value, StructSymbol)
+	// Enter new Symbol Scope
+	prev := c.currentSym
+	c.currentSym = sym
+	defer func() {
+		c.currentSym = prev
+	}()
+
+	// Define
+	ok := c.define(sym)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined", sym.Name),
+			stmt.Identifier.Range(),
+		)
+		return
+	}
+
+	// Register Generic Parameters
+	if stmt.GenericParams != nil {
+		c.evaluateGenericParameters(sym, stmt.GenericParams)
+	}
+
+	// Register Properties
+	for _, prop := range stmt.Properties {
+		pSym := newSymbolInfo(prop.Value, VariableSymbol)
+		t := c.evaluateTypeExpression(prop.AnnotatedType)
+		pSym.TypeDesc = t
+		sym.addProperty(pSym)
+	}
 }

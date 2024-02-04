@@ -213,7 +213,13 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 
 	keyw := p.expect(token.STRUCT)
 
-	ident := p.parseIdentifierWithOptionalAnnotation()
+	ident := p.parseIdentifierWithoutAnnotation()
+
+	var genericParams *ast.GenericParametersClause
+
+	if p.currentMatches(token.LSS) {
+		genericParams = p.parseGenericParameterClause()
+	}
 
 	lBrace := p.expect(token.LBRACE)
 
@@ -227,10 +233,11 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 	rBrace := p.expect(token.RBRACE)
 
 	return &ast.StructStatement{
-		KeyWPos:    keyw.Pos,
-		Identifier: ident,
-		LBracePos:  lBrace.Pos,
-		RBracePos:  rBrace.Pos,
-		Properties: properties,
+		KeyWPos:       keyw.Pos,
+		Identifier:    ident,
+		GenericParams: genericParams,
+		LBracePos:     lBrace.Pos,
+		RBracePos:     rBrace.Pos,
+		Properties:    properties,
 	}
 }

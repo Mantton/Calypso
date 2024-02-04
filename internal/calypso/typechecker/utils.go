@@ -55,7 +55,7 @@ func (c *Checker) injectLiterals() {
 
 	arrayLit := newSymbolInfo("ArrayLiteral", TypeSymbol)
 	genericVal := newSymbolInfo("T", GenericTypeSymbol)
-	err := arrayLit.addGenericArgument(genericVal)
+	err := arrayLit.addGenericParameter(genericVal)
 
 	if err != nil {
 		panic(err)

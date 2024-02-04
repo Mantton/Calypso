@@ -5,18 +5,17 @@ import (
 	"fmt"
 )
 
-type specializationTable map[*SymbolInfo]*SymbolInfo
-
 // validates that two types
-func (c *Checker) validate(expected, provided *SymbolInfo) error {
-	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided.Name, expected.Name)
+func (c *Checker) validate(expected, provided *SymbolInfo, t SpecializationTable) error {
+	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
+
 	// Provided is unresolved
 	if expected == unresolved {
-		return fmt.Errorf("`%s` is unresolved", expected.Name)
+		return fmt.Errorf("`%s` is unresolved", expected)
 	}
 
 	if provided == unresolved {
-		return fmt.Errorf("`%s` is unresolved", provided.Name)
+		return fmt.Errorf("`%s` is unresolved", provided)
 	}
 
 	// expected is any, always validate
@@ -26,12 +25,12 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 
 	// Ensure Expected is a Type
 	if !c.isType(expected.Type) {
-		return fmt.Errorf("`%s` is not a type. this is a typechecker error. report", expected.Name)
+		return fmt.Errorf("`%s` is not a type. this is a typechecker error. report", expected)
 	}
 
 	// Ensure Provided is a Type
 	if !c.isType(provided.Type) {
-		return fmt.Errorf("`%s` is not a type. this is a typechecker error. report", expected.Name)
+		return fmt.Errorf("`%s` is not a type. this is a typechecker error. report", expected)
 	}
 
 	// Provided is Expected
@@ -39,18 +38,20 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 		return nil
 	}
 
-	// TODO: This should account for packages/modules
 	hasError := false
 
-	specializations := make(specializationTable)
+	if t == nil {
+		t = make(SpecializationTable)
+	}
+
 	// Resolve Specializations, and get map containing the specialized types
-	rExpected, err := c.resolveSpecialization(expected, specializations)
+	rExpected, err := c.resolveSpecialization(expected, t)
 
 	if err != nil {
 		return err
 	}
 
-	rProvided, err := c.resolveSpecialization(provided, specializations)
+	rProvided, err := c.resolveSpecialization(provided, t)
 
 	if err != nil {
 		return err
@@ -62,15 +63,15 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 
 	// Iterate till neither side has any generics or
 	depth := 0
-	for rExpected.AliasOf != nil || rProvided.AliasOf != nil || rExpected.ConcreteOf != nil || rProvided.ConcreteOf != nil {
+	for rExpected.AliasOf != nil || rProvided.AliasOf != nil || rExpected.SpecializedOf != nil || rProvided.SpecializedOf != nil {
 		// Resolve Specializations, and get map containing the specialized types
-		rExpected, err = c.resolveSpecialization(rExpected, specializations)
+		rExpected, err = c.resolveSpecialization(rExpected, t)
 
 		if err != nil {
 			return err
 		}
 
-		rProvided, err = c.resolveSpecialization(rProvided, specializations)
+		rProvided, err = c.resolveSpecialization(rProvided, t)
 
 		if err != nil {
 			return err
@@ -85,7 +86,6 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 			panic("TOO MANY NESTED RESULTS")
 		}
 	}
-
 	// Ensure Provided conforms to all standards of the expected type
 	for key, value := range rExpectedStandards {
 		p, ok := rProvidedStandards[key]
@@ -93,7 +93,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 		// Does not conform to standard
 		if !ok {
 			c.addError(
-				fmt.Sprintf("`%s` does not conform/implement the `%s` standard.", provided.Name, value.Name),
+				fmt.Sprintf("`%s` does not conform/implement the `%s` standard.", provided, value),
 				c.currentNode.Range(),
 			)
 			hasError = true
@@ -103,7 +103,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 		// Standards have same key identifier but do not match for some reason.
 		if p != value {
 			c.addError(
-				fmt.Sprintf("`%s` does not match standard of the same identifier. please report this issue", p.Name),
+				fmt.Sprintf("`%s` does not match standard of the same identifier. please report this issue", p),
 				c.currentNode.Range(),
 			)
 			hasError = true
@@ -115,44 +115,19 @@ func (c *Checker) validate(expected, provided *SymbolInfo) error {
 		return errors.New("REPORTED")
 	}
 
-	// If validating generics & Constraints of the Generic Param T have been met
+	// // If validating generics & Constraints of the Generic Param T have been met
+	// if rExpected.Type == GenericTypeSymbol && rProvided.Type == GenericTypeSymbol {
+	// 	return nil
+	// }
+
 	if rExpected.Type == GenericTypeSymbol {
 		return nil
 	}
 
 	// At this point, the expected is not a generic so both resolved types should be the exact same, with only checks of the arguments left
 	if rExpected != rProvided {
-		return fmt.Errorf("expected `%s`, received `%s`", rExpected.Name, rProvided.Name)
+		return fmt.Errorf("expected `%s`, received `%s`", rExpected, rProvided)
 	}
-
-	// Both Types are the same, check arguments
-	// TODO: do we possibly need to compare the length of both arg arrays?
-	// for i, arg := range rExpected.GenericArguments {
-	// 	expectedArg, ok := specializations.get(arg)
-
-	// 	if !ok {
-	// 		panic("UNABLE TO RESOLVE GENERIC SPECIALIZATION")
-	// 	}
-
-	// 	providedArg, ok := specializations.get(rProvided.GenericArguments[i])
-
-	// 	if !ok {
-	// 		panic("UNABLE TO RESOLVE GENERIC SPECIALIZATION")
-	// 	}
-
-	// 	ok = c.validate(expectedArg, providedArg)
-
-	// 	if !ok {
-	// 		c.addError(
-	// 			fmt.Sprintf("Cannot assign `%s` to `%s`", expectedArg.Name, providedArg.Name),
-	// 			c.currentNode.Range(),
-	// 		)
-
-	// 		hasError = true
-
-	// 	}
-	// }
-
 	return nil
 }
 
@@ -180,98 +155,110 @@ func (c *Checker) resolveAlias(s *SymbolInfo) (*SymbolInfo, map[string]*SymbolIn
 }
 
 // Resolves Specializations of Generic Types.
-func (c *Checker) resolveSpecialization(s *SymbolInfo, t specializationTable) (*SymbolInfo, error) {
-
-	generic := s.ConcreteOf
+func (c *Checker) resolveSpecialization(s *SymbolInfo, t SpecializationTable) (*SymbolInfo, error) {
 
 	// does not have generic
-	if generic == nil {
+	if s.SpecializedOf == nil {
 		return s, nil
 	}
 
-	if generic.ConcreteOf != nil {
-		panic("Cannot have a concrete of a concrete")
-	}
+	generic := s
 
-	for i, arg := range s.GenericArguments {
-		a := generic.GenericArguments[i]
-		if a.Type == GenericTypeSymbol {
-			err := c.add(t, a, arg)
+	for generic != nil {
 
+		for key, value := range generic.Specializations {
+			fmt.Println("[Resolve]", key, value)
+			err := c.specialize(t, key, value)
 			if err != nil {
+				fmt.Println("err", err)
 				return nil, err
 			}
 		}
 
-	}
+		if generic.SpecializedOf == nil {
+			return generic, nil
+		} else {
+			generic = generic.SpecializedOf
+		}
 
+	}
 	return generic, nil
 }
 
-func (c *Checker) add(t specializationTable, k, v *SymbolInfo) error {
+func (c *Checker) specialize(t SpecializationTable, k, v *SymbolInfo) error {
+	fmt.Println("Specializing", k, "as", v, "In Table")
 
-	// If generic, find all where key
-	if v.Type == GenericTypeSymbol {
+	// ensure is generic
+	if k.Type != GenericTypeSymbol {
+		return fmt.Errorf("`%s` is not a generic type", k)
+	}
 
-		oldVal, ok := t[k]
-		if !ok {
-			t[k] = t[v]
-			return nil
-		}
+	currentType, ok := t.get(k)
 
-		newVal, ok := t[v]
-		if !ok {
-			panic("Trying to get generic type that has not been specialized")
-		}
+	// `K` has not been defined, define & exit
+	if !ok {
+		t[k] = v
+		return nil
+	}
 
-		err := c.validate(newVal, oldVal)
+	// `K` has been defined check
 
-		if err != nil {
-			t[k] = unresolved
-			return err
-		}
-
-		t[k] = t[v]
-	} else {
-
-		oldVal, ok := t[k]
-
-		// Not Stored, Store
-		if !ok {
-			t[k] = v
-			return nil
-		}
-
-		// Stored, Validate Change
-		err := c.validate(v, oldVal)
+	// Specialization of `K` is a generic
+	if currentType.Type == GenericTypeSymbol {
+		err := c.validate(currentType, v, t)
 
 		if err != nil {
-			t[k] = unresolved
 			return err
 		}
 
 		t[k] = v
 
+		fmt.Println("Specializing [UPDATING]", currentType, "as", v)
+		t[currentType] = v
+
+	} else {
+		// Current Value is not a generic, compare
+
+		// New Value is generic, resolve
+		if v.Type == GenericTypeSymbol {
+			spec, ok := t.get(k)
+
+			if !ok {
+				panic("unable to resolve generic")
+			}
+
+			err := c.validate(currentType, spec, t)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			err := c.validate(currentType, v, t)
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 
-	// fmt.Println("\n DICT")
-	// for key, value := range t {
-	// 	fmt.Println(" >>>>>>", key.Name, key.ID, "Maps To", value.Name, value.ID, "Args")
-	// }
 	return nil
 }
 
-func (t specializationTable) get(s *SymbolInfo) (*SymbolInfo, bool) {
+func (t SpecializationTable) get(s *SymbolInfo) (*SymbolInfo, bool) {
 
 	if s.Type != GenericTypeSymbol {
 		return s, true
 	}
+
 	v, ok := t[s]
+
 	return v, ok
 }
 
-func (c *Checker) debugPrintArguments(s *SymbolInfo) {
-	for _, arg := range s.GenericArguments {
-		fmt.Println("[DEBUG]", arg.Name, "For", s.Name)
+func (t SpecializationTable) Debug() {
+	fmt.Println("\n[Specialization Table] DEBUG")
+	for key, value := range t {
+		fmt.Println(" >>>>>>", key, "Maps To", value, "Args")
 	}
+	fmt.Println()
 }

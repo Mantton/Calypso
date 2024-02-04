@@ -151,14 +151,22 @@ func (e *KeyValueExpression) Range() token.SyntaxRange {
 	}
 }
 
-func (e *GroupedExpression) expressionNode()    {}
-func (e *CallExpression) expressionNode()       {}
-func (e *UnaryExpression) expressionNode()      {}
-func (e *BinaryExpression) expressionNode()     {}
-func (e *AssignmentExpression) expressionNode() {}
-func (e *IndexExpression) expressionNode()      {}
-func (e *PropertyExpression) expressionNode()   {}
-func (e *KeyValueExpression) expressionNode()   {}
+func (e *CompositeLiteralBodyClause) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.Key.Range().Start,
+		End:   e.Value.Range().End,
+	}
+}
+
+func (e *GroupedExpression) expressionNode()          {}
+func (e *CallExpression) expressionNode()             {}
+func (e *UnaryExpression) expressionNode()            {}
+func (e *BinaryExpression) expressionNode()           {}
+func (e *AssignmentExpression) expressionNode()       {}
+func (e *IndexExpression) expressionNode()            {}
+func (e *PropertyExpression) expressionNode()         {}
+func (e *KeyValueExpression) expressionNode()         {}
+func (e *CompositeLiteralBodyClause) expressionNode() {}
 
 // * Statements
 func (e *IfStatement) Range() token.SyntaxRange {
