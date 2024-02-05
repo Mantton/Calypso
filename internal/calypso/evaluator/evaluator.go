@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mantton/calypso/internal/calypso/compiler"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
@@ -51,7 +52,7 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 	fmt.Println("[Resolver] Complete")
 
 	checker := typechecker.New(typechecker.STD)
-	checker.CheckFile(file)
+	symbols := checker.CheckFile(file)
 
 	if len(checker.Errors) != 0 {
 		for _, err := range checker.Errors {
@@ -60,7 +61,13 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 		return 1
 	}
 	fmt.Println("[TypeChecker] Complete")
+
+	fmt.Println("\n\nCompiler")
+
+	compiler := compiler.New()
+	compiler.Compile(file, symbols)
 	fmt.Println("Done")
+
 	return 0
 }
 
