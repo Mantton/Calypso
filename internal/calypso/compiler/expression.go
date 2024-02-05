@@ -1,23 +1,18 @@
 package compiler
 
-import (
-	"fmt"
+import "github.com/mantton/calypso/internal/calypso/ast"
 
-	"github.com/mantton/calypso/internal/calypso/ast"
-	"tinygo.org/x/go-llvm"
-)
+// Base Expressions
+func (c *Compiler) VisitFunctionExpression(n *ast.FunctionExpression)     {}
+func (c *Compiler) VisitIdentifierExpression(n *ast.IdentifierExpression) {}
 
-func (c *Compiler) evaluateExpression(expr ast.Expression) llvm.Value {
-	fmt.Printf("Compiling %T\n", expr)
-
-	switch expr := expr.(type) {
-	case *ast.IntegerLiteral:
-		return llvm.ConstInt(c.context.Int32Type(), uint64(expr.Value), false)
-
-	default:
-		fmt.Printf("[COMPILER] Missing Compilation Implementation for %T", expr)
-		panic("")
-
-	}
-
-}
+// Complex Expressions
+func (c *Compiler) VisitGroupedExpression(n *ast.GroupedExpression)                   {}
+func (c *Compiler) VisitCallExpression(n *ast.CallExpression)                         {}
+func (c *Compiler) VisitUnaryExpression(n *ast.UnaryExpression)                       {}
+func (c *Compiler) VisitBinaryExpression(n *ast.BinaryExpression)                     {}
+func (c *Compiler) VisitAssignmentExpression(n *ast.AssignmentExpression)             {}
+func (c *Compiler) VisitIndexExpression(n *ast.IndexExpression)                       {}
+func (c *Compiler) VisitPropertyExpression(n *ast.PropertyExpression)                 {}
+func (c *Compiler) VisitKeyValueExpression(n *ast.KeyValueExpression)                 {}
+func (c *Compiler) VisitCompositeLiteralBodyClause(n *ast.CompositeLiteralBodyClause) {}

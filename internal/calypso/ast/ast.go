@@ -7,7 +7,7 @@ import (
 
 type Node interface {
 	Range() token.SyntaxRange
-	accept(Visitor)
+	Accept(visitor)
 }
 
 type Expression interface {

@@ -20,21 +20,8 @@ func (c *Compiler) compileFile(file *ast.File, symbols *typechecker.SymbolTable)
 	defer c.builder.Dispose()
 
 	for _, decl := range decls {
-		c.compileDeclaration(decl)
+		decl.Accept(c)
 	}
 
-	// fnType := llvm.FunctionType(c.context.Int32Type(), []llvm.Type{}, false)
-	// fn := llvm.AddFunction(c.module, "main", fnType)
-	// entry := llvm.AddBasicBlock(fn, "entry")
-	// c.builder.SetInsertPointAtEnd(entry)
-
-	// // Construct
-	// one := llvm.ConstInt(c.context.Int32Type(), 1, false)
-	// sum := c.builder.CreateAdd(one, one, "sum")
-
-	// c.builder.CreateRet(sum)
-	// fmt.Println(c.module.String())
-
 	return c.module.String()
-
 }

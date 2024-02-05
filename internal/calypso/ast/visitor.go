@@ -1,187 +1,187 @@
 package ast
 
-type Visitor interface {
+type visitor interface {
 	// Literals
-	visitIntegerLiteral(*IntegerLiteral)
-	visitFloatLiteral(*FloatLiteral)
-	visitStringLiteral(*StringLiteral)
-	visitBooleanLiteral(*BooleanLiteral)
-	visitNullLiteral(*NullLiteral)
-	visitVoidLiteral(*VoidLiteral)
+	VisitIntegerLiteral(*IntegerLiteral)
+	VisitFloatLiteral(*FloatLiteral)
+	VisitStringLiteral(*StringLiteral)
+	VisitBooleanLiteral(*BooleanLiteral)
+	VisitNullLiteral(*NullLiteral)
+	VisitVoidLiteral(*VoidLiteral)
 
 	// Complex Literals
-	visitCompositeLiteral(*CompositeLiteral)
-	visitArrayLiteral(*ArrayLiteral)
-	visitMapLiteral(*MapLiteral)
+	VisitCompositeLiteral(*CompositeLiteral)
+	VisitArrayLiteral(*ArrayLiteral)
+	VisitMapLiteral(*MapLiteral)
 
 	// Base Expressions
-	visitFunctionExpression(*FunctionExpression)
-	visitIdentifierExpression(*IdentifierExpression)
+	VisitFunctionExpression(*FunctionExpression)
+	VisitIdentifierExpression(*IdentifierExpression)
 
 	// Other Expressions
-	visitGroupedExpression(*GroupedExpression)
-	visitCallExpression(*CallExpression)
-	visitUnaryExpression(*UnaryExpression)
-	visitBinaryExpression(*BinaryExpression)
-	visitAssignmentExpression(*AssignmentExpression)
-	visitIndexExpression(*IndexExpression)
-	visitPropertyExpression(*PropertyExpression)
-	visitKeyValueExpression(*KeyValueExpression)
-	visitCompositeLiteralBodyClause(*CompositeLiteralBodyClause)
+	VisitGroupedExpression(*GroupedExpression)
+	VisitCallExpression(*CallExpression)
+	VisitUnaryExpression(*UnaryExpression)
+	VisitBinaryExpression(*BinaryExpression)
+	VisitAssignmentExpression(*AssignmentExpression)
+	VisitIndexExpression(*IndexExpression)
+	VisitPropertyExpression(*PropertyExpression)
+	VisitKeyValueExpression(*KeyValueExpression)
+	VisitCompositeLiteralBodyClause(*CompositeLiteralBodyClause)
 
 	// Statements
-	visitIfStatement(*IfStatement)
-	visitExpressionStatement(*ExpressionStatement)
-	visitWhileStatement(*WhileStatement)
-	visitReturnStatement(*ReturnStatement)
-	visitBlockStatement(*BlockStatement)
-	visitVariableStatement(*VariableStatement)
-	visitFunctionStatement(*FunctionStatement)
-	visitAliasStatement(*AliasStatement)
-	visitStructStatement(*StructStatement)
+	VisitIfStatement(*IfStatement)
+	VisitExpressionStatement(*ExpressionStatement)
+	VisitWhileStatement(*WhileStatement)
+	VisitReturnStatement(*ReturnStatement)
+	VisitBlockStatement(*BlockStatement)
+	VisitVariableStatement(*VariableStatement)
+	VisitFunctionStatement(*FunctionStatement)
+	VisitAliasStatement(*AliasStatement)
+	VisitStructStatement(*StructStatement)
 
 	// Declarations
-	visitConstantDeclaration(*ConstantDeclaration)
-	visitStatementDeclaration(*StatementDeclaration)
-	visitFunctionDeclaration(*FunctionDeclaration)
-	visitStandardDeclaration(*StandardDeclaration)
-	visitTypeDeclaration(*TypeDeclaration)
-	visitExtensionDeclaration(*ExtensionDeclaration)
-	visitConformanceDeclaration(*ConformanceDeclaration)
+	VisitConstantDeclaration(*ConstantDeclaration)
+	VisitStatementDeclaration(*StatementDeclaration)
+	VisitFunctionDeclaration(*FunctionDeclaration)
+	VisitStandardDeclaration(*StandardDeclaration)
+	VisitTypeDeclaration(*TypeDeclaration)
+	VisitExtensionDeclaration(*ExtensionDeclaration)
+	VisitConformanceDeclaration(*ConformanceDeclaration)
 
 	// Types
-	visitIdentifierTypeExpression(*IdentifierTypeExpression)
-	visitArrayTypeExpression(*ArrayTypeExpression)
-	visitMapTypeExpression(*MapTypeExpression)
+	VisitIdentifierTypeExpression(*IdentifierTypeExpression)
+	VisitArrayTypeExpression(*ArrayTypeExpression)
+	VisitMapTypeExpression(*MapTypeExpression)
 }
 
 // Literal Conformance
-func (n *IntegerLiteral) accept(v Visitor) {
-	v.visitIntegerLiteral(n)
+func (n *IntegerLiteral) Accept(v visitor) {
+	v.VisitIntegerLiteral(n)
 }
-func (n *FloatLiteral) accept(v Visitor) {
-	v.visitFloatLiteral(n)
+func (n *FloatLiteral) Accept(v visitor) {
+	v.VisitFloatLiteral(n)
 }
-func (n *StringLiteral) accept(v Visitor) {
-	v.visitStringLiteral(n)
+func (n *StringLiteral) Accept(v visitor) {
+	v.VisitStringLiteral(n)
 }
-func (n *BooleanLiteral) accept(v Visitor) {
-	v.visitBooleanLiteral(n)
+func (n *BooleanLiteral) Accept(v visitor) {
+	v.VisitBooleanLiteral(n)
 }
-func (n *NullLiteral) accept(v Visitor) {
-	v.visitNullLiteral(n)
+func (n *NullLiteral) Accept(v visitor) {
+	v.VisitNullLiteral(n)
 }
-func (n *VoidLiteral) accept(v Visitor) {
-	v.visitVoidLiteral(n)
+func (n *VoidLiteral) Accept(v visitor) {
+	v.VisitVoidLiteral(n)
 }
 
 // Complex Literals Conformance
-func (n *CompositeLiteral) accept(v Visitor) {
-	v.visitCompositeLiteral(n)
+func (n *CompositeLiteral) Accept(v visitor) {
+	v.VisitCompositeLiteral(n)
 }
-func (n *ArrayLiteral) accept(v Visitor) {
-	v.visitArrayLiteral(n)
+func (n *ArrayLiteral) Accept(v visitor) {
+	v.VisitArrayLiteral(n)
 }
-func (n *MapLiteral) accept(v Visitor) {
-	v.visitMapLiteral(n)
+func (n *MapLiteral) Accept(v visitor) {
+	v.VisitMapLiteral(n)
 }
 
 // Base Expressions
-func (n *FunctionExpression) accept(v Visitor) {
-	v.visitFunctionExpression(n)
+func (n *FunctionExpression) Accept(v visitor) {
+	v.VisitFunctionExpression(n)
 }
-func (n *IdentifierExpression) accept(v Visitor) {
-	v.visitIdentifierExpression(n)
+func (n *IdentifierExpression) Accept(v visitor) {
+	v.VisitIdentifierExpression(n)
 }
 
 // Complex Expressions
-func (n *GroupedExpression) accept(v Visitor) {
-	v.visitGroupedExpression(n)
+func (n *GroupedExpression) Accept(v visitor) {
+	v.VisitGroupedExpression(n)
 }
-func (n *CallExpression) accept(v Visitor) {
-	v.visitCallExpression(n)
+func (n *CallExpression) Accept(v visitor) {
+	v.VisitCallExpression(n)
 }
-func (n *UnaryExpression) accept(v Visitor) {
-	v.visitUnaryExpression(n)
+func (n *UnaryExpression) Accept(v visitor) {
+	v.VisitUnaryExpression(n)
 }
-func (n *BinaryExpression) accept(v Visitor) {
-	v.visitBinaryExpression(n)
+func (n *BinaryExpression) Accept(v visitor) {
+	v.VisitBinaryExpression(n)
 }
-func (n *AssignmentExpression) accept(v Visitor) {
-	v.visitAssignmentExpression(n)
+func (n *AssignmentExpression) Accept(v visitor) {
+	v.VisitAssignmentExpression(n)
 }
-func (n *IndexExpression) accept(v Visitor) {
-	v.visitIndexExpression(n)
+func (n *IndexExpression) Accept(v visitor) {
+	v.VisitIndexExpression(n)
 }
-func (n *PropertyExpression) accept(v Visitor) {
-	v.visitPropertyExpression(n)
+func (n *PropertyExpression) Accept(v visitor) {
+	v.VisitPropertyExpression(n)
 }
-func (n *KeyValueExpression) accept(v Visitor) {
-	v.visitKeyValueExpression(n)
+func (n *KeyValueExpression) Accept(v visitor) {
+	v.VisitKeyValueExpression(n)
 }
-func (n *CompositeLiteralBodyClause) accept(v Visitor) {
-	v.visitCompositeLiteralBodyClause(n)
+func (n *CompositeLiteralBodyClause) Accept(v visitor) {
+	v.VisitCompositeLiteralBodyClause(n)
 }
 
 // Statements
-func (n *IfStatement) accept(v Visitor) {
-	v.visitIfStatement(n)
+func (n *IfStatement) Accept(v visitor) {
+	v.VisitIfStatement(n)
 }
-func (n *ExpressionStatement) accept(v Visitor) {
-	v.visitExpressionStatement(n)
+func (n *ExpressionStatement) Accept(v visitor) {
+	v.VisitExpressionStatement(n)
 }
-func (n *WhileStatement) accept(v Visitor) {
-	v.visitWhileStatement(n)
+func (n *WhileStatement) Accept(v visitor) {
+	v.VisitWhileStatement(n)
 }
-func (n *ReturnStatement) accept(v Visitor) {
-	v.visitReturnStatement(n)
+func (n *ReturnStatement) Accept(v visitor) {
+	v.VisitReturnStatement(n)
 }
-func (n *BlockStatement) accept(v Visitor) {
-	v.visitBlockStatement(n)
+func (n *BlockStatement) Accept(v visitor) {
+	v.VisitBlockStatement(n)
 }
-func (n *VariableStatement) accept(v Visitor) {
-	v.visitVariableStatement(n)
+func (n *VariableStatement) Accept(v visitor) {
+	v.VisitVariableStatement(n)
 }
-func (n *FunctionStatement) accept(v Visitor) {
-	v.visitFunctionStatement(n)
+func (n *FunctionStatement) Accept(v visitor) {
+	v.VisitFunctionStatement(n)
 }
-func (n *AliasStatement) accept(v Visitor) {
-	v.visitAliasStatement(n)
+func (n *AliasStatement) Accept(v visitor) {
+	v.VisitAliasStatement(n)
 }
-func (n *StructStatement) accept(v Visitor) {
-	v.visitStructStatement(n)
+func (n *StructStatement) Accept(v visitor) {
+	v.VisitStructStatement(n)
 }
 
 // Declarations
-func (n *ConstantDeclaration) accept(v Visitor) {
-	v.visitConstantDeclaration(n)
+func (n *ConstantDeclaration) Accept(v visitor) {
+	v.VisitConstantDeclaration(n)
 }
-func (n *StatementDeclaration) accept(v Visitor) {
-	v.visitStatementDeclaration(n)
+func (n *StatementDeclaration) Accept(v visitor) {
+	v.VisitStatementDeclaration(n)
 }
-func (n *FunctionDeclaration) accept(v Visitor) {
-	v.visitFunctionDeclaration(n)
+func (n *FunctionDeclaration) Accept(v visitor) {
+	v.VisitFunctionDeclaration(n)
 }
-func (n *StandardDeclaration) accept(v Visitor) {
-	v.visitStandardDeclaration(n)
+func (n *StandardDeclaration) Accept(v visitor) {
+	v.VisitStandardDeclaration(n)
 }
-func (n *TypeDeclaration) accept(v Visitor) {
-	v.visitTypeDeclaration(n)
+func (n *TypeDeclaration) Accept(v visitor) {
+	v.VisitTypeDeclaration(n)
 }
-func (n *ExtensionDeclaration) accept(v Visitor) {
-	v.visitExtensionDeclaration(n)
+func (n *ExtensionDeclaration) Accept(v visitor) {
+	v.VisitExtensionDeclaration(n)
 }
-func (n *ConformanceDeclaration) accept(v Visitor) {
-	v.visitConformanceDeclaration(n)
+func (n *ConformanceDeclaration) Accept(v visitor) {
+	v.VisitConformanceDeclaration(n)
 }
 
 // Types
-func (n *IdentifierTypeExpression) accept(v Visitor) {
-	v.visitIdentifierTypeExpression(n)
+func (n *IdentifierTypeExpression) Accept(v visitor) {
+	v.VisitIdentifierTypeExpression(n)
 }
-func (n *ArrayTypeExpression) accept(v Visitor) {
-	v.visitArrayTypeExpression(n)
+func (n *ArrayTypeExpression) Accept(v visitor) {
+	v.VisitArrayTypeExpression(n)
 }
-func (n *MapTypeExpression) accept(v Visitor) {
-	v.visitMapTypeExpression(n)
+func (n *MapTypeExpression) Accept(v visitor) {
+	v.VisitMapTypeExpression(n)
 }
