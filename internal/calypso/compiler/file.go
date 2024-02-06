@@ -19,9 +19,11 @@ func (c *Compiler) compileFile(file *ast.File, symbols *typechecker.SymbolTable)
 	defer c.module.Dispose()
 	defer c.builder.Dispose()
 
-	for _, decl := range decls {
-		decl.Accept(c)
-	}
+	c.doInScope(func() {
+		for _, decl := range decls {
+			decl.Accept(c)
+		}
+	})
 
 	return c.module.String()
 }

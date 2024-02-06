@@ -12,7 +12,7 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 	switch p.current() {
 	case token.CONST:
 		stmt := p.parseVariableStatement()
-
+		stmt.IsGlobal = true
 		return &ast.ConstantDeclaration{
 			Stmt: stmt,
 		}

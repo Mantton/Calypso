@@ -89,6 +89,7 @@ type VariableStatement struct {
 	Identifier *IdentifierExpression
 	Value      Expression
 	IsConstant bool
+	IsGlobal   bool
 }
 
 type FunctionStatement struct {
