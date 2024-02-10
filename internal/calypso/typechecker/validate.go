@@ -9,7 +9,7 @@ import (
 
 // validates that two types
 func (c *Checker) validate(expected, provided *symbols.SymbolInfo, t symbols.SpecializationTable) error {
-	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
+	// fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
 
 	// Provided is unresolved
 	if expected == unresolved {
