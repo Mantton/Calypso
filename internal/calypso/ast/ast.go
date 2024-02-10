@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -82,6 +83,7 @@ type BlockStatement struct {
 	LBrackPos  token.TokenPosition
 	RBrackPos  token.TokenPosition
 	Statements []Statement
+	Symbols    *symbols.SymbolTable
 }
 
 type VariableStatement struct {

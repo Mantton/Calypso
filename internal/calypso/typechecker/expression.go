@@ -232,7 +232,6 @@ func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *symbols.Symbol
 }
 
 func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *symbols.SymbolInfo {
-
 	lhs := c.evaluateExpression(e.Left)
 	rhs := c.evaluateExpression(e.Right)
 	op := e.Op
@@ -292,35 +291,9 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *symbols.Sym
 		}
 
 	case token.LSS, token.GTR, token.LEQ, token.GEQ:
-		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
-		if err == nil {
-			return c.resolveLiteral(symbols.INTEGER)
-		}
-
-		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
-
-		if err == nil {
-			return c.resolveLiteral(symbols.FLOAT)
-		}
+		return c.resolveLiteral(symbols.BOOLEAN)
 	case token.EQL, token.NEQ:
-		// Integers, Floats, Booleans
-		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
-		if err == nil {
-			return c.resolveLiteral(symbols.INTEGER)
-		}
-
-		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
-
-		if err == nil {
-			return c.resolveLiteral(symbols.FLOAT)
-		}
-
-		err = c.validate(lhs, c.resolveLiteral(symbols.BOOLEAN), nil)
-
-		if err == nil {
-			return c.resolveLiteral(symbols.BOOLEAN)
-		}
+		return c.resolveLiteral(symbols.BOOLEAN)
 	default:
 		err = fmt.Errorf("unsupported binary operand `%s`", token.LookUp(op))
 

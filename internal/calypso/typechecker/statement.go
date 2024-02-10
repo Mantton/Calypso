@@ -27,6 +27,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkExpression(stmt.Expr)
 	case *ast.StructStatement:
 		c.checkStructStatement(stmt)
+	case *ast.IfStatement:
+		c.checkIfStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T", stmt)
 		panic(msg)
@@ -77,7 +79,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 }
 
 func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
-
+	blk.Symbols = c.symbols
 	if len(blk.Statements) == 0 {
 		return
 	}
@@ -249,5 +251,29 @@ func (c *Checker) checkStructStatement(stmt *ast.StructStatement) {
 		t := c.evaluateTypeExpression(prop.AnnotatedType)
 		pSym.TypeDesc = t
 		sym.AddProperty(pSym)
+	}
+}
+
+func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
+
+	// 1 - Check Condition
+	cond := c.evaluateExpression(stmt.Condition)
+
+	err := c.validate(c.resolveLiteral(symbols.BOOLEAN), cond, nil)
+
+	if err != nil {
+		c.addError(err.Error(), stmt.Condition.Range())
+		return
+	}
+
+	// 2 - Check Action
+	c.enterScope()
+	c.checkBlockStatement(stmt.Action)
+	c.leaveScope(false)
+
+	if stmt.Alternative != nil {
+		c.enterScope()
+		c.checkBlockStatement(stmt.Alternative)
+		c.leaveScope(false)
 	}
 }
