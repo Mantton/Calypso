@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -27,8 +28,8 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 
 func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 
-	sym := newSymbolInfo(expr.Identifier.Value, FunctionSymbol)
-	sym.FuncDesc = &FunctionDescriptor{}
+	sym := symbols.NewSymbol(expr.Identifier.Value, symbols.FunctionSymbol)
+	sym.FuncDesc = &symbols.FunctionDescriptor{}
 	ok := c.define(sym)
 
 	if !ok {
@@ -56,7 +57,7 @@ func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 
 	// Params
 	for _, param := range expr.Params {
-		pSym := newSymbolInfo(param.Value, VariableSymbol)
+		pSym := symbols.NewSymbol(param.Value, symbols.VariableSymbol)
 		t := c.evaluateTypeExpression(param.AnnotatedType)
 		pSym.TypeDesc = t
 		c.define(pSym)
@@ -74,7 +75,7 @@ func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 	} else if sym.FuncDesc.InferredReturnType != nil {
 		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.InferredReturnType
 	} else {
-		sym.FuncDesc.ValidatedReturnType = c.resolveLiteral(VOID)
+		sym.FuncDesc.ValidatedReturnType = c.resolveLiteral(symbols.VOID)
 	}
 
 }
@@ -84,23 +85,23 @@ func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
 	c.evaluateAssignmentExpression(expr)
 }
 
-func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
+func (c *Checker) evaluateExpression(expr ast.Expression) *symbols.SymbolInfo {
 	c.currentNode = expr
 
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.IntegerLiteral:
-		return c.resolveLiteral(INTEGER)
+		return c.resolveLiteral(symbols.INTEGER)
 	case *ast.BooleanLiteral:
-		return c.resolveLiteral(BOOLEAN)
+		return c.resolveLiteral(symbols.BOOLEAN)
 	case *ast.FloatLiteral:
-		return c.resolveLiteral(FLOAT)
+		return c.resolveLiteral(symbols.FLOAT)
 	case *ast.StringLiteral:
-		return c.resolveLiteral(STRING)
+		return c.resolveLiteral(symbols.STRING)
 	case *ast.NullLiteral:
-		return c.resolveLiteral(NULL)
+		return c.resolveLiteral(symbols.NULL)
 	case *ast.VoidLiteral:
-		return c.resolveLiteral(VOID)
+		return c.resolveLiteral(symbols.VOID)
 	case *ast.ArrayLiteral:
 		return c.evaluateArrayLiteral(expr)
 	case *ast.IdentifierExpression:
@@ -123,7 +124,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression) *SymbolInfo {
 	}
 }
 
-func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) *SymbolInfo {
+func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) *symbols.SymbolInfo {
 
 	s, ok := c.find(expr.Value)
 
@@ -137,14 +138,14 @@ func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) *
 	}
 
 	switch s.Type {
-	case VariableSymbol:
+	case symbols.VariableSymbol:
 		return s.TypeDesc
 	default:
 		return s
 	}
 }
 
-func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo {
+func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *symbols.SymbolInfo {
 	op := expr.Op
 
 	rhs := c.evaluateExpression(expr.Expr)
@@ -152,24 +153,24 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo
 	// TODO: Operand Standards
 	switch op {
 	case token.NOT:
-		err = c.validate(rhs, c.resolveLiteral(BOOLEAN), nil)
+		err = c.validate(rhs, c.resolveLiteral(symbols.BOOLEAN), nil)
 
 		if err == nil {
-			return c.resolveLiteral(BOOLEAN)
+			return c.resolveLiteral(symbols.BOOLEAN)
 		}
 
 		// NOT Operand Standard
 
 	case token.SUB:
-		err := c.validate(rhs, c.resolveLiteral(INTEGER), nil)
+		err := c.validate(rhs, c.resolveLiteral(symbols.INTEGER), nil)
 		if err == nil {
-			return c.resolveLiteral(INTEGER)
+			return c.resolveLiteral(symbols.INTEGER)
 		}
 
-		err = c.validate(rhs, c.resolveLiteral(FLOAT), nil)
+		err = c.validate(rhs, c.resolveLiteral(symbols.FLOAT), nil)
 
 		if err == nil {
-			return c.resolveLiteral(FLOAT)
+			return c.resolveLiteral(symbols.FLOAT)
 		}
 
 	default:
@@ -186,13 +187,13 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) *SymbolInfo
 
 }
 
-func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) *SymbolInfo {
+func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) *symbols.SymbolInfo {
 	return c.evaluateExpression(expr.Expr)
 }
 
-func (c *Checker) evaluateArrayLiteral(expr *ast.ArrayLiteral) *SymbolInfo {
-	conc := c.resolveLiteral(ARRAY)
-	symbol := newSymbolInfo(conc.Name, TypeSymbol)
+func (c *Checker) evaluateArrayLiteral(expr *ast.ArrayLiteral) *symbols.SymbolInfo {
+	conc := c.resolveLiteral(symbols.ARRAY)
+	symbol := symbols.NewSymbol(conc.Name, symbols.TypeSymbol)
 	elementType := c.evaluateExpressionList(expr.Elements)
 	symbol.SpecializedOf = conc
 	// Specialize Array Generic With Element Type
@@ -200,14 +201,14 @@ func (c *Checker) evaluateArrayLiteral(expr *ast.ArrayLiteral) *SymbolInfo {
 	return symbol
 }
 
-func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
+func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *symbols.SymbolInfo {
 
 	if len(exprs) == 0 {
 		// No Elements, Array Can Contain Any Element
-		return c.resolveLiteral(ANY)
+		return c.resolveLiteral(symbols.ANY)
 	}
 
-	var expected *SymbolInfo
+	var expected *symbols.SymbolInfo
 
 	for _, expr := range exprs {
 		if expected == nil {
@@ -221,7 +222,7 @@ func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
 
 		// If Unable to validate type, simple set list type as any
 		if err != nil {
-			return c.resolveLiteral(ANY)
+			return c.resolveLiteral(symbols.ANY)
 		}
 
 	}
@@ -230,13 +231,13 @@ func (c *Checker) evaluateExpressionList(exprs []ast.Expression) *SymbolInfo {
 
 }
 
-func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo {
+func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *symbols.SymbolInfo {
 
 	lhs := c.evaluateExpression(e.Left)
 	rhs := c.evaluateExpression(e.Right)
 	op := e.Op
 
-	if lhs.Type == GenericTypeSymbol || rhs.Type == GenericTypeSymbol {
+	if lhs.Type == symbols.GenericTypeSymbol || rhs.Type == symbols.GenericTypeSymbol {
 		c.addError(
 			"unable to perform binary operation on generic types",
 			e.Range(),
@@ -255,70 +256,70 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo 
 	switch op {
 	case token.ADD:
 		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
 		if err == nil {
-			return c.resolveLiteral(INTEGER)
+			return c.resolveLiteral(symbols.INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
 
 		if err == nil {
-			return c.resolveLiteral(FLOAT)
+			return c.resolveLiteral(symbols.FLOAT)
 		}
 	case token.SUB:
 		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
 		if err == nil {
-			return c.resolveLiteral(INTEGER)
+			return c.resolveLiteral(symbols.INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
 
 		if err == nil {
-			return c.resolveLiteral(FLOAT)
+			return c.resolveLiteral(symbols.FLOAT)
 		}
 	case token.QUO, token.MUL:
 		// Integers, Floats
-		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
 		if err == nil {
-			return c.resolveLiteral(INTEGER)
+			return c.resolveLiteral(symbols.INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
 
 		if err == nil {
-			return c.resolveLiteral(FLOAT)
+			return c.resolveLiteral(symbols.FLOAT)
 		}
 
 	case token.LSS, token.GTR, token.LEQ, token.GEQ:
 		// Integers, Floats, Operator Standards
-		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
 		if err == nil {
-			return c.resolveLiteral(INTEGER)
+			return c.resolveLiteral(symbols.INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
 
 		if err == nil {
-			return c.resolveLiteral(FLOAT)
+			return c.resolveLiteral(symbols.FLOAT)
 		}
 	case token.EQL, token.NEQ:
 		// Integers, Floats, Booleans
-		err = c.validate(lhs, c.resolveLiteral(INTEGER), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.INTEGER), nil)
 		if err == nil {
-			return c.resolveLiteral(INTEGER)
+			return c.resolveLiteral(symbols.INTEGER)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(FLOAT), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.FLOAT), nil)
 
 		if err == nil {
-			return c.resolveLiteral(FLOAT)
+			return c.resolveLiteral(symbols.FLOAT)
 		}
 
-		err = c.validate(lhs, c.resolveLiteral(BOOLEAN), nil)
+		err = c.validate(lhs, c.resolveLiteral(symbols.BOOLEAN), nil)
 
 		if err == nil {
-			return c.resolveLiteral(BOOLEAN)
+			return c.resolveLiteral(symbols.BOOLEAN)
 		}
 	default:
 		err = fmt.Errorf("unsupported binary operand `%s`", token.LookUp(op))
@@ -333,7 +334,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) *SymbolInfo 
 	return unresolved
 }
 
-func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) *SymbolInfo {
+func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) *symbols.SymbolInfo {
 
 	lhs := c.evaluateExpression(expr.Target)
 	rhs := c.evaluateExpression(expr.Value)
@@ -345,15 +346,15 @@ func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) *
 	}
 
 	// Assignment Calls are void
-	return c.resolveLiteral(VOID)
+	return c.resolveLiteral(symbols.VOID)
 }
 
-func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
+func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *symbols.SymbolInfo {
 
 	target := c.evaluateExpression(expr.Target)
 
 	// Ensure Target is Callable
-	if target.FuncDesc == nil || target.Type != FunctionSymbol {
+	if target.FuncDesc == nil || target.Type != symbols.FunctionSymbol {
 		c.addError(
 			fmt.Sprintf("`%s` is not a function", target.Name),
 			expr.Target.Range(),
@@ -373,7 +374,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 
 	}
 
-	sym := newSymbolInfo(target.Name, FunctionSymbol)
+	sym := symbols.NewSymbol(target.Name, symbols.FunctionSymbol)
 	sym.SpecializedOf = target
 
 	for i, arg := range expr.Arguments {
@@ -384,9 +385,9 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 			panic("[CallExpression] Parameter Type Should not be nil")
 		}
 
-		if expected.Type == GenericTypeSymbol {
+		if expected.Type == symbols.GenericTypeSymbol {
 			// Generic, First Find Specialization
-			v, ok := sym.Specializations.get(expected)
+			v, ok := sym.Specializations.Get(expected)
 
 			// If not found add
 			if !ok {
@@ -426,8 +427,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 		}
 	}
 
-	if target.FuncDesc.ValidatedReturnType.Type == GenericTypeSymbol {
-		v, ok := sym.Specializations.get(target.FuncDesc.ValidatedReturnType)
+	if target.FuncDesc.ValidatedReturnType.Type == symbols.GenericTypeSymbol {
+		v, ok := sym.Specializations.Get(target.FuncDesc.ValidatedReturnType)
 
 		if !ok {
 			c.addError(
@@ -444,11 +445,11 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) *SymbolInfo {
 
 }
 
-func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *SymbolInfo {
+func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *symbols.SymbolInfo {
 
 	base, ok := c.find(lit.Identifier.Value)
 
-	if base.Type != StructSymbol {
+	if base.Type != symbols.StructSymbol {
 		c.addError(
 			fmt.Sprintf("`%s` is not a struct", lit.Identifier.Value),
 			lit.Identifier.Range(),
@@ -465,7 +466,7 @@ func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *SymbolInf
 		return unresolved
 	}
 
-	sym := newSymbolInfo(base.Name, StructSymbol)
+	sym := symbols.NewSymbol(base.Name, symbols.StructSymbol)
 	sym.SpecializedOf = base
 
 	seen := make(map[string]bool)
@@ -505,7 +506,7 @@ func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *SymbolInf
 		provided := c.evaluateExpression(pair.Value)
 
 		var err error
-		if expected.Type == GenericTypeSymbol {
+		if expected.Type == symbols.GenericTypeSymbol {
 			_, ok := sym.Specializations[expected]
 			if !ok {
 				fmt.Println("[DEBUG] Struct Specialize")

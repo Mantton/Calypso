@@ -1,4 +1,4 @@
-package typechecker
+package symbols
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 
 // Symbol Constants
 type SymbolType byte
+type Literal byte
 
 const (
 	VariableSymbol    SymbolType = iota // Variables
@@ -17,6 +18,18 @@ const (
 	AliasSymbol                         // Aliases
 	TypeSymbol                          // Types
 	GenericTypeSymbol                   // Generic Arguments / Params
+)
+
+const (
+	INTEGER Literal = iota
+	FLOAT
+	STRING
+	BOOLEAN
+	ARRAY
+	MAP
+	NULL
+	VOID
+	ANY
 )
 
 var (
@@ -62,7 +75,7 @@ type SymbolTable struct {
 type SpecializationTable map[*SymbolInfo]*SymbolInfo
 
 // NewSymbolTable creates a new symbol table with an optional parent scope.
-func newSymbolTable(parent *SymbolTable) *SymbolTable {
+func NewTable(parent *SymbolTable) *SymbolTable {
 	return &SymbolTable{
 		Parent:  parent,
 		Symbols: make(map[string]*SymbolInfo),
@@ -92,7 +105,7 @@ func (t *SymbolTable) Resolve(name string) (*SymbolInfo, bool) {
 }
 
 // * Symbol Info
-func newSymbolInfo(name string, t SymbolType) *SymbolInfo {
+func NewSymbol(name string, t SymbolType) *SymbolInfo {
 	idLock.Lock()         // Lock the mutex before modifying the counter
 	defer idLock.Unlock() // Unlock the mutex after modifying the counter
 	nextSymbolId++        // Increment the global ID counter
@@ -111,7 +124,7 @@ func (s *SymbolInfo) Identifier() string {
 	ids := []string{s.PackageName, s.ModuleName, s.Name}
 	return strings.Join(ids, "_")
 }
-func (s *SymbolInfo) addProperty(it *SymbolInfo) bool {
+func (s *SymbolInfo) AddProperty(it *SymbolInfo) bool {
 	_, ok := s.Properties[it.Name]
 
 	// is already defined
@@ -125,7 +138,7 @@ func (s *SymbolInfo) addProperty(it *SymbolInfo) bool {
 	return true
 }
 
-func (s *SymbolInfo) addConstraint(c *SymbolInfo) error {
+func (s *SymbolInfo) AddConstraint(c *SymbolInfo) error {
 
 	if c.Type != StandardSymbol {
 		return fmt.Errorf("`%s` is not a conformable standard", c.Name)
@@ -135,7 +148,7 @@ func (s *SymbolInfo) addConstraint(c *SymbolInfo) error {
 	return nil
 }
 
-func (s *SymbolInfo) addGenericParameter(p *SymbolInfo) error {
+func (s *SymbolInfo) AddGenericParameter(p *SymbolInfo) error {
 	if p.Type != GenericTypeSymbol {
 		return fmt.Errorf(
 			fmt.Sprintf("`%s` is not a generic type. Report this error", p.Name),
@@ -201,4 +214,23 @@ func LookUpNameOfSymbolType(t SymbolType) string {
 	default:
 		return "UNDEFINED SYMBOL"
 	}
+}
+
+func (t SpecializationTable) Get(s *SymbolInfo) (*SymbolInfo, bool) {
+
+	if s.Type != GenericTypeSymbol {
+		return s, true
+	}
+
+	v, ok := t[s]
+
+	return v, ok
+}
+
+func (t SpecializationTable) Debug() {
+	fmt.Println("\n[Specialization Table] DEBUG")
+	for key, value := range t {
+		fmt.Println(" >>>>>>", key, "Maps To", value, "Args")
+	}
+	fmt.Println()
 }

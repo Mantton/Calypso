@@ -5,6 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
 type CheckerMode byte
@@ -18,15 +19,15 @@ const (
 )
 
 // TODO: Replace this with unresolved property
-var unresolved = newSymbolInfo("unresolved", TypeSymbol)
+var unresolved = symbols.NewSymbol("unresolved", symbols.TypeSymbol)
 
 type Checker struct {
 	Errors      lexer.ErrorList
-	symbols     *SymbolTable
+	symbols     *symbols.SymbolTable
 	depth       int
 	mode        CheckerMode
 	currentNode ast.Node
-	currentSym  *SymbolInfo
+	currentSym  *symbols.SymbolInfo
 }
 
 func New(mode CheckerMode) *Checker {
@@ -46,7 +47,7 @@ func (c *Checker) enterScope() {
 	}
 
 	parent := c.symbols
-	child := newSymbolTable(parent)
+	child := symbols.NewTable(parent)
 	c.symbols = child
 }
 
@@ -62,12 +63,12 @@ func (c *Checker) leaveScope(isParent bool) {
 	}
 }
 
-func (c *Checker) define(s *SymbolInfo) bool {
+func (c *Checker) define(s *symbols.SymbolInfo) bool {
 	result := c.symbols.Define(s)
 
 	if result {
 		switch s.Type {
-		case VariableSymbol:
+		case symbols.VariableSymbol:
 			fmt.Println("Defined Variable", s.Name, "As Type", s.TypeDesc.Name)
 		default:
 			fmt.Println("Defined", s.Name)
@@ -77,6 +78,6 @@ func (c *Checker) define(s *SymbolInfo) bool {
 	return result
 }
 
-func (c *Checker) find(n string) (*SymbolInfo, bool) {
+func (c *Checker) find(n string) (*symbols.SymbolInfo, bool) {
 	return c.symbols.Resolve(n)
 }

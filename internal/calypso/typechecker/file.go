@@ -1,8 +1,11 @@
 package typechecker
 
-import "github.com/mantton/calypso/internal/calypso/ast"
+import (
+	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/symbols"
+)
 
-func (c *Checker) CheckFile(file *ast.File) *SymbolTable {
+func (c *Checker) CheckFile(file *ast.File) *symbols.SymbolTable {
 	c.enterScope() // global enter
 	c.injectLiterals()
 	if len(file.Declarations) != 0 {

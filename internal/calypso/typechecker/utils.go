@@ -2,25 +2,12 @@ package typechecker
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-type Literal byte
-
-const (
-	INTEGER Literal = iota
-	FLOAT
-	STRING
-	BOOLEAN
-	ARRAY
-	MAP
-	NULL
-	VOID
-	ANY
-)
-
-func (c *Checker) isType(t SymbolType) bool {
-	return t == TypeSymbol || t == AliasSymbol || t == StandardSymbol || t == GenericTypeSymbol
+func (c *Checker) isType(t symbols.SymbolType) bool {
+	return t == symbols.TypeSymbol || t == symbols.AliasSymbol || t == symbols.StandardSymbol || t == symbols.GenericTypeSymbol
 }
 
 func (c *Checker) addError(msg string, pos token.SyntaxRange) {
@@ -35,15 +22,15 @@ func (c *Checker) injectLiterals() {
 		return
 	}
 
-	integerLit := newSymbolInfo("IntegerLiteral", TypeSymbol)
-	floatLit := newSymbolInfo("FloatLiteral", TypeSymbol)
-	stringLit := newSymbolInfo("StringLiteral", TypeSymbol)
-	booleanLit := newSymbolInfo("BooleanLiteral", TypeSymbol)
+	integerLit := symbols.NewSymbol("IntegerLiteral", symbols.TypeSymbol)
+	floatLit := symbols.NewSymbol("FloatLiteral", symbols.TypeSymbol)
+	stringLit := symbols.NewSymbol("StringLiteral", symbols.TypeSymbol)
+	booleanLit := symbols.NewSymbol("BooleanLiteral", symbols.TypeSymbol)
 
-	voidLit := newSymbolInfo("void", TypeSymbol)
-	nullLit := newSymbolInfo("null", TypeSymbol)
+	voidLit := symbols.NewSymbol("void", symbols.TypeSymbol)
+	nullLit := symbols.NewSymbol("null", symbols.TypeSymbol)
 
-	anyLit := newSymbolInfo("any", TypeSymbol)
+	anyLit := symbols.NewSymbol("any", symbols.TypeSymbol)
 
 	c.define(integerLit)
 	c.define(floatLit)
@@ -53,9 +40,9 @@ func (c *Checker) injectLiterals() {
 	c.define(voidLit)
 	c.define(anyLit)
 
-	arrayLit := newSymbolInfo("ArrayLiteral", TypeSymbol)
-	genericVal := newSymbolInfo("T", GenericTypeSymbol)
-	err := arrayLit.addGenericParameter(genericVal)
+	arrayLit := symbols.NewSymbol("ArrayLiteral", symbols.TypeSymbol)
+	genericVal := symbols.NewSymbol("T", symbols.GenericTypeSymbol)
+	err := arrayLit.AddGenericParameter(genericVal)
 
 	if err != nil {
 		panic(err)
@@ -64,26 +51,26 @@ func (c *Checker) injectLiterals() {
 	c.define(arrayLit)
 }
 
-func (c *Checker) resolveLiteral(l Literal) *SymbolInfo {
+func (c *Checker) resolveLiteral(l symbols.Literal) *symbols.SymbolInfo {
 	var name string
 	if c.mode == STD {
 
 		switch l {
-		case INTEGER:
+		case symbols.INTEGER:
 			name = "IntegerLiteral"
-		case FLOAT:
+		case symbols.FLOAT:
 			name = "FloatLiteral"
-		case STRING:
+		case symbols.STRING:
 			name = "StringLiteral"
-		case BOOLEAN:
+		case symbols.BOOLEAN:
 			name = "BooleanLiteral"
-		case NULL:
+		case symbols.NULL:
 			name = "null"
-		case VOID:
+		case symbols.VOID:
 			name = "void"
-		case ANY:
+		case symbols.ANY:
 			name = "any"
-		case ARRAY:
+		case symbols.ARRAY:
 			name = "ArrayLiteral"
 		default:
 			panic("unresolved literal")
@@ -102,7 +89,7 @@ func (c *Checker) resolveLiteral(l Literal) *SymbolInfo {
 	panic("unable to resolve literal")
 }
 
-func (c *Checker) resolveGenericArgument(n string) (*SymbolInfo, bool) {
+func (c *Checker) resolveGenericArgument(n string) (*symbols.SymbolInfo, bool) {
 	if c.currentSym == nil {
 		return c.find(n)
 	}

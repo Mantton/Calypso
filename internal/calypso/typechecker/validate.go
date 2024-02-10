@@ -3,10 +3,12 @@ package typechecker
 import (
 	"errors"
 	"fmt"
+
+	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
 // validates that two types
-func (c *Checker) validate(expected, provided *SymbolInfo, t SpecializationTable) error {
+func (c *Checker) validate(expected, provided *symbols.SymbolInfo, t symbols.SpecializationTable) error {
 	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
 
 	// Provided is unresolved
@@ -19,7 +21,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo, t SpecializationTable
 	}
 
 	// expected is any, always validate
-	if expected == c.resolveLiteral(ANY) {
+	if expected == c.resolveLiteral(symbols.ANY) {
 		return nil
 	}
 
@@ -41,7 +43,7 @@ func (c *Checker) validate(expected, provided *SymbolInfo, t SpecializationTable
 	hasError := false
 
 	if t == nil {
-		t = make(SpecializationTable)
+		t = make(symbols.SpecializationTable)
 	}
 
 	// Resolve Specializations, and get map containing the specialized types
@@ -116,11 +118,11 @@ func (c *Checker) validate(expected, provided *SymbolInfo, t SpecializationTable
 	}
 
 	// // If validating generics & Constraints of the Generic Param T have been met
-	// if rExpected.Type == GenericTypeSymbol && rProvided.Type == GenericTypeSymbol {
+	// if rExpected.Type == symbols.GenericTypeSymbol && rProvided.Type == symbols.GenericTypeSymbol {
 	// 	return nil
 	// }
 
-	if rExpected.Type == GenericTypeSymbol {
+	if rExpected.Type == symbols.GenericTypeSymbol {
 		return nil
 	}
 
@@ -131,10 +133,10 @@ func (c *Checker) validate(expected, provided *SymbolInfo, t SpecializationTable
 	return nil
 }
 
-func (c *Checker) resolveAlias(s *SymbolInfo) (*SymbolInfo, map[string]*SymbolInfo) {
+func (c *Checker) resolveAlias(s *symbols.SymbolInfo) (*symbols.SymbolInfo, map[string]*symbols.SymbolInfo) {
 	o := s
 	// list of standards to conform to using this alias
-	constraints := make(map[string]*SymbolInfo)
+	constraints := make(map[string]*symbols.SymbolInfo)
 
 	// Add from Current Object
 	for key, value := range o.Constraints {
@@ -155,7 +157,7 @@ func (c *Checker) resolveAlias(s *SymbolInfo) (*SymbolInfo, map[string]*SymbolIn
 }
 
 // Resolves Specializations of Generic Types.
-func (c *Checker) resolveSpecialization(s *SymbolInfo, t SpecializationTable) (*SymbolInfo, error) {
+func (c *Checker) resolveSpecialization(s *symbols.SymbolInfo, t symbols.SpecializationTable) (*symbols.SymbolInfo, error) {
 
 	// does not have generic
 	if s.SpecializedOf == nil {
@@ -185,15 +187,15 @@ func (c *Checker) resolveSpecialization(s *SymbolInfo, t SpecializationTable) (*
 	return generic, nil
 }
 
-func (c *Checker) specialize(t SpecializationTable, k, v *SymbolInfo) error {
+func (c *Checker) specialize(t symbols.SpecializationTable, k, v *symbols.SymbolInfo) error {
 	fmt.Println("Specializing", k, "as", v, "In Table")
 
 	// ensure is generic
-	if k.Type != GenericTypeSymbol {
+	if k.Type != symbols.GenericTypeSymbol {
 		return fmt.Errorf("`%s` is not a generic type", k)
 	}
 
-	currentType, ok := t.get(k)
+	currentType, ok := t.Get(k)
 
 	// `K` has not been defined, define & exit
 	if !ok {
@@ -204,7 +206,7 @@ func (c *Checker) specialize(t SpecializationTable, k, v *SymbolInfo) error {
 	// `K` has been defined check
 
 	// Specialization of `K` is a generic
-	if currentType.Type == GenericTypeSymbol {
+	if currentType.Type == symbols.GenericTypeSymbol {
 		err := c.validate(currentType, v, t)
 
 		if err != nil {
@@ -220,8 +222,8 @@ func (c *Checker) specialize(t SpecializationTable, k, v *SymbolInfo) error {
 		// Current Value is not a generic, compare
 
 		// New Value is generic, resolve
-		if v.Type == GenericTypeSymbol {
-			spec, ok := t.get(k)
+		if v.Type == symbols.GenericTypeSymbol {
+			spec, ok := t.Get(k)
 
 			if !ok {
 				panic("unable to resolve generic")
@@ -242,23 +244,4 @@ func (c *Checker) specialize(t SpecializationTable, k, v *SymbolInfo) error {
 	}
 
 	return nil
-}
-
-func (t SpecializationTable) get(s *SymbolInfo) (*SymbolInfo, bool) {
-
-	if s.Type != GenericTypeSymbol {
-		return s, true
-	}
-
-	v, ok := t[s]
-
-	return v, ok
-}
-
-func (t SpecializationTable) Debug() {
-	fmt.Println("\n[Specialization Table] DEBUG")
-	for key, value := range t {
-		fmt.Println(" >>>>>>", key, "Maps To", value, "Args")
-	}
-	fmt.Println()
 }

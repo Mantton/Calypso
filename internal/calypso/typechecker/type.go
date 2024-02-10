@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
-func (c *Checker) evaluateTypeExpression(e ast.TypeExpression) *SymbolInfo {
+func (c *Checker) evaluateTypeExpression(e ast.TypeExpression) *symbols.SymbolInfo {
 	switch expr := e.(type) {
 	case *ast.IdentifierTypeExpression:
 		return c.evaluateIdentifierTypeExpression(expr)
@@ -16,7 +17,7 @@ func (c *Checker) evaluateTypeExpression(e ast.TypeExpression) *SymbolInfo {
 	panic(msg)
 }
 
-func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpression) *SymbolInfo {
+func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpression) *symbols.SymbolInfo {
 	// Identifier means this is predefined
 
 	// Get from table
@@ -53,7 +54,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return sym
 	}
 
-	specialized := newSymbolInfo(sym.Name, TypeSymbol)
+	specialized := symbols.NewSymbol(sym.Name, symbols.TypeSymbol)
 	specialized.SpecializedOf = sym
 
 	// Ensure each argument are valid
@@ -63,7 +64,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		provided := c.evaluateTypeExpression(arg)
 
 		var err error
-		if expected.Type == GenericTypeSymbol {
+		if expected.Type == symbols.GenericTypeSymbol {
 			_, ok := sym.Specializations[expected]
 			if !ok {
 				err = c.specialize(specialized.Specializations, expected, provided)

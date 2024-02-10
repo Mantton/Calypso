@@ -5,6 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
 func (c *Checker) checkDeclaration(decl ast.Declaration) {
@@ -43,7 +44,7 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	// TODO: Scope to Module/Package
-	standard := newSymbolInfo(d.Identifier.Value, StandardSymbol)
+	standard := symbols.NewSymbol(d.Identifier.Value, symbols.StandardSymbol)
 
 	ok := c.define(standard)
 
@@ -59,9 +60,9 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 		// * NOTE: Parser already ensures the body is not part here
 
 		// TODO: Parse Function Type
-		fnDesc := newSymbolInfo(fn.Func.Identifier.Value, FunctionSymbol)
+		fnDesc := symbols.NewSymbol(fn.Func.Identifier.Value, symbols.FunctionSymbol)
 		// Add Property
-		ok = standard.addProperty(fnDesc)
+		ok = standard.AddProperty(fnDesc)
 
 		if !ok {
 			// already defined
@@ -86,9 +87,9 @@ func (c *Checker) checkExtension(d *ast.ExtensionDeclaration) {
 		c.addError(msg, d.Identifier.Range())
 	}
 
-	action := func(t *SymbolInfo, node ast.Node) {
+	action := func(t *symbols.SymbolInfo, node ast.Node) {
 		if s != nil {
-			ok = s.addProperty(t)
+			ok = s.AddProperty(t)
 
 			if !ok {
 				c.addError(fmt.Sprintf("`%s` is already defined in `%s`", t.Name, s.Name), node.Range())
@@ -98,7 +99,7 @@ func (c *Checker) checkExtension(d *ast.ExtensionDeclaration) {
 
 	for _, fn := range d.Content {
 		// TODO: Parse Function Type
-		fnDesc := newSymbolInfo(fn.Func.Identifier.Value, FunctionSymbol)
+		fnDesc := symbols.NewSymbol(fn.Func.Identifier.Value, symbols.FunctionSymbol)
 		action(fnDesc, fn)
 	}
 
@@ -106,9 +107,9 @@ func (c *Checker) checkExtension(d *ast.ExtensionDeclaration) {
 
 func (c *Checker) checkTypeDeclaration(d *ast.TypeDeclaration) {
 
-	s := &SymbolInfo{
+	s := &symbols.SymbolInfo{
 		Name: d.Identifier.Value,
-		Type: TypeSymbol,
+		Type: symbols.TypeSymbol,
 	}
 
 	ok := c.define(s)

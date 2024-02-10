@@ -3,8 +3,8 @@ package evaluator
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/mantton/calypso/internal/calypso/compiler"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
@@ -21,6 +21,10 @@ func New() *Evaluator {
 func (e *Evaluator) Evaluate(filepath, input string) int {
 
 	// Lexer / Scanner
+
+	fmt.Println("[Parser] Starting")
+	start := time.Now()
+
 	lexer := lexer.New(input)
 	tokens := lexer.AllTokens()
 
@@ -36,10 +40,14 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 		}
 		return 1
 	}
+	duration := time.Since(start)
 
-	fmt.Println("[Parser] Complete")
+	fmt.Println("[Parser] Complete.", "Took", duration)
 
 	// Resolver
+	fmt.Println("[Resolver] Starting")
+	start = time.Now()
+
 	resolver := resolver.New()
 	resolver.ResolveFile(file)
 
@@ -49,7 +57,12 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 		}
 		return 1
 	}
-	fmt.Println("[Resolver] Complete")
+	duration = time.Since(start)
+
+	fmt.Println("[Resolver] Complete.", "Took", duration)
+
+	fmt.Println("[TypeChecker] Starting")
+	start = time.Now()
 
 	checker := typechecker.New(typechecker.STD)
 	symbols := checker.CheckFile(file)
@@ -60,13 +73,11 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 		}
 		return 1
 	}
-	fmt.Println("[TypeChecker] Complete")
+	duration = time.Since(start)
 
-	fmt.Println("\n\nCompiler")
+	fmt.Println("[TypeChecker] Complete.", "Took", duration)
 
-	compiler := compiler.New()
-	compiler.Compile(file, symbols)
-	fmt.Println("Done")
+	fmt.Print(symbols)
 
 	return 0
 }

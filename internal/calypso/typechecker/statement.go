@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
 func (c *Checker) checkStatement(stmt ast.Statement) {
@@ -34,7 +35,7 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 
 func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
-	s := newSymbolInfo(stmt.Identifier.Value, VariableSymbol)
+	s := symbols.NewSymbol(stmt.Identifier.Value, symbols.VariableSymbol)
 	s.TypeDesc = unresolved
 	s.Mutable = !stmt.IsConstant
 	ok := c.define(s)
@@ -47,7 +48,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 		return
 	}
 
-	var annotation *SymbolInfo
+	var annotation *symbols.SymbolInfo
 
 	// Check Annotation
 	if t := stmt.Identifier.AnnotatedType; t != nil {
@@ -88,7 +89,7 @@ func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
 
 func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 
-	s := newSymbolInfo(stmt.Identifier.Value, AliasSymbol)
+	s := symbols.NewSymbol(stmt.Identifier.Value, symbols.AliasSymbol)
 	prev := c.currentSym
 	c.currentSym = s
 	defer func() {
@@ -116,10 +117,10 @@ func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
 	s.AliasOf = expected
 }
 
-func (c *Checker) evaluateGenericParameters(s *SymbolInfo, clause *ast.GenericParametersClause) bool {
+func (c *Checker) evaluateGenericParameters(s *symbols.SymbolInfo, clause *ast.GenericParametersClause) bool {
 	hasErrors := false
 	for _, param := range clause.Parameters {
-		p := newSymbolInfo(param.Identifier.Value, GenericTypeSymbol)
+		p := symbols.NewSymbol(param.Identifier.Value, symbols.GenericTypeSymbol)
 
 		// Resolve Standards
 		for _, standard := range param.Standards {
@@ -134,7 +135,7 @@ func (c *Checker) evaluateGenericParameters(s *SymbolInfo, clause *ast.GenericPa
 			}
 
 			// Ensure Sym is Standard
-			if standardSym.Type != StandardSymbol {
+			if standardSym.Type != symbols.StandardSymbol {
 				c.addError(
 					fmt.Sprintf("`%s` is not a conformable standard", standard.Value),
 					standard.Range(),
@@ -143,7 +144,7 @@ func (c *Checker) evaluateGenericParameters(s *SymbolInfo, clause *ast.GenericPa
 			}
 
 			// Add Standard to Parameter
-			err := p.addConstraint(standardSym)
+			err := p.AddConstraint(standardSym)
 
 			if err != nil {
 				c.addError(
@@ -156,7 +157,7 @@ func (c *Checker) evaluateGenericParameters(s *SymbolInfo, clause *ast.GenericPa
 
 		}
 		// Add Parameters to Symbol
-		err := s.addGenericParameter(p)
+		err := s.AddGenericParameter(p)
 
 		if err != nil {
 			c.addError(
@@ -206,7 +207,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 		err := c.validate(inferred, provided, nil)
 		// Types Do not match, set to any
 		if err != nil {
-			c.currentSym.FuncDesc.InferredReturnType = c.resolveLiteral(ANY)
+			c.currentSym.FuncDesc.InferredReturnType = c.resolveLiteral(symbols.ANY)
 			return
 		}
 		// Types Match, Do nothing
@@ -218,7 +219,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 
 func (c *Checker) checkStructStatement(stmt *ast.StructStatement) {
 
-	sym := newSymbolInfo(stmt.Identifier.Value, StructSymbol)
+	sym := symbols.NewSymbol(stmt.Identifier.Value, symbols.StructSymbol)
 	// Enter new Symbol Scope
 	prev := c.currentSym
 	c.currentSym = sym
@@ -244,9 +245,9 @@ func (c *Checker) checkStructStatement(stmt *ast.StructStatement) {
 
 	// Register Properties
 	for _, prop := range stmt.Properties {
-		pSym := newSymbolInfo(prop.Value, VariableSymbol)
+		pSym := symbols.NewSymbol(prop.Value, symbols.VariableSymbol)
 		t := c.evaluateTypeExpression(prop.AnnotatedType)
 		pSym.TypeDesc = t
-		sym.addProperty(pSym)
+		sym.AddProperty(pSym)
 	}
 }
