@@ -169,10 +169,10 @@ func (c *Checker) resolveSpecialization(s *symbols.SymbolInfo, t symbols.Special
 	for generic != nil {
 
 		for key, value := range generic.Specializations {
-			fmt.Println("[Resolve]", key, value)
+			// fmt.Println("[Resolve]", key, value)
 			err := c.specialize(t, key, value)
 			if err != nil {
-				fmt.Println("err", err)
+				// fmt.Println("err", err)
 				return nil, err
 			}
 		}
@@ -188,7 +188,7 @@ func (c *Checker) resolveSpecialization(s *symbols.SymbolInfo, t symbols.Special
 }
 
 func (c *Checker) specialize(t symbols.SpecializationTable, k, v *symbols.SymbolInfo) error {
-	fmt.Println("Specializing", k, "as", v, "In Table")
+	// fmt.Println("Specializing", k, "as", v, "In Table")
 
 	// ensure is generic
 	if k.Type != symbols.GenericTypeSymbol {
@@ -215,7 +215,7 @@ func (c *Checker) specialize(t symbols.SpecializationTable, k, v *symbols.Symbol
 
 		t[k] = v
 
-		fmt.Println("Specializing [UPDATING]", currentType, "as", v)
+		// fmt.Println("Specializing [UPDATING]", currentType, "as", v)
 		t[currentType] = v
 
 	} else {

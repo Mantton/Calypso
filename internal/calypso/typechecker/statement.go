@@ -8,11 +8,11 @@ import (
 )
 
 func (c *Checker) checkStatement(stmt ast.Statement) {
-	fmt.Printf(
-		"\nChecking Statement: %T @ Line %d\n",
-		stmt,
-		stmt.Range().Start.Line,
-	)
+	// fmt.Printf(
+	// 	"\nChecking Statement: %T @ Line %d\n",
+	// 	stmt,
+	// 	stmt.Range().Start.Line,
+	// )
 	c.currentNode = stmt
 	switch stmt := stmt.(type) {
 	case *ast.VariableStatement:

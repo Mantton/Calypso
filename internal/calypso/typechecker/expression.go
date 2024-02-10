@@ -10,11 +10,11 @@ import (
 
 func (c *Checker) checkExpression(expr ast.Expression) {
 
-	fmt.Printf(
-		"\nChecking Expression: %T @ Line %d\n",
-		expr,
-		expr.Range().Start.Line,
-	)
+	// fmt.Printf(
+	// 	"\nChecking Expression: %T @ Line %d\n",
+	// 	expr,
+	// 	expr.Range().Start.Line,
+	// )
 	switch expr := expr.(type) {
 	case *ast.FunctionExpression:
 		c.checkFunctionExpression(expr)
@@ -71,7 +71,7 @@ func (c *Checker) checkFunctionExpression(expr *ast.FunctionExpression) {
 
 	if sym.FuncDesc.AnnotatedReturnType != nil {
 		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.AnnotatedReturnType
-		fmt.Println()
+		// fmt.Println()
 	} else if sym.FuncDesc.InferredReturnType != nil {
 		sym.FuncDesc.ValidatedReturnType = sym.FuncDesc.InferredReturnType
 	} else {
@@ -509,7 +509,7 @@ func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *symbols.S
 		if expected.Type == symbols.GenericTypeSymbol {
 			_, ok := sym.Specializations[expected]
 			if !ok {
-				fmt.Println("[DEBUG] Struct Specialize")
+				// fmt.Println("[DEBUG] Struct Specialize")
 				err = c.specialize(sym.Specializations, expected, provided)
 			}
 		} else {
@@ -533,7 +533,7 @@ func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *symbols.S
 	} else {
 		// Ensure All Generic Params Have been Specialized
 		sym.Specializations.Debug()
-		fmt.Println(base.GenericParams)
+		// fmt.Println(base.GenericParams)
 		for _, param := range base.GenericParams {
 			_, ok := sym.Specializations[param]
 

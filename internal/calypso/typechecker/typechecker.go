@@ -1,8 +1,6 @@
 package typechecker
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/symbols"
@@ -66,15 +64,15 @@ func (c *Checker) leaveScope(isParent bool) {
 func (c *Checker) define(s *symbols.SymbolInfo) bool {
 	result := c.symbols.Define(s)
 
-	if result {
-		switch s.Type {
-		case symbols.VariableSymbol:
-			fmt.Println("Defined Variable", s.Name, "As Type", s.TypeDesc.Name)
-		default:
-			fmt.Println("Defined", s.Name)
+	// if result {
+	// 	switch s.Type {
+	// 	case symbols.VariableSymbol:
+	// 		fmt.Println("Defined Variable", s.Name, "As Type", s.TypeDesc.Name)
+	// 	default:
+	// 		fmt.Println("Defined", s.Name)
 
-		}
-	}
+	// 	}
+	// }
 	return result
 }
 
