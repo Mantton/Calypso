@@ -52,12 +52,12 @@ type SymbolInfo struct {
 	Type        SymbolType // The type of symbol being represented
 	TypeDesc    *SymbolInfo
 
-	Properties map[string]*SymbolInfo // For complex types like structs, this holds property types
-	AliasOf    *SymbolInfo            // For aliases, points to the original type
-	ChildOf    *SymbolInfo            // For defined types, points to the original/base type
-	FuncDesc   *FunctionDescriptor    // For functions, describes the function's signature
-	IsPrivate  bool                   // if this symbol is a private property
-	Mutable    bool
+	Fields    map[string]*SymbolInfo // For complex types like structs, this holds property types
+	AliasOf   *SymbolInfo            // For aliases, points to the original type
+	ChildOf   *SymbolInfo            // For defined types, points to the original/base type
+	FuncDesc  *FunctionDescriptor    // For functions, describes the function's signature
+	IsPrivate bool                   // if this symbol is a private property
+	Mutable   bool
 
 	GenericParams []*SymbolInfo          // Generic Params with this symbol
 	Constraints   map[string]*SymbolInfo // For Types & Structs, points to the Standards being conformed to.
@@ -113,7 +113,7 @@ func NewSymbol(name string, t SymbolType) *SymbolInfo {
 	return &SymbolInfo{
 		Name:            name,
 		Type:            t,
-		Properties:      make(map[string]*SymbolInfo),
+		Fields:          make(map[string]*SymbolInfo),
 		Constraints:     make(map[string]*SymbolInfo),
 		Specializations: make(SpecializationTable),
 		ID:              nextSymbolId,
@@ -125,14 +125,14 @@ func (s *SymbolInfo) Identifier() string {
 	return strings.Join(ids, "_")
 }
 func (s *SymbolInfo) AddProperty(it *SymbolInfo) bool {
-	_, ok := s.Properties[it.Name]
+	_, ok := s.Fields[it.Name]
 
 	// is already defined
 	if ok {
 		return false
 	}
 
-	s.Properties[it.Name] = it
+	s.Fields[it.Name] = it
 
 	fmt.Printf("Adding Property %s of type %s to %s\n", it, it.TypeDesc, s)
 	return true

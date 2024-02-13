@@ -30,6 +30,7 @@ type File struct {
 	ModuleName   string
 	Declarations []Declaration
 	Errors       lexer.ErrorList
+	Symbols      *symbols.SymbolTable
 }
 
 // * Declarations

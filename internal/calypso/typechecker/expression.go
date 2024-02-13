@@ -447,7 +447,7 @@ func (c *Checker) evaluateCompositeLiteral(lit *ast.CompositeLiteral) *symbols.S
 	for _, pair := range lit.Pairs {
 		key := pair.Key.Value
 
-		expectedProperty, ok := base.Properties[key]
+		expectedProperty, ok := base.Fields[key]
 
 		// Property is not defined in struct
 		if !ok {
