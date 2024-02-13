@@ -8,7 +8,6 @@ import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
-	"github.com/mantton/calypso/internal/calypso/ssagen"
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
@@ -78,10 +77,10 @@ func (e *Evaluator) Evaluate(filepath, input string) int {
 
 	fmt.Println("[TypeChecker] Complete.", "Took", duration)
 
-	fmt.Println("[SSA] Starting")
-	exec := ssagen.Generate(file)
-	exec.Build()
-	fmt.Println("[SSA] Complete.", "Took", duration)
+	// fmt.Println("[SSA] Starting")
+	// exec := ssagen.Generate(file)
+	// exec.Build()
+	// fmt.Println("[SSA] Complete.", "Took", duration)
 
 	return 0
 }
