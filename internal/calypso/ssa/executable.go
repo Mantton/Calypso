@@ -35,7 +35,7 @@ func (n *Executable) Build() {
 func (b builder) resolveFunction(d *ast.FunctionExpression) {
 
 	fn := &Function{}
-	b.Mod.Members[d.Identifier.Value] = fn
+	b.Mod.Functions[d.Identifier.Value] = fn
 	b.Fn = fn
 	b.Block = &Block{}
 	b.resolveBlockStatement(d.Body, fn)
@@ -62,9 +62,9 @@ func (b *builder) resolveVariableStmt(n *ast.VariableStatement, fn *Function) {
 
 	// Alloc
 	// Value
-	val := b.resolveExpr(n.Value)
+	// val := b.resolveExpr(n.Value)
 
-	fmt.Println(val)
+	// fmt.Println(val, n.Identifier.Value)
 }
 func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *Function) {
 
@@ -81,5 +81,5 @@ func (b *builder) resolveExpr(n ast.Expression) Value {
 		}
 	}
 
-	panic("expr")
+	panic(fmt.Sprintf("unknown expr %T\n", n))
 }

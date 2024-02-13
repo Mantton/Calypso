@@ -39,13 +39,17 @@ type Package struct {
 }
 
 type Module struct {
-	Members map[string]Member
-	Files   []*ast.File
+	Functions       map[string]*Function
+	GlobalConstants map[string]*Global
+	Structs         map[string]any
+	Files           []*ast.File
 }
 
 func NewModule(file *ast.File) *Module {
 	return &Module{
-		Members: make(map[string]Member),
+		Functions:       make(map[string]*Function),
+		GlobalConstants: make(map[string]*Global),
+		Structs:         make(map[string]any),
 	}
 }
 

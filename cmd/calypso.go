@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mantton/calypso/internal/calypso/evaluator"
+	"github.com/mantton/calypso/internal/calypso/builder"
 )
 
 func main() {
@@ -35,9 +35,9 @@ func main() {
 			fmt.Println(err.Error())
 			os.Exit(1)
 		}
-		eval := evaluator.New()
-		code := eval.Evaluate(path, string(data))
 
-		os.Exit(code)
+		builder.Build(path, string(data))
+
+		os.Exit(0)
 	}
 }

@@ -53,10 +53,11 @@ type SymbolInfo struct {
 	TypeDesc    *SymbolInfo
 
 	Fields    map[string]*SymbolInfo // For complex types like structs, this holds property types
-	AliasOf   *SymbolInfo            // For aliases, points to the original type
-	ChildOf   *SymbolInfo            // For defined types, points to the original/base type
-	FuncDesc  *FunctionDescriptor    // For functions, describes the function's signature
-	IsPrivate bool                   // if this symbol is a private property
+	Fns       map[string]*SymbolInfo
+	AliasOf   *SymbolInfo         // For aliases, points to the original type
+	ChildOf   *SymbolInfo         // For defined types, points to the original/base type
+	FuncDesc  *FunctionDescriptor // For functions, describes the function's signature
+	IsPrivate bool                // if this symbol is a private property
 	Mutable   bool
 
 	GenericParams []*SymbolInfo          // Generic Params with this symbol
