@@ -1,18 +1,21 @@
 package ssa
 
-import "go/token"
+import (
+	"github.com/mantton/calypso/internal/calypso/symbols"
+	"github.com/mantton/calypso/internal/calypso/token"
+)
 
 type Load struct {
-	Address *Address
+	Address Value
 }
 
 type Allocate struct {
-	Variable *Variable
-	OnHeap   bool
+	TypeSymbol *symbols.SymbolInfo
+	OnHeap     bool
 }
 
 type Store struct {
-	Address *Address
+	Address Value
 	Value   Value
 }
 
@@ -44,3 +47,9 @@ func (*Store) ssaNode()    {}
 func (*Call) ssaNode()     {}
 func (*Return) ssaNode()   {}
 func (*Binary) ssaNode()   {}
+
+// Instructions That Yield Values
+func (*Allocate) ssaVal() {}
+func (*Binary) ssaVal()   {}
+func (*Load) ssaVal()     {}
+func (*Call) ssaVal()     {}

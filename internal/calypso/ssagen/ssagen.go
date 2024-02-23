@@ -7,5 +7,6 @@ import (
 
 func Generate(file *ast.File) *ssa.Executable {
 	exec := ssa.NewExecutable(file)
+	build(exec)
 	return exec
 }

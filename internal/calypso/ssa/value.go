@@ -11,26 +11,20 @@ type Constant struct {
 }
 
 type Global struct {
-	Value    Constant
-	Variable *Variable
+	Value Constant
 }
 
-type Variable struct {
-	Name string
-}
-
-type Address struct {
-	Variable *Variable
-	Anchor   *Address
-	Offset   int
-}
+// type Address struct {
+// 	Anchor *Address
+// 	Offset int
+// }
 
 func (*Constant) ssaNode() {}
 func (*Global) ssaNode()   {}
-func (*Variable) ssaNode() {}
-func (*Address) ssaNode()  {}
+
+// func (*Address) ssaNode()  {}
 
 func (*Constant) ssaVal() {}
 func (*Global) ssaVal()   {}
-func (*Variable) ssaVal() {}
-func (*Address) ssaVal()  {}
+
+// func (*Address) ssaVal()  {}
