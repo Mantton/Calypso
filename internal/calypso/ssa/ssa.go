@@ -2,7 +2,6 @@ package ssa
 
 import (
 	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
 // * 1
@@ -39,55 +38,18 @@ type Package struct {
 }
 
 type Module struct {
+	Name            string
 	Functions       map[string]*Function
 	GlobalConstants map[string]*Global
 	Structs         map[string]any
 	Files           []*ast.File
 }
 
-func NewModule(file *ast.File) *Module {
+func NewModule(file *ast.File, name string) *Module {
 	return &Module{
+		Name:            name,
 		Functions:       make(map[string]*Function),
 		GlobalConstants: make(map[string]*Global),
 		Structs:         make(map[string]any),
 	}
 }
-
-// * 3
-// allocates mem for value and yields it's mem address
-type Alloc struct {
-	Name string
-}
-
-// Stores `Value` at mem address `Address`
-type Store struct {
-	Address Value
-	Value   Value
-}
-
-type Load struct {
-	Address Value
-}
-
-// represents a value known at compile time
-type Constant struct {
-	Value any
-	Type  *symbols.SymbolInfo
-}
-
-type Global struct {
-	Value Constant
-	Name  string
-}
-
-type Return struct {
-	Results Value
-}
-
-func (n *Alloc) ssaVal()   {}
-func (n *Alloc) ssaInstr() {}
-
-func (n *Store) ssaInstr()  {}
-func (n *Load) ssaInstr()   {}
-func (n *Constant) ssaVal() {}
-func (n *Return) ssaInstr() {}

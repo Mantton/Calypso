@@ -17,7 +17,7 @@ func Build(filepath, input string) *ast.File {
 
 	// Lexer / Scanner
 
-	fmt.Println("[Parser] Starting")
+	fmt.Println("\n[Parser] Starting")
 	start := time.Now()
 
 	lexer := lexer.New(input)
@@ -37,10 +37,10 @@ func Build(filepath, input string) *ast.File {
 	}
 	duration := time.Since(start)
 
-	fmt.Println("[Parser] Complete.", "Took", duration)
+	fmt.Println("[Parser] Completed.", "Took", duration)
 
 	// Resolver
-	fmt.Println("[Resolver] Starting")
+	fmt.Println("\n[Resolver] Starting")
 	start = time.Now()
 
 	resolver := resolver.New()
@@ -54,9 +54,9 @@ func Build(filepath, input string) *ast.File {
 	}
 	duration = time.Since(start)
 
-	fmt.Println("[Resolver] Complete.", "Took", duration)
+	fmt.Println("[Resolver] Completed.", "Took", duration)
 
-	fmt.Println("[TypeChecker] Starting")
+	fmt.Println("\n[TypeChecker] Starting")
 	start = time.Now()
 
 	checker := typechecker.New(typechecker.STD)
@@ -70,12 +70,12 @@ func Build(filepath, input string) *ast.File {
 	}
 	duration = time.Since(start)
 
-	fmt.Println("[TypeChecker] Complete.", "Took", duration)
+	fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
-	fmt.Println("[SSA] Starting")
+	fmt.Println("\n[SSAGen] Starting")
 	exec := ssagen.Generate(file)
 	exec.Build()
-	fmt.Println("[SSA] Complete.", "Took", duration)
+	fmt.Println("[SSAGen] Completed.", "Took", duration)
 
 	return file
 }
