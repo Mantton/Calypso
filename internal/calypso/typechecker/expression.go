@@ -8,6 +8,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
+// ---------------------- Checks ---------------------------------
 func (c *Checker) checkExpression(expr ast.Expression) {
 
 	fmt.Printf(
@@ -18,45 +19,10 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 	switch expr := expr.(type) {
 	case *ast.FunctionExpression:
 		c.checkFunctionExpression(expr)
-	// case *ast.AssignmentExpression:
+	case *ast.AssignmentExpression:
+		c.checkAssignmentExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression check not implemented, %T", expr)
-		panic(msg)
-	}
-}
-
-func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
-	switch expr := expr.(type) {
-	// Literals
-	case *ast.IntegerLiteral:
-		return types.LookUp(types.Int)
-	case *ast.BooleanLiteral:
-		return types.LookUp(types.Bool)
-	case *ast.FloatLiteral:
-		return types.LookUp(types.Float)
-	case *ast.StringLiteral:
-		return types.LookUp(types.String)
-	case *ast.NullLiteral:
-		return types.LookUp(types.Null)
-	case *ast.VoidLiteral:
-		return types.LookUp(types.Void)
-	case *ast.IdentifierExpression:
-		return c.evaluateIdentifierExpression(expr)
-	case *ast.GroupedExpression:
-		return c.evaluateGroupedExpression(expr)
-	case *ast.CallExpression:
-		return c.evaluateCallExpression(expr)
-	case *ast.UnaryExpression:
-		return c.evaluateUnaryExpression(expr)
-	case *ast.BinaryExpression:
-		return c.evaluateBinaryExpression(expr)
-	// case *ast.AssignmentExpression:
-
-	// case *ast.ArrayLiteral:
-	// case *ast.CompositeLiteral:
-
-	default:
-		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
 	}
 }
@@ -110,6 +76,50 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
 	// Ensure All Generic Params are used
 	// Ensure All Params are used
+}
+
+func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
+	// TODO: mutability checks
+	c.evaluateAssignmentExpression(expr)
+}
+
+// ----------- Eval ------------------
+func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
+	switch expr := expr.(type) {
+	// Literals
+	case *ast.IntegerLiteral:
+		return types.LookUp(types.Int)
+	case *ast.BooleanLiteral:
+		return types.LookUp(types.Bool)
+	case *ast.FloatLiteral:
+		return types.LookUp(types.Float)
+	case *ast.StringLiteral:
+		return types.LookUp(types.String)
+	case *ast.NullLiteral:
+		return types.LookUp(types.Null)
+	case *ast.VoidLiteral:
+		return types.LookUp(types.Void)
+	case *ast.IdentifierExpression:
+		return c.evaluateIdentifierExpression(expr)
+	case *ast.GroupedExpression:
+		return c.evaluateGroupedExpression(expr)
+	case *ast.CallExpression:
+		return c.evaluateCallExpression(expr)
+	case *ast.UnaryExpression:
+		return c.evaluateUnaryExpression(expr)
+	case *ast.BinaryExpression:
+		return c.evaluateBinaryExpression(expr)
+	case *ast.AssignmentExpression:
+		return c.evaluateAssignmentExpression(expr)
+
+	// case *ast.ArrayLiteral:
+	// case *ast.MapLiteral:
+	// case *ast.CompositeLiteral:
+
+	default:
+		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
+		panic(msg)
+	}
 }
 
 func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) types.Type {
@@ -255,4 +265,19 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 	c.addError(err.Error(), e.Range())
 	return unresolved
 
+}
+
+func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) types.Type {
+
+	lhs := c.evaluateExpression(expr.Target)
+	rhs := c.evaluateExpression(expr.Value)
+
+	_, err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+	}
+
+	// assignment yield void
+	return types.LookUp(types.Void)
 }
