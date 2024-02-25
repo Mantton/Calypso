@@ -20,6 +20,7 @@ type Checker struct {
 	depth  int
 	mode   CheckerMode
 	scope  *types.Scope
+	fn     *types.FunctionSignature
 }
 
 func New(mode CheckerMode) *Checker {

@@ -29,10 +29,18 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 
 func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
+	prevFn := c.fn
+	defer func() {
+		c.fn = prevFn
+	}()
+
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg)
 	e.Signature = def
 	ok := c.define(def)
+
+	// set current checking function to sg
+	c.fn = sg
 
 	if !ok {
 		c.addError(
@@ -72,7 +80,7 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	}
 
 	// Body
-	c.checkBlockStatement(e.Body, def)
+	c.checkBlockStatement(e.Body)
 
 	// Ensure All Generic Params are used
 	// Ensure All Params are used

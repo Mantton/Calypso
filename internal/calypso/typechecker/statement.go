@@ -21,28 +21,24 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 	case *ast.BlockStatement:
 		panic("CALL `checkBlockStatement` DIRECTLY")
 	case *ast.ReturnStatement:
-		panic("CALL `checkReturnStatement` DIRECTLY")
+		c.checkReturnStatement(stmt)
+	case *ast.IfStatement:
+		c.checkIfStatement(stmt)
 	// case *ast.AliasStatement:
 	// case *ast.StructStatement:
-	// case *ast.IfStatement:
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
 	}
 }
 
-func (c *Checker) checkBlockStatement(blk *ast.BlockStatement, fn *types.Function) {
+func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
 	if len(blk.Statements) == 0 {
 		return
 	}
 
 	for _, stmt := range blk.Statements {
-		switch stmt := stmt.(type) {
-		case *ast.ReturnStatement:
-			c.checkReturnStatement(stmt, fn.Type().(*types.FunctionSignature))
-		default:
-			c.checkStatement(stmt)
-		}
+		c.checkStatement(stmt)
 	}
 }
 
@@ -88,8 +84,17 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	def.SetType(annotation)
 }
 
-func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, fn *types.FunctionSignature) {
+func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 
+	if c.fn == nil {
+		c.addError(
+			"top level return is not allowed",
+			stmt.Value.Range(),
+		)
+		return
+	}
+
+	fn := c.fn
 	provided := c.evaluateExpression(stmt.Value)
 
 	// no return type set, infer
@@ -110,4 +115,28 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, fn *types.Func
 	}
 
 	fn.ReturnType = t
+}
+
+func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
+
+	// 1 - Check Condition
+	cond := c.evaluateExpression(stmt.Condition)
+	_, err := c.validate(types.LookUp(types.Bool), cond)
+
+	if err != nil {
+		c.addError(err.Error(), stmt.Condition.Range())
+		return
+	}
+
+	// 2 - Check Action
+	c.enterScope()
+	c.checkBlockStatement(stmt.Action)
+	c.leaveScope()
+
+	// 3 - Check Alternative
+	if stmt.Alternative != nil {
+		c.enterScope()
+		c.checkBlockStatement(stmt.Alternative)
+		c.leaveScope()
+	}
 }
