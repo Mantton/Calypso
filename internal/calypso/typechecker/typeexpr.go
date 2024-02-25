@@ -48,7 +48,7 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 		t := c.evaluateTypeExpression(e.ReturnType)
 		sg.ReturnType = t
 	} else {
-		c.addError(fmt.Sprintf("missing return value in function signature"), e.Range())
+		c.addError("missing return value in function signature", e.Range())
 		sg.ReturnType = unresolved
 	}
 

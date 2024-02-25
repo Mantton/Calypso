@@ -7,7 +7,6 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) specialize() {}
 func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type, error) {
 	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
 
@@ -15,7 +14,7 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 
 	if isGeneric {
 		// Check Constraints
-		panic("generic")
+		panic("generic specialization & checking not implemented")
 	}
 
 	match := reflect.TypeOf(expected) == reflect.TypeOf(provided)

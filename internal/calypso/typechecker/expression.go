@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/token"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
@@ -45,11 +46,15 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluateGroupedExpression(expr)
 	case *ast.CallExpression:
 		return c.evaluateCallExpression(expr)
-	// case *ast.ArrayLiteral:
-	// case *ast.UnaryExpression:
-	// case *ast.BinaryExpression:
+	case *ast.UnaryExpression:
+		return c.evaluateUnaryExpression(expr)
+	case *ast.BinaryExpression:
+		return c.evaluateBinaryExpression(expr)
 	// case *ast.AssignmentExpression:
+
+	// case *ast.ArrayLiteral:
 	// case *ast.CompositeLiteral:
+
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -173,5 +178,81 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 	}
 
 	return fn.ReturnType
+}
+
+func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type {
+	op := expr.Op
+	rhs := c.evaluateExpression(expr.Expr)
+	var err error
+
+	switch op {
+	case token.NOT:
+
+		// if RHS is boolean, return boolean type. as not inverts boolean value
+		bl := types.LookUp(types.Bool)
+		if rhs == bl {
+			return bl
+		}
+
+		// RHS is not a boolean, ensure type conforms to NOT operan standard
+		// TODO: ^^^
+		panic("operand standards have not been implemented")
+
+	case token.SUB:
+
+		// if RHS is numeric, return RHS type as numberic types can be negated
+		if types.IsNumeric(rhs) {
+			return rhs
+		}
+
+		err = fmt.Errorf("unsupported negation operand on type `%s`", rhs)
+	default:
+		err = fmt.Errorf("unsupported unary operand `%s`", token.LookUp(op))
+	}
+
+	if err == nil {
+		panic("there should be an error here")
+	}
+
+	c.addError(err.Error(), expr.Range())
+
+	return unresolved
+
+}
+
+func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
+	lhs := c.evaluateExpression(e.Left)
+	rhs := c.evaluateExpression(e.Right)
+	op := e.Op
+
+	typ, err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), e.Range())
+		return unresolved
+	}
+
+	switch op {
+	case token.ADD, token.SUB, token.QUO, token.MUL:
+		if types.IsNumeric(typ) {
+			return typ
+		}
+	case token.LSS, token.GTR, token.LEQ, token.GEQ:
+		if types.IsNumeric(typ) {
+			return types.LookUp(types.Bool)
+		}
+		panic("COMPARABLE STANDARD NOT IMPLEMENTED")
+
+	case token.EQL, token.NEQ:
+		if types.IsEquatable(typ) {
+			return types.LookUp(types.Bool)
+		}
+		panic("EQUATABLE STANDARD NOT IMPLEMENTED")
+	}
+
+	// no matching operand
+	err = fmt.Errorf("unsupported binary operand `%s`", token.LookUp(op))
+	c.addError(err.Error(), e.Range())
+	return unresolved
 
 }
