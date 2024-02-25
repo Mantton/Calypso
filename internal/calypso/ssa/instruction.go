@@ -1,8 +1,8 @@
 package ssa
 
 import (
-	"github.com/mantton/calypso/internal/calypso/symbols"
 	"github.com/mantton/calypso/internal/calypso/token"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type Load struct {
@@ -10,8 +10,8 @@ type Load struct {
 }
 
 type Allocate struct {
-	TypeSymbol *symbols.SymbolInfo
-	OnHeap     bool
+	Type   types.Type
+	OnHeap bool
 }
 
 type Store struct {

@@ -1,5 +1,7 @@
 package types
 
-type Struct struct{}
+type Struct struct {
+}
 
-func (s *Struct) ssaType() {}
+func (t *Struct) clyT()          {}
+func (t *Struct) String() string { return "struct" }

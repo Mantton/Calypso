@@ -2,8 +2,8 @@ package ast
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
-	"github.com/mantton/calypso/internal/calypso/symbols"
 	"github.com/mantton/calypso/internal/calypso/token"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type Node interface {
@@ -30,7 +30,6 @@ type File struct {
 	ModuleName   string
 	Declarations []Declaration
 	Errors       lexer.ErrorList
-	Symbols      *symbols.SymbolTable
 }
 
 // * Declarations
@@ -84,7 +83,6 @@ type BlockStatement struct {
 	LBrackPos  token.TokenPosition
 	RBrackPos  token.TokenPosition
 	Statements []Statement
-	Symbols    *symbols.SymbolTable
 }
 
 type VariableStatement struct {
@@ -206,6 +204,7 @@ type FunctionExpression struct {
 	GenericParams *GenericParametersClause
 	RParenPos     token.TokenPosition
 	ReturnType    TypeExpression
+	Signature     *types.Function
 }
 
 // * Literals

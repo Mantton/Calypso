@@ -1,56 +1,66 @@
-package typechecker
+package t
 
 import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/symbols"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 func (c *Checker) checkStatement(stmt ast.Statement) {
-	// fmt.Printf(
-	// 	"\nChecking Statement: %T @ Line %d\n",
-	// 	stmt,
-	// 	stmt.Range().Start.Line,
-	// )
-	c.currentNode = stmt
+	fmt.Printf(
+		"Checking Statement: %T @ Line %d\n",
+		stmt,
+		stmt.Range().Start.Line,
+	)
 	switch stmt := stmt.(type) {
+	case *ast.ExpressionStatement:
+		c.checkExpression(stmt.Expr)
 	case *ast.VariableStatement:
 		c.checkVariableStatement(stmt)
 	case *ast.BlockStatement:
-		c.checkBlockStatement(stmt)
-	case *ast.AliasStatement:
-		c.checkAliasStatement(stmt)
+		panic("CALL `checkBlockStatement` DIRECTLY")
 	case *ast.ReturnStatement:
-		c.checkReturnStatement(stmt)
-	case *ast.ExpressionStatement:
-		c.checkExpression(stmt.Expr)
-	case *ast.StructStatement:
-		c.checkStructStatement(stmt)
-	case *ast.IfStatement:
-		c.checkIfStatement(stmt)
+		panic("CALL `checkReturnStatement` DIRECTLY")
+	// case *ast.AliasStatement:
+	// case *ast.StructStatement:
+	// case *ast.IfStatement:
 	default:
-		msg := fmt.Sprintf("statement check not implemented, %T", stmt)
+		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
+	}
+}
+
+func (c *Checker) checkBlockStatement(blk *ast.BlockStatement, fn *types.Function) {
+	if len(blk.Statements) == 0 {
+		return
+	}
+
+	for _, stmt := range blk.Statements {
+		switch stmt := stmt.(type) {
+		case *ast.ReturnStatement:
+			c.checkReturnStatement(stmt, fn.Type().(*types.FunctionSignature))
+		default:
+			c.checkStatement(stmt)
+		}
 	}
 }
 
 func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
-	s := symbols.NewSymbol(stmt.Identifier.Value, symbols.VariableSymbol)
-	s.TypeDesc = unresolved
-	s.Mutable = !stmt.IsConstant
-	ok := c.define(s)
+	def := types.NewVar(stmt.Identifier.Value, unresolved)
+	def.Mutable = !stmt.IsConstant
+	ok := c.define(def)
 
 	if !ok {
 		c.addError(
-			fmt.Sprintf("`%s` is already defined", s.Name),
+			fmt.Sprintf("`%s` is already defined", def.Name()),
 			stmt.Identifier.Range(),
 		)
 		return
 	}
 
-	var annotation *symbols.SymbolInfo
+	var annotation types.Type
 
 	// Check Annotation
 	if t := stmt.Identifier.AnnotatedType; t != nil {
@@ -60,141 +70,38 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	initializer := c.evaluateExpression(stmt.Value)
 
 	if annotation == nil {
-		s.TypeDesc = initializer
+		def.SetType(initializer)
 		return
 	}
 
 	// Annotation Present, Ensure Annotated Type Matches the provided Type
-	err := c.validate(annotation, initializer, annotation.Specializations)
+	annotation, err := c.validate(annotation, initializer)
 
 	if err != nil {
 		c.addError(
 			err.Error(),
 			stmt.Value.Range(),
 		)
-
-	}
-
-	s.TypeDesc = annotation
-}
-
-func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
-	blk.Symbols = c.symbols
-	if len(blk.Statements) == 0 {
 		return
 	}
 
-	for _, stmt := range blk.Statements {
-		c.checkStatement(stmt)
-	}
+	def.SetType(annotation)
 }
 
-func (c *Checker) checkAliasStatement(stmt *ast.AliasStatement) {
-
-	s := symbols.NewSymbol(stmt.Identifier.Value, symbols.AliasSymbol)
-	prev := c.currentSym
-	c.currentSym = s
-	defer func() {
-		c.currentSym = prev
-	}()
-
-	ok := c.define(s)
-
-	if !ok {
-		c.addError(
-			fmt.Sprintf("`%s` is already defined", stmt.Identifier.Value),
-			stmt.Identifier.Range(),
-		)
-		return
-	}
-
-	// alias Foo<T: Hashing> = Array<T>
-	genericParams := stmt.GenericParams
-
-	if genericParams != nil {
-		c.evaluateGenericParameters(s, genericParams)
-	}
-
-	expected := c.evaluateTypeExpression(stmt.Target)
-	s.AliasOf = expected
-}
-
-func (c *Checker) evaluateGenericParameters(s *symbols.SymbolInfo, clause *ast.GenericParametersClause) bool {
-	hasErrors := false
-	for _, param := range clause.Parameters {
-		p := symbols.NewSymbol(param.Identifier.Value, symbols.GenericTypeSymbol)
-
-		// Resolve Standards
-		for _, standard := range param.Standards {
-			standardSym, ok := c.find(standard.Value)
-			// not defined
-			if !ok {
-				c.addError(
-					fmt.Sprintf("`%s` is not found", standard.Value),
-					standard.Range(),
-				)
-				hasErrors = true
-			}
-
-			// Ensure Sym is Standard
-			if standardSym.Type != symbols.StandardSymbol {
-				c.addError(
-					fmt.Sprintf("`%s` is not a conformable standard", standard.Value),
-					standard.Range(),
-				)
-				hasErrors = true
-			}
-
-			// Add Standard to Parameter
-			err := p.AddConstraint(standardSym)
-
-			if err != nil {
-				c.addError(
-					err.Error(),
-					param.Identifier.Range(),
-				)
-				hasErrors = true
-
-			}
-
-		}
-		// Add Parameters to Symbol
-		err := s.AddGenericParameter(p)
-
-		if err != nil {
-			c.addError(
-				err.Error(),
-				param.Identifier.Range(),
-			)
-			hasErrors = true
-		}
-	}
-
-	return !hasErrors
-}
-
-func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
-
-	if c.currentSym == nil {
-		c.addError(
-			"top level returns are not permitted",
-			stmt.Range(),
-		)
-
-		return
-	}
-
-	if c.currentSym.FuncDesc == nil {
-		panic("Current Symbol Scope is not a function")
-	}
+func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, fn *types.FunctionSignature) {
 
 	provided := c.evaluateExpression(stmt.Value)
-	expected := c.currentSym.FuncDesc.AnnotatedReturnType
 
-	// Has Expected Return Type
-	if expected != nil {
-		err := c.validate(expected, provided, nil)
+	// no return type set, infer
+	if fn.ReturnType == nil {
+		fn.ReturnType = provided
+		return
+	}
 
+	// return type is already set, validate
+	t, err := c.validate(fn.ReturnType, provided)
+
+	if err != nil {
 		if err != nil {
 			c.addError(err.Error(), stmt.Range())
 		}
@@ -202,78 +109,5 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 		return
 	}
 
-	// No Expected Return Type, Try Inference
-	inferred := c.currentSym.FuncDesc.InferredReturnType
-
-	if inferred != nil {
-		err := c.validate(inferred, provided, nil)
-		// Types Do not match, set to any
-		if err != nil {
-			c.currentSym.FuncDesc.InferredReturnType = c.resolveLiteral(symbols.ANY)
-			return
-		}
-		// Types Match, Do nothing
-	} else {
-		c.currentSym.FuncDesc.InferredReturnType = provided
-	}
-
-}
-
-func (c *Checker) checkStructStatement(stmt *ast.StructStatement) {
-
-	sym := symbols.NewSymbol(stmt.Identifier.Value, symbols.StructSymbol)
-	// Enter new Symbol Scope
-	prev := c.currentSym
-	c.currentSym = sym
-	defer func() {
-		c.currentSym = prev
-	}()
-
-	// Define
-	ok := c.define(sym)
-
-	if !ok {
-		c.addError(
-			fmt.Sprintf("`%s` is already defined", sym.Name),
-			stmt.Identifier.Range(),
-		)
-		return
-	}
-
-	// Register Generic Parameters
-	if stmt.GenericParams != nil {
-		c.evaluateGenericParameters(sym, stmt.GenericParams)
-	}
-
-	// Register Properties
-	for _, prop := range stmt.Properties {
-		pSym := symbols.NewSymbol(prop.Value, symbols.VariableSymbol)
-		t := c.evaluateTypeExpression(prop.AnnotatedType)
-		pSym.TypeDesc = t
-		sym.AddProperty(pSym)
-	}
-}
-
-func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
-
-	// 1 - Check Condition
-	cond := c.evaluateExpression(stmt.Condition)
-
-	err := c.validate(c.resolveLiteral(symbols.BOOLEAN), cond, nil)
-
-	if err != nil {
-		c.addError(err.Error(), stmt.Condition.Range())
-		return
-	}
-
-	// 2 - Check Action
-	c.enterScope()
-	c.checkBlockStatement(stmt.Action)
-	c.leaveScope(false)
-
-	if stmt.Alternative != nil {
-		c.enterScope()
-		c.checkBlockStatement(stmt.Alternative)
-		c.leaveScope(false)
-	}
+	fn.ReturnType = t
 }

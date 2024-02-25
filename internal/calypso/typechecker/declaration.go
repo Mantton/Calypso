@@ -1,11 +1,10 @@
-package typechecker
+package t
 
 import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
-	"github.com/mantton/calypso/internal/calypso/symbols"
 )
 
 func (c *Checker) checkDeclaration(decl ast.Declaration) {
@@ -20,106 +19,23 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 				}
 			}
 		}()
-		c.currentNode = decl
-
+		fmt.Printf(
+			"Checking Declaration: %T @ Line %d\n",
+			decl,
+			decl.Range().Start.Line,
+		)
 		switch decl := decl.(type) {
 		case *ast.ConstantDeclaration:
 			c.checkStatement(decl.Stmt)
 		case *ast.FunctionDeclaration:
 			c.checkExpression(decl.Func)
-		case *ast.StatementDeclaration:
-			c.checkStatement(decl.Stmt)
-		case *ast.StandardDeclaration:
-			c.checkStandardDeclaration(decl)
-		case *ast.ExtensionDeclaration:
-			c.checkExtension(decl)
-		case *ast.TypeDeclaration:
-			c.checkTypeDeclaration(decl)
+		// case *ast.StatementDeclaration:
+		// case *ast.StandardDeclaration:
+		// case *ast.ExtensionDeclaration:
+		// case *ast.TypeDeclaration:
 		default:
 			msg := fmt.Sprintf("declaration check not implemented, %T", decl)
 			panic(msg)
 		}
 	}()
-}
-
-func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
-	// TODO: Scope to Module/Package
-	standard := symbols.NewSymbol(d.Identifier.Value, symbols.StandardSymbol)
-
-	ok := c.define(standard)
-
-	for _, expr := range d.Block.Statements {
-
-		fn, ok := expr.(*ast.FunctionStatement)
-
-		if !ok {
-			c.addError("Only Functions are allowed in a Standards body", expr.Range())
-			continue
-		}
-
-		// * NOTE: Parser already ensures the body is not part here
-
-		// TODO: Parse Function Type
-		fnDesc := symbols.NewSymbol(fn.Func.Identifier.Value, symbols.FunctionSymbol)
-		// Add Property
-		ok = standard.AddProperty(fnDesc)
-
-		if !ok {
-			// already defined
-			c.addError(fmt.Sprintf("`%s` is already defined in `%s`", fnDesc.Name, standard.Name), fn.Range())
-			continue
-		}
-	}
-
-	if !ok {
-		msg := fmt.Sprintf("`%s` is already defined.", d.Identifier.Value)
-		c.addError(msg, d.Identifier.Range())
-	}
-
-}
-
-func (c *Checker) checkExtension(d *ast.ExtensionDeclaration) {
-
-	s, ok := c.find(d.Identifier.Value)
-
-	if !ok {
-		msg := fmt.Sprintf("Unable to locate `%s`", d.Identifier.Value)
-		c.addError(msg, d.Identifier.Range())
-	}
-
-	action := func(t *symbols.SymbolInfo, node ast.Node) {
-		if s != nil {
-			ok = s.AddProperty(t)
-
-			if !ok {
-				c.addError(fmt.Sprintf("`%s` is already defined in `%s`", t.Name, s.Name), node.Range())
-			}
-		}
-	}
-
-	for _, fn := range d.Content {
-		// TODO: Parse Function Type
-		fnDesc := symbols.NewSymbol(fn.Func.Identifier.Value, symbols.FunctionSymbol)
-		action(fnDesc, fn)
-	}
-
-}
-
-func (c *Checker) checkTypeDeclaration(d *ast.TypeDeclaration) {
-
-	s := &symbols.SymbolInfo{
-		Name: d.Identifier.Value,
-		Type: symbols.TypeSymbol,
-	}
-
-	ok := c.define(s)
-
-	// Already Defined,
-	if !ok {
-		c.addError(fmt.Sprintf("`%s` is already defined", d.Identifier.Value), d.Identifier.Range())
-	}
-
-	// TODO: Check Generics
-	e := c.evaluateTypeExpression(d.Value)
-	s.ChildOf = e
 }

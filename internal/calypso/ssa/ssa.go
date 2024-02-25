@@ -2,6 +2,7 @@ package ssa
 
 import (
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 // * 1
@@ -30,6 +31,7 @@ type Node interface {
 type Executable struct {
 	Modules      map[string]*Module
 	IncludedFile *ast.File
+	Scope        *types.Scope
 }
 
 // TODO: Package

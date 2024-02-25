@@ -1,30 +1,19 @@
 package ssa
 
-import (
-	"github.com/mantton/calypso/internal/calypso/symbols"
-)
+import "github.com/mantton/calypso/internal/calypso/types"
 
 // represents a value known at compile time
 type Constant struct {
 	Value any
-	Type  *symbols.SymbolInfo
+	Type  types.Type
 }
 
 type Global struct {
 	Value Constant
 }
 
-// type Address struct {
-// 	Anchor *Address
-// 	Offset int
-// }
-
 func (*Constant) ssaNode() {}
 func (*Global) ssaNode()   {}
 
-// func (*Address) ssaNode()  {}
-
 func (*Constant) ssaVal() {}
 func (*Global) ssaVal()   {}
-
-// func (*Address) ssaVal()  {}

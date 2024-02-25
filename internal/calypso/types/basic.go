@@ -1,7 +1,24 @@
 package types
 
+type BasicType byte
+
+const (
+	Unresolved BasicType = iota
+	Bool
+	Int
+	Float
+	String
+
+	Null
+	Void
+	Any
+)
+
 type Basic struct {
-	Literal int
+	Literal BasicType
+	name    string
 }
 
-func (s *Basic) ssaType() {}
+func (t *Basic) clyT()          {}
+func (t *Basic) Name() string   { return t.name }
+func (t *Basic) String() string { return t.name }

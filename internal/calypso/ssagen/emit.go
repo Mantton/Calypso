@@ -2,31 +2,31 @@ package ssagen
 
 import (
 	"github.com/mantton/calypso/internal/calypso/ssa"
-	"github.com/mantton/calypso/internal/calypso/symbols"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func emitStackAlloc(fn *ssa.Function, s *symbols.SymbolInfo) *ssa.Allocate {
+func emitStackAlloc(fn *ssa.Function, t types.Type) *ssa.Allocate {
 	i := &ssa.Allocate{
-		TypeSymbol: s.TypeDesc,
+		Type: t,
 	}
 
 	fn.Emit(i)
 	return i
 }
 
-func emitHeapAlloc(fn *ssa.Function, s *symbols.SymbolInfo) *ssa.Allocate {
+func emitHeapAlloc(fn *ssa.Function, t types.Type) *ssa.Allocate {
 	i := &ssa.Allocate{
-		TypeSymbol: s.TypeDesc,
-		OnHeap:     true,
+		Type:   t,
+		OnHeap: true,
 	}
 
 	fn.Emit(i)
 	return i
 }
 
-func emitLocalVar(fn *ssa.Function, s *symbols.SymbolInfo) *ssa.Allocate {
-	addr := emitStackAlloc(fn, s.TypeDesc)
-	fn.Variables[s.Name] = addr
+func emitLocalVar(fn *ssa.Function, v *types.Var) *ssa.Allocate {
+	addr := emitStackAlloc(fn, v.Type())
+	fn.Variables[v.Name()] = addr
 	return addr
 }
 

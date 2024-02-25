@@ -11,7 +11,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/ssagen"
-	"github.com/mantton/calypso/internal/calypso/typechecker"
+	t "github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
 func Build(filepath, input string) *ast.File {
@@ -60,8 +60,8 @@ func Build(filepath, input string) *ast.File {
 	fmt.Println("\n[TypeChecker] Starting")
 	start = time.Now()
 
-	checker := typechecker.New(typechecker.STD)
-	checker.CheckFile(file)
+	checker := t.New(t.STD)
+	sc := checker.CheckFile(file)
 
 	if len(checker.Errors) != 0 {
 		for _, err := range checker.Errors {
@@ -74,7 +74,7 @@ func Build(filepath, input string) *ast.File {
 	fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
 	fmt.Println("\n[SSAGen] Starting")
-	exec := ssagen.Generate(file)
+	exec := ssagen.Generate(file, sc)
 	fmt.Println("[SSAGen] Completed.", "Took", duration)
 
 	fmt.Println("\n[IRGen] Starting")

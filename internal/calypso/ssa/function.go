@@ -1,9 +1,11 @@
 package ssa
 
-import "github.com/mantton/calypso/internal/calypso/symbols"
+import (
+	"github.com/mantton/calypso/internal/calypso/types"
+)
 
 type Function struct {
-	Symbol    *symbols.SymbolInfo
+	Type      *types.Function
 	Blocks    []*Block
 	Locals    []*Allocate
 	Variables map[string]Value
@@ -34,9 +36,9 @@ func (f *Function) NewBlock() *Block {
 	return b
 }
 
-func NewFunction(s *symbols.SymbolInfo) *Function {
+func NewFunction(sg *types.Function) *Function {
 	return &Function{
-		Symbol:    s,
+		Type:      sg,
 		Variables: make(map[string]Value),
 	}
 }

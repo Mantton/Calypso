@@ -5,7 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/ssa"
-	"github.com/mantton/calypso/internal/calypso/symbols"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type builder struct {
@@ -22,27 +22,28 @@ func build(e *ssa.Executable) {
 		switch d := decl.(type) {
 		case *ast.FunctionDeclaration:
 			b.resolveFunction(d.Func)
+		default:
+			panic(fmt.Sprintf("unknown decl %T\n", decl))
 		}
 	}
 
 	e.Modules["main"] = b.Mod
 }
 
-func (b builder) resolveFunction(d *ast.FunctionExpression) {
+func (b builder) resolveFunction(n *ast.FunctionExpression) {
 
-	fn := ssa.NewFunction(&symbols.SymbolInfo{Name: d.Identifier.Value})
-	b.Mod.Functions[d.Identifier.Value] = fn
+	fn := ssa.NewFunction(n.Signature)
+	b.Mod.Functions[n.Identifier.Value] = fn
 	b.Fn = fn
 	fn.CurrentBlock = fn.NewBlock()
-	b.resolveBlockStatement(d.Body, fn)
+	b.resolveBlockStatement(n.Body, fn, n.Signature.Type().(*types.FunctionSignature).Scope)
 }
 
-func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function) {
+func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function, s *types.Scope) {
 
 	switch n := n.(type) {
 	case *ast.VariableStatement:
-		b.resolveVariableStmt(n, fn)
-	// case *ast.IfStatement:
+		b.resolveVariableStmt(n, fn, s)
 	case *ast.ReturnStatement:
 		b.resolveReturnStmt(n, fn)
 	case *ast.BlockStatement:
@@ -61,7 +62,7 @@ func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function) {
 
 }
 
-func (b *builder) resolveVariableStmt(n *ast.VariableStatement, fn *ssa.Function) {
+func (b *builder) resolveVariableStmt(n *ast.VariableStatement, fn *ssa.Function, s *types.Scope) {
 
 	val := b.resolveExpr(n.Value, fn)
 
@@ -78,7 +79,12 @@ func (b *builder) resolveVariableStmt(n *ast.VariableStatement, fn *ssa.Function
 	}
 
 	// Variable, Allocate Memory & Store Address
-	addr := emitLocalVar(fn, &symbols.SymbolInfo{Name: n.Identifier.Value, TypeDesc: &symbols.SymbolInfo{Name: "Test"}})
+	v, ok := s.Resolve(n.Identifier.Value)
+	if !ok {
+		panic("Var cannot be found in scope")
+	}
+
+	addr := emitLocalVar(fn, v.(*types.Var))
 
 	// Store Data @ Addr
 
@@ -96,10 +102,10 @@ func (b *builder) resolveReturnStmt(n *ast.ReturnStatement, fn *ssa.Function) {
 	fn.Emit(i)
 }
 
-func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *ssa.Function) {
+func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *ssa.Function, sc *types.Scope) {
 
 	for _, s := range n.Statements {
-		b.resolveStmt(s, fn)
+		b.resolveStmt(s, fn, sc)
 	}
 }
 

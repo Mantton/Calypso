@@ -1,5 +1,11 @@
 package types
 
 type Type interface {
-	ssaType()
+	clyT()
+	String() string
+}
+
+func IsGeneric(t Type) bool {
+	_, ok := t.(*TypeParam)
+	return ok
 }

@@ -1,6 +1,9 @@
 package types
 
 type Alias struct {
+	Definition TypeDef
+	RHS        Type
 }
 
-func (s *Alias) ssaType() {}
+func (t *Alias) clyT()          {}
+func (t *Alias) String() string { return t.Definition.name }

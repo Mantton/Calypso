@@ -72,7 +72,7 @@ func (c *compiler) Compile() string {
 }
 
 func (c *compiler) emitFn(fn *ssa.Function) {
-	fmt.Printf("[EMITTING FUNC] %s\n", fn.Symbol.Name)
+	fmt.Printf("[EMITTING FUNC] %s\n", fn.Type.Name())
 
 	// Create LLVM Fn
 	returnType := c.context.Int32Type()
@@ -80,7 +80,7 @@ func (c *compiler) emitFn(fn *ssa.Function) {
 	fnType := llvm.FunctionType(returnType, paramTypes, false)
 
 	// Params
-	f := llvm.AddFunction(c.module, fn.Symbol.Name, fnType)
+	f := llvm.AddFunction(c.module, fn.Type.Name(), fnType)
 	locals := make(Locals)
 	// Blocks
 
