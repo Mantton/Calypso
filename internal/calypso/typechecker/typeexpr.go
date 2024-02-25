@@ -31,3 +31,26 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 
 	return def.Type()
 }
+
+func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.FunctionSignature {
+
+	sg := types.NewFunctionSignature()
+
+	// Parameters
+	for _, p := range e.Params {
+		t := c.evaluateTypeExpression(p.AnnotatedType)
+		v := types.NewVar(p.Value, t)
+		sg.AddParameter(v)
+	}
+
+	// Annotated Return Type
+	if e.ReturnType != nil {
+		t := c.evaluateTypeExpression(e.ReturnType)
+		sg.ReturnType = t
+	} else {
+		c.addError(fmt.Sprintf("missing return value in function signature"), e.Range())
+		sg.ReturnType = unresolved
+	}
+
+	return sg
+}
