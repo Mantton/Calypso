@@ -5,6 +5,7 @@ type visitor interface {
 	VisitIntegerLiteral(*IntegerLiteral)
 	VisitFloatLiteral(*FloatLiteral)
 	VisitStringLiteral(*StringLiteral)
+	VisitCharLiteral(*CharLiteral)
 	VisitBooleanLiteral(*BooleanLiteral)
 	VisitNullLiteral(*NullLiteral)
 	VisitVoidLiteral(*VoidLiteral)
@@ -64,6 +65,9 @@ func (n *FloatLiteral) Accept(v visitor) {
 }
 func (n *StringLiteral) Accept(v visitor) {
 	v.VisitStringLiteral(n)
+}
+func (n *CharLiteral) Accept(v visitor) {
+	v.VisitCharLiteral(n)
 }
 func (n *BooleanLiteral) Accept(v visitor) {
 	v.VisitBooleanLiteral(n)

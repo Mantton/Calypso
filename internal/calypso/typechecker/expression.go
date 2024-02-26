@@ -83,7 +83,7 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	c.checkBlockStatement(e.Body)
 
 	// No return statement with no annotated return type, return type is void
-	if e.ReturnType == nil {
+	if sg.ReturnType == nil {
 		sg.ReturnType = types.LookUp(types.Void)
 	}
 
@@ -101,17 +101,20 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.IntegerLiteral:
-		return types.LookUp(types.Int)
+		return types.LookUp(types.IntegerLiteral)
 	case *ast.BooleanLiteral:
 		return types.LookUp(types.Bool)
 	case *ast.FloatLiteral:
-		return types.LookUp(types.Float)
+		return types.LookUp(types.FloatingPointLiteral)
 	case *ast.StringLiteral:
 		return types.LookUp(types.String)
+	case *ast.CharLiteral:
+		return types.LookUp(types.Char)
 	case *ast.NullLiteral:
 		return types.LookUp(types.Null)
 	case *ast.VoidLiteral:
 		return types.LookUp(types.Void)
+
 	case *ast.IdentifierExpression:
 		return c.evaluateIdentifierExpression(expr)
 	case *ast.GroupedExpression:

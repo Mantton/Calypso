@@ -9,17 +9,20 @@ import (
 
 // named members of a package
 type Member interface {
+	Node
 	ssaMbr()
 }
 
 // an expression that yields a value
 type Value interface {
+	Node
 	ssaVal()
 	Type() types.Type
 }
 
 // a statement that consumes a value and performs computation
 type Instruction interface {
+	Node
 	ssaInstr()
 }
 

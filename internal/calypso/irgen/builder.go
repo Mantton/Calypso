@@ -24,7 +24,7 @@ type builder struct {
 
 func newBuilder(fn *ssa.Function, c *compiler, b llvm.Builder) *builder {
 	// Initialize Function
-	f, fnType := c.getFunction(fn.Type)
+	f, fnType := c.getFunction(fn.Symbol)
 	return &builder{
 		compiler:   c,
 		fn:         fn,
@@ -37,7 +37,7 @@ func newBuilder(fn *ssa.Function, c *compiler, b llvm.Builder) *builder {
 }
 
 func (b *builder) buildFunction() {
-	fmt.Printf("[EMITTING FUNC] %s\n", b.fn.Type.Name())
+	fmt.Printf("[EMITTING FUNC] %s\n", b.fn.Symbol.Name())
 
 	// Create Blocks
 	var entry llvm.BasicBlock
@@ -53,6 +53,9 @@ func (b *builder) buildFunction() {
 	b.SetInsertPointAtEnd(entry)
 
 	// TODO: load params
+	for i, v := range b.fn.Parameters {
+		b.setValue(v, b.llvmFn.Param(i))
+	}
 
 	// Fill Blocks
 	for _, ptr := range b.fn.Blocks {
@@ -132,6 +135,11 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 		op := v.Op
 		typ := v.Left.Type()
 
+		if typ == nil {
+			fmt.Printf("%T", v.Left)
+			panic("type is nil")
+		}
+
 		switch typ := typ.(type) {
 		case *types.Basic:
 			switch typ.Literal {
@@ -169,7 +177,18 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 
 		}
 
+		fmt.Println(token.LookUp(op), typ)
 		panic("not ready")
+	case *ssa.Call:
+		lV, lT := b.getFunction(v.Target.Symbol)
+		var lA []llvm.Value
+
+		for _, p := range v.Arguments {
+			lA = append(lA, b.getValue(p))
+		}
+
+		r := b.CreateCall(lT, lV, lA, "")
+		return r
 
 	default:
 		panic("TODO: NOT IMPLMENTED")

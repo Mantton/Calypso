@@ -35,12 +35,24 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 		switch t.Literal {
 		case types.Void:
 			return c.context.VoidType()
-		case types.Int:
+		case types.Int, types.UInt:
 			return c.context.Int64Type()
+		case types.Int64, types.UInt64:
+			return c.context.Int64Type()
+		case types.Int32, types.UInt32:
+			return c.context.Int32Type()
+		case types.Int16, types.UInt16:
+			return c.context.Int16Type()
+		case types.Int8, types.UInt8:
+			return c.context.Int8Type()
 		case types.Float:
 			return c.context.FloatType()
+		case types.Double:
+			return c.context.DoubleType()
 		case types.Bool:
 			return c.context.Int1Type()
+		case types.IntegerLiteral:
+			panic("????")
 		}
 	}
 

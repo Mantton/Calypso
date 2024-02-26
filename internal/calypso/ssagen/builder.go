@@ -35,6 +35,12 @@ func (b builder) resolveFunction(n *ast.FunctionExpression) {
 	fn := ssa.NewFunction(n.Signature)
 	b.Mod.Functions[n.Identifier.Value] = fn
 	b.Fn = fn
+
+	sg := n.Signature.Type().(*types.FunctionSignature)
+
+	for _, p := range sg.Parameters {
+		fn.AddParameter(p)
+	}
 	fn.CurrentBlock = fn.NewBlock()
 	b.resolveBlockStatement(n.Body, fn, n.Signature.Type().(*types.FunctionSignature).Scope)
 }
@@ -185,29 +191,68 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 			Value: n.Value,
 			Typ:   types.LookUp(types.String),
 		}
+	case *ast.CharLiteral:
+		return &ssa.Constant{
+			Value: n.Value,
+			Typ:   types.LookUp(types.Char),
+		}
 	case *ast.CallExpression:
-		panic("fix this")
-		return &ssa.Call{
-			Target:    "Foo",
-			Arguments: nil,
+		val := b.resolveExpr(n.Target, fn)
+
+		f, ok := val.(*ssa.Function)
+
+		if !ok {
+			panic("cannot be invoked")
 		}
+
+		var args []ssa.Value
+
+		for _, p := range n.Arguments {
+			v := b.resolveExpr(p, fn)
+			args = append(args, v)
+		}
+		i := &ssa.Call{
+			Target:    f,
+			Arguments: args,
+		}
+
+		i.SetType(f.Symbol.Type().(*types.FunctionSignature).ReturnType)
+
+		fn.Emit(i)
+		return i
 	case *ast.IdentifierExpression:
-		val := fn.Variables[n.Value]
+		val, ok := fn.Variables[n.Value]
 
-		switch val := val.(type) {
-		case *ssa.Allocate:
-			i := &ssa.Load{
-				Address: val,
+		if ok {
+			switch val := val.(type) {
+			case *ssa.Allocate:
+				i := &ssa.Load{
+					Address: val,
+				}
+
+				i.SetType(val.Type())
+				fn.Emit(i)
+				return i
+			case *ssa.Constant, *ssa.Parameter:
+				return val
+			default:
+				panic(fmt.Sprintf("identifier found invalid type: %T", val))
 			}
-
-			i.SetType(val.Type())
-			fn.Emit(i)
-			return i
-		case *ssa.Constant:
-			return val
-		default:
-			panic("identifier found invalid type")
 		}
+
+		val, ok = b.Mod.GlobalConstants[n.Value]
+
+		if ok {
+			return val
+		}
+
+		fn, ok = b.Mod.Functions[n.Value]
+
+		if ok {
+			return fn
+		}
+
+		panic("unable to locate identifier")
 
 	case *ast.AssignmentExpression:
 		a := b.resolveExpr(n.Target, fn)

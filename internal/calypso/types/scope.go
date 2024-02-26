@@ -16,7 +16,7 @@ func NewScope(p *Scope) *Scope {
 
 // Defines a new entity in the scope
 func (s *Scope) Define(e Symbol) bool {
-	fmt.Printf("defining %s\n", e.Name())
+	// fmt.Printf("defining %s\n", e.Name())
 	// defer fmt.Println(s)
 	k := e.Name()
 	_, ok := s.Symbols[k]

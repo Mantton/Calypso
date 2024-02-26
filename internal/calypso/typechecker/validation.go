@@ -36,6 +36,16 @@ func (c *Checker) validateBasicTypes(expected *types.Basic, provided *types.Basi
 		return expected, nil
 	}
 
+	// either side
+	if types.IsGroupLiteral(provided) {
+		switch {
+		case provided.Literal == types.IntegerLiteral, types.IsNumeric(expected):
+			return expected, nil
+		case provided.Literal == types.FloatingPointLiteral, types.IsFloatingPoint(expected):
+			return expected, nil
+		}
+	}
+
 	match := expected == provided
 	if !match {
 		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)

@@ -1,6 +1,13 @@
+/*
+Copyright (c) 2009 The Go Authors. All rights reserved.
+*/
+
 package lexer
 
 import (
+	"fmt"
+	"unicode"
+
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -150,6 +157,8 @@ func (l *Lexer) parseToken() token.ScannedToken {
 	// * Literals
 	case '"':
 		tok = l.string()
+	case '\'':
+		tok = l.char()
 	case '&':
 		// TODO: &&
 		tok = l.build(token.AMP)
@@ -193,6 +202,109 @@ func (l *Lexer) peek() rune {
 
 	return l.source[l.cursor]
 }
+
+func (l *Lexer) char() token.ScannedToken {
+	// Reference: https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/go/scanner/scanner.go;l=609
+	n := 0
+
+	for {
+		ch := l.peek()
+
+		// if new line or invalid character
+		if ch == '\n' || ch < 0 {
+			panic("char literal not terminated")
+		}
+
+		// Move to next token
+		l.next()
+
+		// closing quote
+		if ch == '\'' {
+			break
+		}
+
+		// increment char count
+		n++
+
+		// Scan/Parse Escape Character
+		if ch == '\\' {
+			l.scanEscape('\'')
+		}
+
+		// read to closing quote
+
+	}
+
+	if n != 1 {
+		panic("invalid char literal")
+	}
+
+	s := string(l.source[l.anchor-1 : l.cursor])
+
+	return token.ScannedToken{
+		Lit: s,
+		Tok: token.CHAR,
+		Pos: l.genPosition(),
+	}
+}
+
+// REFERENCE : https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/go/scanner/scanner.go;l=556
+func (l *Lexer) scanEscape(br rune) {
+	var n int
+	var base, max uint32
+	switch l.peek() {
+	case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', br:
+		l.next()
+	case '0', '1', '2', '3', '4', '5', '6', '7':
+		n, base, max = 3, 8, 255
+	case 'x':
+		l.next()
+		n, base, max = 2, 16, 255
+	case 'u':
+		l.next()
+		n, base, max = 4, 16, unicode.MaxRune
+	case 'U':
+		l.next()
+		n, base, max = 8, 16, unicode.MaxRune
+	default:
+		msg := "unknown escape sequence"
+		if l.peek() < 0 {
+			msg = "escape sequence not terminated"
+		}
+		panic(msg)
+	}
+
+	var x uint32
+	for n > 0 {
+		d := uint32(digitVal(l.peek()))
+		if d >= base {
+			msg := fmt.Sprintf("illegal character %#U in escape sequence", l.peek())
+			if l.peek() < 0 {
+				msg = "escape sequence not terminated"
+			}
+			panic(msg)
+		}
+		x = x*base + d
+		l.next()
+		n--
+	}
+
+	if x > max || 0xD800 <= x && x < 0xE000 {
+		panic("escape sequence is invalid Unicode code point")
+	}
+}
+
+func digitVal(ch rune) int {
+	switch {
+	case '0' <= ch && ch <= '9':
+		return int(ch - '0')
+	case 'a' <= lower(ch) && lower(ch) <= 'f':
+		return int(lower(ch) - 'a' + 10)
+	}
+	return 16 // larger than any legal digit val
+}
+
+func lower(ch rune) rune { return ('a' - 'A') | ch } // returns lower-case ch iff ch is ASCII letter
 
 func (l *Lexer) string() token.ScannedToken {
 	for l.peek() != '"' && !l.isAtEnd() {

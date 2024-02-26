@@ -39,6 +39,7 @@ const (
 	INTEGER
 	FLOAT
 	STRING
+	CHAR
 	lit_e // Literals End
 
 	ASSIGN // =

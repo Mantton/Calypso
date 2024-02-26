@@ -63,13 +63,29 @@ func (c *compiler) Compile() string {
 		b.buildFunction()
 	}
 
-	// Emit Functino Values
+	trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())
+	if err != nil {
+		panic(err)
+	}
+	c.module.SetTarget(trg.Description())
 
-	c.module.SetTarget("arm64")
+	mt := trg.CreateTargetMachine(llvm.DefaultTargetTriple(), "", "", llvm.CodeGenLevelDefault, llvm.RelocDefault, llvm.CodeModelDefault)
 
-	c.module.Dump()
+	pbo := llvm.NewPassBuilderOptions()
+	defer pbo.Dispose()
+
+	pm := llvm.NewPassManager()
+	mt.AddAnalysisPasses(pm)
+
+	err = c.module.RunPasses("default<Os>", mt, pbo)
+
+	if err != nil {
+		panic(err)
+	}
+
 	// Verify Module
-	err := llvm.VerifyModule(c.module, llvm.PrintMessageAction)
+	err = llvm.VerifyModule(c.module, llvm.ReturnStatusAction)
+	c.module.Dump()
 
 	if err != nil {
 		panic(err)

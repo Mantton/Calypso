@@ -209,18 +209,27 @@ type FunctionExpression struct {
 
 // * Literals
 type IntegerLiteral struct {
-	Pos   token.TokenPosition
-	Value int
+	Pos           token.TokenPosition
+	Value         string
+	ResolvedValue uint64
 }
 
 type FloatLiteral struct {
-	Pos   token.TokenPosition
-	Value float64
+	Pos           token.TokenPosition
+	Value         string
+	ResolvedValue float64
 }
 
 type StringLiteral struct {
-	Pos   token.TokenPosition
-	Value string
+	Pos           token.TokenPosition
+	Value         string
+	ResolvedValue string
+}
+
+type CharLiteral struct {
+	Pos           token.TokenPosition
+	Value         string
+	ResolvedValue rune
 }
 
 type BooleanLiteral struct {
