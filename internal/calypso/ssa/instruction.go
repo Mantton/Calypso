@@ -2,15 +2,15 @@ package ssa
 
 import (
 	"github.com/mantton/calypso/internal/calypso/token"
-	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type Load struct {
+	yielder
 	Address Value
 }
 
 type Allocate struct {
-	Type   types.Type
+	yielder
 	OnHeap bool
 }
 
@@ -20,6 +20,7 @@ type Store struct {
 }
 
 type Call struct {
+	yielder
 	Target    string
 	Arguments []Value
 }
@@ -29,9 +30,20 @@ type Return struct {
 }
 
 type Binary struct {
+	yielder
 	Left  Value
 	Op    token.Token
 	Right Value
+}
+
+type Branch struct {
+	Condition   Value
+	Action      *Block // Then
+	Alternative *Block // Else
+}
+
+type Jump struct {
+	Block *Block
 }
 
 func (*Load) ssaInstr()     {}
@@ -40,6 +52,8 @@ func (*Store) ssaInstr()    {}
 func (*Call) ssaInstr()     {}
 func (*Return) ssaInstr()   {}
 func (*Binary) ssaInstr()   {}
+func (*Branch) ssaInstr()   {}
+func (*Jump) ssaInstr()     {}
 
 func (*Load) ssaNode()     {}
 func (*Allocate) ssaNode() {}
@@ -47,6 +61,8 @@ func (*Store) ssaNode()    {}
 func (*Call) ssaNode()     {}
 func (*Return) ssaNode()   {}
 func (*Binary) ssaNode()   {}
+func (*Branch) ssaNode()   {}
+func (*Jump) ssaNode()     {}
 
 // Instructions That Yield Values
 func (*Allocate) ssaVal() {}

@@ -6,20 +6,18 @@ import (
 )
 
 func emitStackAlloc(fn *ssa.Function, t types.Type) *ssa.Allocate {
-	i := &ssa.Allocate{
-		Type: t,
-	}
-
+	i := &ssa.Allocate{}
+	i.SetType(t)
 	fn.Emit(i)
 	return i
 }
 
 func emitHeapAlloc(fn *ssa.Function, t types.Type) *ssa.Allocate {
 	i := &ssa.Allocate{
-		Type:   t,
 		OnHeap: true,
 	}
 
+	i.SetType(t)
 	fn.Emit(i)
 	return i
 }
@@ -37,4 +35,14 @@ func emitStore(f *ssa.Function, addr ssa.Value, val ssa.Value) {
 	}
 
 	f.Emit(i)
+}
+
+func emitGlobalVar(m *ssa.Module, c *ssa.Constant, k string) {
+	m.GlobalConstants[k] = &ssa.Global{
+		Value: c,
+	}
+}
+
+func emitConstantVar(fn *ssa.Function, c *ssa.Constant, k string) {
+	fn.Variables[k] = c
 }

@@ -54,7 +54,50 @@ func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function, s *types.Scope) 
 		if ok {
 			fn.Emit(i)
 		}
-		return
+	case *ast.IfStatement:
+		// 1 - Resolve Condition
+		cond := b.resolveExpr(n.Condition, fn) // eval condition
+		prevBlock := fn.CurrentBlock           // the current block
+
+		// Resolve Action Block
+		actionBlock := fn.NewBlock() // the action block i.e then
+		var altBlock *ssa.Block
+		fn.CurrentBlock = actionBlock
+		b.resolveBlockStatement(n.Action, fn, s)
+
+		// Resolve Alternative Block
+		if n.Alternative != nil {
+			altBlock = fn.NewBlock() // the alternate block i.e else
+
+			fn.CurrentBlock = altBlock
+			b.resolveBlockStatement(n.Alternative, fn, s)
+		}
+
+		joinBlock := fn.NewBlock() // the join block
+
+		actionBlock.Emit(&ssa.Jump{
+			Block: joinBlock,
+		})
+
+		if altBlock != nil {
+			altBlock.Emit(&ssa.Jump{
+				Block: joinBlock,
+			})
+			prevBlock.Emit(&ssa.Branch{
+				Condition:   cond,
+				Action:      actionBlock,
+				Alternative: altBlock,
+			})
+		} else {
+			prevBlock.Emit(&ssa.Branch{
+				Condition:   cond,
+				Action:      actionBlock,
+				Alternative: joinBlock,
+			})
+		}
+
+		fn.CurrentBlock = joinBlock
+
 	default:
 		panic(fmt.Sprintf("unknown statement %T\n", n))
 
@@ -66,17 +109,28 @@ func (b *builder) resolveVariableStmt(n *ast.VariableStatement, fn *ssa.Function
 
 	val := b.resolveExpr(n.Value, fn)
 
-	// Global variables are constants known at compile-time
+	// globals are constants known at compile-time
 	if n.IsGlobal {
-
+		v, ok := val.(*ssa.Constant)
+		if !ok {
+			panic("GLOBAL VALUE MUST BE KNOWN AT COMPILE TIME")
+		}
+		emitGlobalVar(b.Mod, v, n.Identifier.Value)
 		return
 	}
 
-	// TODO: check if value is a constant
-	// Constants known at compile time do not need to be allocated
+	// non global constants
 	if n.IsConstant {
-		return
+		v, ok := val.(*ssa.Constant)
+
+		// constant is a compile time constant
+		if ok {
+			emitConstantVar(fn, v, n.Identifier.Value)
+			return
+		}
 	}
+
+	// -- at this point, the variable is either a runtime constant or a mutable variable
 
 	// Variable, Allocate Memory & Store Address
 	v, ok := s.Resolve(n.Identifier.Value)
@@ -114,17 +168,47 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 	case *ast.IntegerLiteral:
 		return &ssa.Constant{
 			Value: n.Value,
+			Typ:   types.LookUp(types.Int),
+		}
+	case *ast.BooleanLiteral:
+		return &ssa.Constant{
+			Value: n.Value,
+			Typ:   types.LookUp(types.Bool),
+		}
+	case *ast.FloatLiteral:
+		return &ssa.Constant{
+			Value: n.Value,
+			Typ:   types.LookUp(types.Float),
+		}
+	case *ast.StringLiteral:
+		return &ssa.Constant{
+			Value: n.Value,
+			Typ:   types.LookUp(types.String),
 		}
 	case *ast.CallExpression:
+		panic("fix this")
 		return &ssa.Call{
 			Target:    "Foo",
 			Arguments: nil,
 		}
 	case *ast.IdentifierExpression:
-		addr := fn.Variables[n.Value]
-		return &ssa.Load{
-			Address: addr,
+		val := fn.Variables[n.Value]
+
+		switch val := val.(type) {
+		case *ssa.Allocate:
+			i := &ssa.Load{
+				Address: val,
+			}
+
+			i.SetType(val.Type())
+			fn.Emit(i)
+			return i
+		case *ssa.Constant:
+			return val
+		default:
+			panic("identifier found invalid type")
 		}
+
 	case *ast.AssignmentExpression:
 		a := b.resolveExpr(n.Target, fn)
 		v := b.resolveExpr(n.Value, fn)
@@ -132,11 +216,14 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 		return nil
 	case *ast.BinaryExpression:
 		lhs, rhs := b.resolveExpr(n.Left, fn), b.resolveExpr(n.Right, fn)
-		return &ssa.Binary{
+		i := &ssa.Binary{
 			Left:  lhs,
 			Op:    n.Op,
 			Right: rhs,
 		}
+		i.SetType(lhs.Type())
+		fn.Emit(i)
+		return i
 
 	default:
 		panic(fmt.Sprintf("unknown expr %T\n", n))

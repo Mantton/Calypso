@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/irgen"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
+	"github.com/mantton/calypso/internal/calypso/ssagen"
 	t "github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
@@ -59,7 +61,7 @@ func Build(filepath, input string) *ast.File {
 	start = time.Now()
 
 	checker := t.New(t.STD)
-	checker.CheckFile(file)
+	sc := checker.CheckFile(file)
 
 	if len(checker.Errors) != 0 {
 		for _, err := range checker.Errors {
@@ -71,13 +73,13 @@ func Build(filepath, input string) *ast.File {
 
 	fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
-	// fmt.Println("\n[SSAGen] Starting")
-	// exec := ssagen.Generate(file, sc)
-	// fmt.Println("[SSAGen] Completed.", "Took", duration)
+	fmt.Println("\n[SSAGen] Starting")
+	exec := ssagen.Generate(file, sc)
+	fmt.Println("[SSAGen] Completed.", "Took", duration)
 
-	// fmt.Println("\n[IRGen] Starting")
-	// irgen.Compile(exec)
-	// fmt.Println("[IRGen] Completed.", "Took", duration)
+	fmt.Println("\n[IRGen] Starting")
+	irgen.Compile(exec)
+	fmt.Println("[IRGen] Completed.", "Took", duration)
 	return file
 }
 

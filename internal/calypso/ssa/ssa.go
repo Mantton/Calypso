@@ -15,11 +15,22 @@ type Member interface {
 // an expression that yields a value
 type Value interface {
 	ssaVal()
+	Type() types.Type
 }
 
 // a statement that consumes a value and performs computation
 type Instruction interface {
 	ssaInstr()
+}
+
+// mix-in embeded by all SSA instructions that yield a value
+type yielder struct {
+	typ types.Type
+}
+
+func (y *yielder) SetType(typ types.Type) { y.typ = typ }
+func (y *yielder) Type() types.Type {
+	return y.typ
 }
 
 // Either a node or value
