@@ -83,7 +83,7 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	c.checkBlockStatement(e.Body)
 
 	// No return statement with no annotated return type, return type is void
-	if e.ReturnType == nil {
+	if sg.ReturnType == nil {
 		sg.ReturnType = types.LookUp(types.Void)
 	}
 

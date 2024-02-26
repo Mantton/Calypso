@@ -4,18 +4,32 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
+type Parameter struct {
+	Name   string
+	Symbol *types.Var
+	Parent *Function
+}
+
 type Function struct {
-	Type      *types.Function
-	Blocks    []*Block
-	Locals    []*Allocate
-	Variables map[string]Value
+	Symbol     *types.Function
+	Blocks     []*Block
+	Locals     []*Allocate
+	Variables  map[string]Value
+	Parameters []*Parameter
 
 	Owner *Member
 
 	CurrentBlock *Block
 }
 
-func (f *Function) ssaMbr() {}
+func (f *Function) ssaMbr()          {}
+func (f *Function) ssaNode()         {}
+func (f *Function) Type() types.Type { return f.Symbol.Type() }
+func (f *Function) ssaVal()          {}
+
+func (f *Parameter) ssaVal()          {}
+func (f *Parameter) ssaNode()         {}
+func (f *Parameter) Type() types.Type { return f.Symbol.Type() }
 
 func (f *Function) Emit(i Instruction) {
 	if f.CurrentBlock == nil {
@@ -36,9 +50,19 @@ func (f *Function) NewBlock() *Block {
 	return b
 }
 
+func (f *Function) AddParameter(t *types.Var) {
+	p := &Parameter{
+		Name:   t.Name(),
+		Symbol: t,
+		Parent: f,
+	}
+	f.Parameters = append(f.Parameters, p)
+	f.Variables[t.Name()] = p
+}
+
 func NewFunction(sg *types.Function) *Function {
 	return &Function{
-		Type:      sg,
+		Symbol:    sg,
 		Variables: make(map[string]Value),
 	}
 }

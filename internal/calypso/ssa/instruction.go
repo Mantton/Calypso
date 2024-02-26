@@ -21,7 +21,7 @@ type Store struct {
 
 type Call struct {
 	yielder
-	Target    string
+	Target    *Function
 	Arguments []Value
 }
 
