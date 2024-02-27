@@ -1,11 +1,11 @@
-package t
+package typechecker
 
 import (
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) CheckFile(file *ast.File) *types.Scope {
+func (c *Checker) CheckFile(file *ast.File) *SymbolTable {
 	c.enterScope() // global enter
 	main := c.scope
 	main.Parent = types.GlobalScope
@@ -15,6 +15,6 @@ func (c *Checker) CheckFile(file *ast.File) *types.Scope {
 		}
 	}
 	c.leaveScope() // global leave
-	return main
+	return c.table
 
 }

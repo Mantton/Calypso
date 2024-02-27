@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"fmt"
@@ -71,7 +71,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 
 	// Annotation Present, Ensure Annotated Type Matches the provided Type
-	annotation, err := c.validate(annotation, initializer)
+	annotation, err := c.validate(annotation, initializer, stmt.Value)
 
 	if err != nil {
 		c.addError(
@@ -104,7 +104,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 	}
 
 	// return type is already set, validate
-	t, err := c.validate(fn.ReturnType, provided)
+	t, err := c.validate(fn.ReturnType, provided, stmt.Value)
 
 	if err != nil {
 		if err != nil {
@@ -121,7 +121,7 @@ func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
 
 	// 1 - Check Condition
 	cond := c.evaluateExpression(stmt.Condition)
-	_, err := c.validate(types.LookUp(types.Bool), cond)
+	_, err := c.validate(types.LookUp(types.Bool), cond, stmt.Condition)
 
 	if err != nil {
 		c.addError(err.Error(), stmt.Condition.Range())

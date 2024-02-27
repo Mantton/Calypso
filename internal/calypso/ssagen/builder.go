@@ -5,17 +5,19 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/ssa"
+	"github.com/mantton/calypso/internal/calypso/typechecker"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type builder struct {
 	Mod *ssa.Module
-	Fn  *ssa.Function
+	Tbl *typechecker.SymbolTable
 }
 
-func build(e *ssa.Executable) {
+func build(e *ssa.Executable, t *typechecker.SymbolTable) {
 	b := &builder{
 		Mod: ssa.NewModule(e.IncludedFile, "main"),
+		Tbl: t,
 	}
 
 	for _, decl := range e.IncludedFile.Declarations {
@@ -32,21 +34,31 @@ func build(e *ssa.Executable) {
 
 func (b builder) resolveFunction(n *ast.FunctionExpression) {
 
-	fn := ssa.NewFunction(n.Signature)
-	b.Mod.Functions[n.Identifier.Value] = fn
-	b.Fn = fn
+	nd, ok := b.Tbl.GetNode(n)
 
-	sg := n.Signature.Type().(*types.FunctionSignature)
+	if !ok {
+		panic("node not in table")
+	}
+
+	sym, ok := nd.Symbol.(*types.Function)
+
+	if !ok {
+		panic("expecting function symbol")
+	}
+
+	fn := ssa.NewFunction(sym)
+	b.Mod.Functions[n.Identifier.Value] = fn
+	sg := sym.Type().(*types.FunctionSignature)
 
 	for _, p := range sg.Parameters {
 		fn.AddParameter(p)
 	}
 	fn.CurrentBlock = fn.NewBlock()
-	b.resolveBlockStatement(n.Body, fn, n.Signature.Type().(*types.FunctionSignature).Scope)
+	b.resolveBlockStatement(n.Body, fn, sg.Scope)
 }
 
 func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function, s *types.Scope) {
-
+	fmt.Printf("[SSAGEN] Building %T\n", n)
 	switch n := n.(type) {
 	case *ast.VariableStatement:
 		b.resolveVariableStmt(n, fn, s)
@@ -171,31 +183,21 @@ func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *ssa.Function,
 
 func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 	switch n := n.(type) {
-	case *ast.IntegerLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Int),
+
+	case *ast.IntegerLiteral,
+		*ast.BooleanLiteral,
+		*ast.FloatLiteral,
+		*ast.StringLiteral,
+		*ast.CharLiteral:
+
+		tn, ok := b.Tbl.GetNode(n)
+		fmt.Printf("[Resolver] %T\n", n)
+		fmt.Println(n)
+		if !ok {
+			panic("cannot resolve constant literal, this path should be unreachable")
 		}
-	case *ast.BooleanLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Bool),
-		}
-	case *ast.FloatLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Float),
-		}
-	case *ast.StringLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.String),
-		}
-	case *ast.CharLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Char),
-		}
+		return ssa.NewConst(tn.Value, tn.Type)
+
 	case *ast.CallExpression:
 		val := b.resolveExpr(n.Target, fn)
 

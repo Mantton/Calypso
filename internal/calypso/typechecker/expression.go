@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"fmt"
@@ -36,7 +36,6 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg)
-	e.Signature = def
 	ok := c.define(def)
 
 	// set current checking function to sg
@@ -52,6 +51,8 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
 	c.enterScope()
 	sg.Scope = c.scope
+	c.table.AddScope(e, c.scope)
+	c.table.AddNode(e, sg, nil, def)
 	defer c.leaveScope()
 
 	// Type/Generic Parameters
@@ -105,7 +106,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 	case *ast.BooleanLiteral:
 		return types.LookUp(types.Bool)
 	case *ast.FloatLiteral:
-		return types.LookUp(types.FloatingPointLiteral)
+		return types.LookUp(types.FloatLiteral)
 	case *ast.StringLiteral:
 		return types.LookUp(types.String)
 	case *ast.CharLiteral:
@@ -192,7 +193,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		expected := fn.Parameters[i].Type()
 
 		// validate will return resolved generic
-		_, err := c.validate(expected, provided)
+		_, err := c.validate(expected, provided, arg)
 
 		if err != nil {
 			c.addError(
@@ -251,7 +252,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 	rhs := c.evaluateExpression(e.Right)
 	op := e.Op
 
-	typ, err := c.validate(lhs, rhs)
+	typ, err := c.validate(lhs, rhs, e.Right)
 
 	if err != nil {
 		c.addError(err.Error(), e.Range())
@@ -288,7 +289,7 @@ func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) t
 	lhs := c.evaluateExpression(expr.Target)
 	rhs := c.evaluateExpression(expr.Value)
 
-	_, err := c.validate(lhs, rhs)
+	_, err := c.validate(lhs, rhs, expr.Value)
 
 	if err != nil {
 		c.addError(err.Error(), expr.Range())

@@ -3,7 +3,6 @@ package ast
 import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
-	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type Node interface {
@@ -204,32 +203,27 @@ type FunctionExpression struct {
 	GenericParams *GenericParametersClause
 	RParenPos     token.TokenPosition
 	ReturnType    TypeExpression
-	Signature     *types.Function
 }
 
 // * Literals
 type IntegerLiteral struct {
-	Pos           token.TokenPosition
-	Value         string
-	ResolvedValue uint64
+	Pos   token.TokenPosition
+	Value string
 }
 
 type FloatLiteral struct {
-	Pos           token.TokenPosition
-	Value         string
-	ResolvedValue float64
+	Pos   token.TokenPosition
+	Value string
 }
 
 type StringLiteral struct {
-	Pos           token.TokenPosition
-	Value         string
-	ResolvedValue string
+	Pos   token.TokenPosition
+	Value string
 }
 
 type CharLiteral struct {
-	Pos           token.TokenPosition
-	Value         string
-	ResolvedValue rune
+	Pos   token.TokenPosition
+	Value string
 }
 
 type BooleanLiteral struct {
