@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"fmt"
@@ -41,12 +41,12 @@ func (c *Checker) validateBasicTypes(expected *types.Basic, provided *types.Basi
 		switch {
 		case provided.Literal == types.IntegerLiteral, types.IsNumeric(expected):
 			return expected, nil
-		case provided.Literal == types.FloatingPointLiteral, types.IsFloatingPoint(expected):
+		case provided.Literal == types.FloatLiteral, types.IsFloatingPoint(expected):
 			return expected, nil
 		}
 	}
 
-	match := expected == provided
+	match := expected.Literal == provided.Literal
 	if !match {
 		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 	}

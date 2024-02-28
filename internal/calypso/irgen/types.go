@@ -14,7 +14,7 @@ func (c *compiler) getFunction(fn *types.Function) (llvm.Value, llvm.Type) {
 		return llvmFn, llvmFn.GlobalValueType()
 	}
 	sg := fn.Type().(*types.FunctionSignature)
-	retType := c.getType(sg.ReturnType)
+	retType := c.getType(sg.Result.Type())
 
 	var params []llvm.Type
 
@@ -35,11 +35,11 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 		switch t.Literal {
 		case types.Void:
 			return c.context.VoidType()
-		case types.Int, types.UInt:
+		case types.Int, types.UInt, types.IntegerLiteral:
 			return c.context.Int64Type()
 		case types.Int64, types.UInt64:
 			return c.context.Int64Type()
-		case types.Int32, types.UInt32:
+		case types.Int32, types.UInt32, types.Char:
 			return c.context.Int32Type()
 		case types.Int16, types.UInt16:
 			return c.context.Int16Type()
@@ -51,8 +51,8 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 			return c.context.DoubleType()
 		case types.Bool:
 			return c.context.Int1Type()
-		case types.IntegerLiteral:
-			panic("????")
+		default:
+			panic("unhandled basic type")
 		}
 	}
 

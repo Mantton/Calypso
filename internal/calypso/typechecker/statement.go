@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"fmt"
@@ -61,18 +61,12 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	// Check Annotation
 	if t := stmt.Identifier.AnnotatedType; t != nil {
 		annotation = c.evaluateTypeExpression(t)
+		def.SetType(annotation)
 	}
 
 	initializer := c.evaluateExpression(stmt.Value)
 
-	if annotation == nil {
-		def.SetType(initializer)
-		return
-	}
-
-	// Annotation Present, Ensure Annotated Type Matches the provided Type
-	annotation, err := c.validate(annotation, initializer)
-
+	err := c.validateAssignment(def, initializer, stmt.Value)
 	if err != nil {
 		c.addError(
 			err.Error(),
@@ -80,8 +74,6 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 		)
 		return
 	}
-
-	def.SetType(annotation)
 }
 
 func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
@@ -97,14 +89,8 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 	fn := c.fn
 	provided := c.evaluateExpression(stmt.Value)
 
-	// no return type set, infer
-	if fn.ReturnType == nil {
-		fn.ReturnType = provided
-		return
-	}
-
 	// return type is already set, validate
-	t, err := c.validate(fn.ReturnType, provided)
+	err := c.validateAssignment(fn.Result, provided, stmt.Value)
 
 	if err != nil {
 		if err != nil {
@@ -113,8 +99,6 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 
 		return
 	}
-
-	fn.ReturnType = t
 }
 
 func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {

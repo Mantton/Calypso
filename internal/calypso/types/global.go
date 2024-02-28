@@ -40,8 +40,8 @@ var GlobalTypes = map[BasicType]*Basic{
 	Any:  {Any, "any"},
 
 	// group literals
-	IntegerLiteral:       {IntegerLiteral, "Literal Integer"},
-	FloatingPointLiteral: {FloatingPointLiteral, "Literal FP"},
+	IntegerLiteral: {IntegerLiteral, "literal int"},
+	FloatLiteral:   {FloatLiteral, "literal float"},
 }
 
 func init() {

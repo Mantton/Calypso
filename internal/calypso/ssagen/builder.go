@@ -5,17 +5,19 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/ssa"
+	"github.com/mantton/calypso/internal/calypso/typechecker"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type builder struct {
 	Mod *ssa.Module
-	Fn  *ssa.Function
+	Tbl *typechecker.SymbolTable
 }
 
-func build(e *ssa.Executable) {
+func build(e *ssa.Executable, t *typechecker.SymbolTable) {
 	b := &builder{
 		Mod: ssa.NewModule(e.IncludedFile, "main"),
+		Tbl: t,
 	}
 
 	for _, decl := range e.IncludedFile.Declarations {
@@ -32,21 +34,25 @@ func build(e *ssa.Executable) {
 
 func (b builder) resolveFunction(n *ast.FunctionExpression) {
 
-	fn := ssa.NewFunction(n.Signature)
-	b.Mod.Functions[n.Identifier.Value] = fn
-	b.Fn = fn
+	tFn := b.Tbl.GetFunction(n)
 
-	sg := n.Signature.Type().(*types.FunctionSignature)
+	if tFn == nil {
+		panic("unknown function")
+	}
+
+	fn := ssa.NewFunction(tFn)
+	b.Mod.Functions[n.Identifier.Value] = fn
+	sg := tFn.Type().(*types.FunctionSignature)
 
 	for _, p := range sg.Parameters {
 		fn.AddParameter(p)
 	}
 	fn.CurrentBlock = fn.NewBlock()
-	b.resolveBlockStatement(n.Body, fn, n.Signature.Type().(*types.FunctionSignature).Scope)
+	b.resolveBlockStatement(n.Body, fn, sg.Scope)
 }
 
 func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function, s *types.Scope) {
-
+	fmt.Printf("[SSAGEN] Building %T\n", n)
 	switch n := n.(type) {
 	case *ast.VariableStatement:
 		b.resolveVariableStmt(n, fn, s)
@@ -171,31 +177,26 @@ func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *ssa.Function,
 
 func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 	switch n := n.(type) {
-	case *ast.IntegerLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Int),
-		}
+
 	case *ast.BooleanLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Bool),
-		}
-	case *ast.FloatLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Float),
-		}
+		return ssa.NewConst(n.Value, types.LookUp(types.Bool))
 	case *ast.StringLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.String),
-		}
+		return ssa.NewConst(n.Value, types.LookUp(types.String))
 	case *ast.CharLiteral:
-		return &ssa.Constant{
-			Value: n.Value,
-			Typ:   types.LookUp(types.Char),
+		return ssa.NewConst(n.Value, types.LookUp(types.Char))
+	case *ast.IntegerLiteral:
+		var t types.Type = types.LookUp(types.IntegerLiteral)
+		if x := b.Tbl.GetNodeType(n); x != nil {
+			t = x
 		}
+		return ssa.NewConst(n.Value, t)
+	case *ast.FloatLiteral:
+		var t types.Type = types.LookUp(types.FloatLiteral)
+		if x := b.Tbl.GetNodeType(n); x != nil {
+			t = x
+		}
+		return ssa.NewConst(n.Value, t)
+
 	case *ast.CallExpression:
 		val := b.resolveExpr(n.Target, fn)
 
@@ -216,7 +217,7 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 			Arguments: args,
 		}
 
-		i.SetType(f.Symbol.Type().(*types.FunctionSignature).ReturnType)
+		i.SetType(f.Symbol.Type().(*types.FunctionSignature).Result.Type())
 
 		fn.Emit(i)
 		return i

@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lexer"
@@ -21,12 +21,14 @@ type Checker struct {
 	mode   CheckerMode
 	scope  *types.Scope
 	fn     *types.FunctionSignature
+	table  *SymbolTable
 }
 
 func New(mode CheckerMode) *Checker {
 	return &Checker{
 		depth: 0,
 		mode:  mode,
+		table: NewSymbolTable(),
 	}
 }
 

@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"fmt"

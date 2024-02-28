@@ -35,7 +35,7 @@ const (
 
 	// helper literals
 	IntegerLiteral
-	FloatingPointLiteral
+	FloatLiteral
 )
 
 type Basic struct {
@@ -51,7 +51,7 @@ func IsNumeric(t Type) bool {
 	switch t := t.(type) {
 	case *Basic:
 		switch t.Literal {
-		case Int, Int8, Int16, Int32, Int64:
+		case Int, Int8, Int16, Int32, Int64, FloatLiteral, IntegerLiteral:
 			return true
 		case UInt, UInt8, UInt16, UInt32, UInt64:
 			return true
@@ -94,12 +94,25 @@ func IsGroupLiteral(t Type) bool {
 	switch t := t.(type) {
 	case *Basic:
 		switch t.Literal {
-		case IntegerLiteral, FloatingPointLiteral:
+		case IntegerLiteral, FloatLiteral:
 			return true
 		}
 
 	}
 	return false
+}
+
+func ResolveLiteral(t Type) Type {
+	switch t := t.(type) {
+	case *Basic:
+		switch t.Literal {
+		case IntegerLiteral:
+			return LookUp(Int)
+		case FloatLiteral:
+			return LookUp(Double)
+		}
+	}
+	return t
 }
 
 func IsEquatable(t Type) bool {

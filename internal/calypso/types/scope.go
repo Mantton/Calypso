@@ -16,7 +16,7 @@ func NewScope(p *Scope) *Scope {
 
 // Defines a new entity in the scope
 func (s *Scope) Define(e Symbol) bool {
-	// fmt.Printf("defining %s\n", e.Name())
+	// fmt.Printf("defining %s as %s\n", e.Name(), e.Type())
 	// defer fmt.Println(s)
 	k := e.Name()
 	_, ok := s.Symbols[k]
@@ -40,4 +40,15 @@ func (s *Scope) Resolve(name string) (Symbol, bool) {
 		return s.Parent.Resolve(name)
 	}
 	return symbol, exists
+}
+
+func (s *Scope) String() string {
+	var str string
+	str += "------SCOPE-----\n"
+
+	for k, v := range s.Symbols {
+		str += fmt.Sprintf("%s : ", k)
+		str += fmt.Sprintf("%s\n", v.Type())
+	}
+	return str
 }

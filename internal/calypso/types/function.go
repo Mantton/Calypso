@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 type Function struct {
 	symbol
 }
@@ -8,14 +10,31 @@ type FunctionSignature struct {
 	Scope          *Scope
 	TypeParameters []*TypeParam
 	Parameters     []*Var
-	ReturnType     Type
+	Result         *Var
 }
 
-func (t *FunctionSignature) clyT()          {}
-func (t *FunctionSignature) String() string { return "fn () -> unresolved" }
+func (t *FunctionSignature) clyT() {}
+func (t *FunctionSignature) String() string {
+
+	f := "fn (%s) -> %s"
+	params := ""
+	ret := t.Result.Type().String()
+
+	for i, p := range t.Parameters {
+		params += p.Type().String()
+
+		if i != len(t.Parameters)-1 {
+			params += ", "
+		}
+	}
+
+	return fmt.Sprintf(f, params, ret)
+}
 
 func NewFunctionSignature() *FunctionSignature {
-	return &FunctionSignature{}
+	return &FunctionSignature{
+		Result: NewVar("", LookUp(Unresolved)),
+	}
 }
 
 func NewFunction(name string, sg *FunctionSignature) *Function {

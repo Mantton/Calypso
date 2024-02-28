@@ -52,7 +52,7 @@ func (b *builder) buildFunction() {
 
 	b.SetInsertPointAtEnd(entry)
 
-	// TODO: load params
+	// load params
 	for i, v := range b.fn.Parameters {
 		b.setValue(v, b.llvmFn.Param(i))
 	}
@@ -111,18 +111,6 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 		typ := b.compiler.getType(v.Type())
 		addr := b.CreateAlloca(typ, "")
 		return addr
-	// case *ssa.Call:
-	// 	// TODO: Types
-
-	// 	target := c.module.NamedFunction(v.Target)
-
-	// 	// Function has not been declared
-	// 	if target.IsNil() {
-	// 		target = llvm.AddFunction(c.module, v.Target, llvm.FunctionType(c.context.Int32Type(), []llvm.Type{}, false))
-	// 	}
-	// 	t := llvm.FunctionType(c.context.Int32Type(), []llvm.Type{}, false)
-	// 	val := c.builder.CreateCall(t, target, []llvm.Value{}, "")
-	// 	return val
 	case *ssa.Load:
 		addr := b.getValue(v.Address)
 		typ := b.compiler.getType(v.Address.Type())
@@ -152,7 +140,7 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 					return b.CreateICmp(llvm.IntNE, lhs, rhs, "")
 				}
 
-			case types.Int:
+			case types.Int, types.IntegerLiteral, types.Int64, types.Int32, types.Int16, types.Int8:
 				switch op {
 				case token.ADD:
 					return b.CreateAdd(lhs, rhs, "")

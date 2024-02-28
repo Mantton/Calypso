@@ -1,11 +1,13 @@
 package ssa
 
-import "github.com/mantton/calypso/internal/calypso/types"
+import (
+	"github.com/mantton/calypso/internal/calypso/types"
+)
 
 // represents a value known at compile time
 type Constant struct {
 	Value any
-	Typ   types.Type
+	typ   types.Type
 }
 
 type Global struct {
@@ -18,5 +20,12 @@ func (*Global) ssaNode()   {}
 func (*Constant) ssaVal() {}
 func (*Global) ssaVal()   {}
 
-func (c *Constant) Type() types.Type { return c.Typ }
+func (c *Constant) Type() types.Type { return c.typ }
 func (c *Global) Type() types.Type   { return c.Value.Type() }
+
+func NewConst(val any, typ types.Type) *Constant {
+	return &Constant{
+		Value: val,
+		typ:   typ,
+	}
+}

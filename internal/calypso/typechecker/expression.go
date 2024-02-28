@@ -1,4 +1,4 @@
-package t
+package typechecker
 
 import (
 	"fmt"
@@ -36,8 +36,10 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg)
-	e.Signature = def
 	ok := c.define(def)
+	defer func() {
+		c.table.DefineFunction(e, def)
+	}()
 
 	// set current checking function to sg
 	c.fn = sg
@@ -52,6 +54,7 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
 	c.enterScope()
 	sg.Scope = c.scope
+	c.table.AddScope(e, c.scope)
 	defer c.leaveScope()
 
 	// Type/Generic Parameters
@@ -76,15 +79,15 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	// Annotated Return Type
 	if e.ReturnType != nil {
 		t := c.evaluateTypeExpression(e.ReturnType)
-		sg.ReturnType = t
+		sg.Result = types.NewVar("", t)
 	}
 
 	// Body
 	c.checkBlockStatement(e.Body)
 
 	// No return statement with no annotated return type, return type is void
-	if sg.ReturnType == nil {
-		sg.ReturnType = types.LookUp(types.Void)
+	if sg.Result.Type() == unresolved {
+		sg.Result = types.NewVar("", types.LookUp(types.Void))
 	}
 
 	// Ensure All Generic Params are used
@@ -101,11 +104,12 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.IntegerLiteral:
+		// c.table.AddNode(expr, types.LookUp(types.IntegerLiteral), nil, nil)
 		return types.LookUp(types.IntegerLiteral)
 	case *ast.BooleanLiteral:
 		return types.LookUp(types.Bool)
 	case *ast.FloatLiteral:
-		return types.LookUp(types.FloatingPointLiteral)
+		return types.LookUp(types.FloatLiteral)
 	case *ast.StringLiteral:
 		return types.LookUp(types.String)
 	case *ast.CharLiteral:
@@ -180,19 +184,22 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 				len(expr.Arguments)),
 			expr.Range(),
 		)
-		return fn.ReturnType
+		return fn.Result.Type()
 	}
 
-	// Check Arguments
 	// TODO: Generics
+
+	// Check Arguments
 	for i, arg := range expr.Arguments {
 
 		fmt.Printf("%T\n", arg)
 		provided := c.evaluateExpression(arg)
 		expected := fn.Parameters[i].Type()
 
+		k := types.NewVar(fn.Parameters[i].Name(), expected)
+
 		// validate will return resolved generic
-		_, err := c.validate(expected, provided)
+		err := c.validateAssignment(k, provided, arg)
 
 		if err != nil {
 			c.addError(
@@ -203,7 +210,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		}
 	}
 
-	return fn.ReturnType
+	return fn.Result.Type()
 }
 
 func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type {
