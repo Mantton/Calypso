@@ -7,7 +7,7 @@ type visitor interface {
 	VisitStringLiteral(*StringLiteral)
 	VisitCharLiteral(*CharLiteral)
 	VisitBooleanLiteral(*BooleanLiteral)
-	VisitNullLiteral(*NullLiteral)
+	VisitNullLiteral(*NilLiteral)
 	VisitVoidLiteral(*VoidLiteral)
 
 	// Complex Literals
@@ -72,7 +72,7 @@ func (n *CharLiteral) Accept(v visitor) {
 func (n *BooleanLiteral) Accept(v visitor) {
 	v.VisitBooleanLiteral(n)
 }
-func (n *NullLiteral) Accept(v visitor) {
+func (n *NilLiteral) Accept(v visitor) {
 	v.VisitNullLiteral(n)
 }
 func (n *VoidLiteral) Accept(v visitor) {

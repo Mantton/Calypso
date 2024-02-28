@@ -32,7 +32,7 @@ func (r *Resolver) resolveExpression(expr ast.Expression) {
 		r.resolveMapLiteral(expr)
 	case *ast.CompositeLiteral:
 		r.resolveCompositeLiteral(expr)
-	case *ast.IntegerLiteral, *ast.StringLiteral, *ast.CharLiteral, *ast.FloatLiteral, *ast.BooleanLiteral, *ast.NullLiteral, *ast.VoidLiteral:
+	case *ast.IntegerLiteral, *ast.StringLiteral, *ast.CharLiteral, *ast.FloatLiteral, *ast.BooleanLiteral, *ast.NilLiteral, *ast.VoidLiteral:
 		return // Do nothing, no expressions to parse
 	default:
 		msg := fmt.Sprintf("expression resolution not implemented, %T", expr)

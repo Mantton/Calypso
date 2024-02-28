@@ -11,6 +11,9 @@ func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expressio
 
 	// if LHS has not been assigned a value
 	if v.Type() == unresolved {
+		if t == types.LookUp(types.NilLiteral) {
+			return fmt.Errorf("use of unspecialized nil in assignment")
+		}
 		v.SetType(t)
 	} else {
 		_, err := c.validate(v.Type(), t)

@@ -177,7 +177,12 @@ func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *ssa.Function,
 
 func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 	switch n := n.(type) {
-
+	case *ast.NilLiteral:
+		if x := b.Tbl.GetNodeType(n); x != nil {
+			return ssa.NewConst(0, x)
+		} else {
+			panic("unreachable")
+		}
 	case *ast.BooleanLiteral:
 		return ssa.NewConst(n.Value, types.LookUp(types.Bool))
 	case *ast.StringLiteral:

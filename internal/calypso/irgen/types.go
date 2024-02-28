@@ -51,6 +51,8 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 			return c.context.DoubleType()
 		case types.Bool:
 			return c.context.Int1Type()
+		case types.NilLiteral:
+			panic("INVALID")
 		default:
 			panic("unhandled basic type")
 		}

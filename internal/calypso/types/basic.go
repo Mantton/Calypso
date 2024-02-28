@@ -29,13 +29,13 @@ const (
 	Byte // alias for uint8
 
 	// misc
-	Null
 	Void
 	Any
 
 	// helper literals
 	IntegerLiteral
 	FloatLiteral
+	NilLiteral
 )
 
 type Basic struct {

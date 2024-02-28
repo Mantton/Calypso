@@ -83,7 +83,7 @@ const (
 	LET
 	TRUE
 	FALSE
-	NULL
+	NIL
 	VOID
 	MODULE
 	IF
@@ -112,7 +112,7 @@ var keywords = map[string]Token{
 	"module":    MODULE,
 	"true":      TRUE,
 	"false":     FALSE,
-	"null":      NULL,
+	"nil":       NIL,
 	"void":      VOID,
 	"if":        IF,
 	"else":      ELSE,

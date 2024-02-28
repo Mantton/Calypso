@@ -95,7 +95,7 @@ func (c *compiler) Compile() string {
 		panic(err)
 	}
 
-	fmt.Println("\n\n\n")
+	fmt.Println("\n----------- OPTIMIZED")
 	c.module.Dump()
 
 	return "CAL"
@@ -128,6 +128,8 @@ func (c *compiler) createConstant(n *ssa.Constant) llvm.Value {
 			o = 1
 		}
 		return llvm.ConstInt(c.context.Int1Type(), uint64(o), true)
+	case types.NilLiteral:
+		panic("unreachable")
 	default:
 		panic("constant type has not been defined yet")
 	}

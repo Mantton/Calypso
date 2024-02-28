@@ -231,7 +231,7 @@ type BooleanLiteral struct {
 	Value bool
 }
 
-type NullLiteral struct {
+type NilLiteral struct {
 	Pos token.TokenPosition
 }
 

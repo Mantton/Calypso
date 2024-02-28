@@ -3,7 +3,7 @@ package types
 var GlobalScope *Scope
 
 var GlobalTypes = map[BasicType]*Basic{
-	Unresolved: {Unresolved, "unresolved"},
+	Unresolved: {Unresolved, "unresolved type"},
 	Bool:       {Bool, "bool"},
 
 	// aliased integer types
@@ -35,13 +35,12 @@ var GlobalTypes = map[BasicType]*Basic{
 	Byte: {Byte, "byte"},
 
 	// misc
-	Null: {Null, "null"},
 	Void: {Void, "void"},
-	Any:  {Any, "any"},
 
 	// group literals
 	IntegerLiteral: {IntegerLiteral, "literal int"},
 	FloatLiteral:   {FloatLiteral, "literal float"},
+	NilLiteral:     {NilLiteral, "literal nil"},
 }
 
 func init() {

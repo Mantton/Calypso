@@ -193,10 +193,12 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		}
 		p.next()
 
-	case token.NULL:
-		expr = &ast.NullLiteral{
+	case token.NIL:
+		expr = &ast.NilLiteral{
 			Pos: p.currentScannedToken().Pos,
 		}
+
+		p.next()
 	case token.VOID:
 		expr = &ast.VoidLiteral{
 			Pos: p.currentScannedToken().Pos,

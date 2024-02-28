@@ -38,7 +38,7 @@ func (e *BooleanLiteral) Range() token.SyntaxRange {
 		End:   e.Pos,
 	}
 }
-func (e *NullLiteral) Range() token.SyntaxRange {
+func (e *NilLiteral) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.Pos,
 		End:   e.Pos,
@@ -63,7 +63,7 @@ func (e *FloatLiteral) expressionNode()     {}
 func (e *StringLiteral) expressionNode()    {}
 func (e *CharLiteral) expressionNode()      {}
 func (e *BooleanLiteral) expressionNode()   {}
-func (e *NullLiteral) expressionNode()      {}
+func (e *NilLiteral) expressionNode()       {}
 func (e *VoidLiteral) expressionNode()      {}
 func (e *CompositeLiteral) expressionNode() {}
 

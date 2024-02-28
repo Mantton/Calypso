@@ -114,8 +114,8 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return types.LookUp(types.String)
 	case *ast.CharLiteral:
 		return types.LookUp(types.Char)
-	case *ast.NullLiteral:
-		return types.LookUp(types.Null)
+	case *ast.NilLiteral:
+		return types.LookUp(types.NilLiteral)
 	case *ast.VoidLiteral:
 		return types.LookUp(types.Void)
 

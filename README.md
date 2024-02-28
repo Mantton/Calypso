@@ -7,6 +7,7 @@ Calypso is a Swift/Typescript/Go inspired language created to help me learn more
 - Floats - `float`
 - Booleans - `bool`
 - Strings - `string`
+- Nil/Null - `nil`
 
 
 # Syntax
