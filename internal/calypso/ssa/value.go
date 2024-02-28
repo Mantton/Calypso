@@ -1,8 +1,6 @@
 package ssa
 
 import (
-	"go/constant"
-
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
@@ -25,7 +23,7 @@ func (*Global) ssaVal()   {}
 func (c *Constant) Type() types.Type { return c.typ }
 func (c *Global) Type() types.Type   { return c.Value.Type() }
 
-func NewConst(val constant.Value, typ types.Type) *Constant {
+func NewConst(val any, typ types.Type) *Constant {
 	return &Constant{
 		Value: val,
 		typ:   typ,

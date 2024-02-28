@@ -34,21 +34,15 @@ func build(e *ssa.Executable, t *typechecker.SymbolTable) {
 
 func (b builder) resolveFunction(n *ast.FunctionExpression) {
 
-	nd, ok := b.Tbl.GetNode(n)
+	tFn := b.Tbl.GetFunction(n)
 
-	if !ok {
-		panic("node not in table")
+	if tFn == nil {
+		panic("unknown function")
 	}
 
-	sym, ok := nd.Symbol.(*types.Function)
-
-	if !ok {
-		panic("expecting function symbol")
-	}
-
-	fn := ssa.NewFunction(sym)
+	fn := ssa.NewFunction(tFn)
 	b.Mod.Functions[n.Identifier.Value] = fn
-	sg := sym.Type().(*types.FunctionSignature)
+	sg := tFn.Type().(*types.FunctionSignature)
 
 	for _, p := range sg.Parameters {
 		fn.AddParameter(p)
@@ -184,19 +178,24 @@ func (b *builder) resolveBlockStatement(n *ast.BlockStatement, fn *ssa.Function,
 func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 	switch n := n.(type) {
 
-	case *ast.IntegerLiteral,
-		*ast.BooleanLiteral,
-		*ast.FloatLiteral,
-		*ast.StringLiteral,
-		*ast.CharLiteral:
-
-		tn, ok := b.Tbl.GetNode(n)
-		fmt.Printf("[Resolver] %T\n", n)
-		fmt.Println(n)
-		if !ok {
-			panic("cannot resolve constant literal, this path should be unreachable")
+	case *ast.BooleanLiteral:
+		return ssa.NewConst(n.Value, types.LookUp(types.Bool))
+	case *ast.StringLiteral:
+		return ssa.NewConst(n.Value, types.LookUp(types.String))
+	case *ast.CharLiteral:
+		return ssa.NewConst(n.Value, types.LookUp(types.Char))
+	case *ast.IntegerLiteral:
+		var t types.Type = types.LookUp(types.IntegerLiteral)
+		if x := b.Tbl.GetNodeType(n); x != nil {
+			t = x
 		}
-		return ssa.NewConst(tn.Value, tn.Type)
+		return ssa.NewConst(n.Value, t)
+	case *ast.FloatLiteral:
+		var t types.Type = types.LookUp(types.FloatLiteral)
+		if x := b.Tbl.GetNodeType(n); x != nil {
+			t = x
+		}
+		return ssa.NewConst(n.Value, t)
 
 	case *ast.CallExpression:
 		val := b.resolveExpr(n.Target, fn)
@@ -218,7 +217,7 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 			Arguments: args,
 		}
 
-		i.SetType(f.Symbol.Type().(*types.FunctionSignature).ReturnType)
+		i.SetType(f.Symbol.Type().(*types.FunctionSignature).Result.Type())
 
 		fn.Emit(i)
 		return i

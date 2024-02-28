@@ -208,12 +208,12 @@ type FunctionExpression struct {
 // * Literals
 type IntegerLiteral struct {
 	Pos   token.TokenPosition
-	Value string
+	Value int64
 }
 
 type FloatLiteral struct {
 	Pos   token.TokenPosition
-	Value string
+	Value float64
 }
 
 type StringLiteral struct {
@@ -223,7 +223,7 @@ type StringLiteral struct {
 
 type CharLiteral struct {
 	Pos   token.TokenPosition
-	Value string
+	Value int64
 }
 
 type BooleanLiteral struct {

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
@@ -203,15 +204,26 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		p.next()
 
 	case token.INTEGER:
+		v, err := strconv.ParseInt(p.currentScannedToken().Lit, 0, 64)
+
+		if err != nil {
+			panic(err)
+		}
 		expr = &ast.IntegerLiteral{
-			Value: p.currentScannedToken().Lit,
+			Value: v,
 			Pos:   p.currentScannedToken().Pos,
 		}
 		p.next()
 
 	case token.FLOAT:
+		v, err := strconv.ParseFloat(p.currentScannedToken().Lit, 64)
+
+		if err != nil {
+			panic(err)
+		}
+
 		expr = &ast.FloatLiteral{
-			Value: p.currentScannedToken().Lit,
+			Value: v,
 			Pos:   p.currentScannedToken().Pos,
 		}
 		p.next()
@@ -223,8 +235,16 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		}
 		p.next()
 	case token.CHAR:
+		l := p.currentScannedToken().Lit
+		n := len(l)
+		code, _, _, err := strconv.UnquoteChar(l[1:n-1], '\'')
+
+		if err != nil {
+			panic(err)
+		}
+
 		expr = &ast.CharLiteral{
-			Value: p.currentScannedToken().Lit,
+			Value: int64(code),
 			Pos:   p.currentScannedToken().Pos,
 		}
 

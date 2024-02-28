@@ -37,6 +37,9 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg)
 	ok := c.define(def)
+	defer func() {
+		c.table.DefineFunction(e, def)
+	}()
 
 	// set current checking function to sg
 	c.fn = sg
@@ -52,7 +55,6 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	c.enterScope()
 	sg.Scope = c.scope
 	c.table.AddScope(e, c.scope)
-	c.table.AddNode(e, sg, nil, def)
 	defer c.leaveScope()
 
 	// Type/Generic Parameters
@@ -77,15 +79,15 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	// Annotated Return Type
 	if e.ReturnType != nil {
 		t := c.evaluateTypeExpression(e.ReturnType)
-		sg.ReturnType = t
+		sg.Result = types.NewVar("", t)
 	}
 
 	// Body
 	c.checkBlockStatement(e.Body)
 
 	// No return statement with no annotated return type, return type is void
-	if sg.ReturnType == nil {
-		sg.ReturnType = types.LookUp(types.Void)
+	if sg.Result.Type() == unresolved {
+		sg.Result = types.NewVar("", types.LookUp(types.Void))
 	}
 
 	// Ensure All Generic Params are used
@@ -102,6 +104,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.IntegerLiteral:
+		// c.table.AddNode(expr, types.LookUp(types.IntegerLiteral), nil, nil)
 		return types.LookUp(types.IntegerLiteral)
 	case *ast.BooleanLiteral:
 		return types.LookUp(types.Bool)
@@ -181,19 +184,22 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 				len(expr.Arguments)),
 			expr.Range(),
 		)
-		return fn.ReturnType
+		return fn.Result.Type()
 	}
 
-	// Check Arguments
 	// TODO: Generics
+
+	// Check Arguments
 	for i, arg := range expr.Arguments {
 
 		fmt.Printf("%T\n", arg)
 		provided := c.evaluateExpression(arg)
 		expected := fn.Parameters[i].Type()
 
+		k := types.NewVar(fn.Parameters[i].Name(), expected)
+
 		// validate will return resolved generic
-		_, err := c.validate(expected, provided, arg)
+		err := c.validateAssignment(k, provided, arg)
 
 		if err != nil {
 			c.addError(
@@ -204,7 +210,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		}
 	}
 
-	return fn.ReturnType
+	return fn.Result.Type()
 }
 
 func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type {
@@ -252,7 +258,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 	rhs := c.evaluateExpression(e.Right)
 	op := e.Op
 
-	typ, err := c.validate(lhs, rhs, e.Right)
+	typ, err := c.validate(lhs, rhs)
 
 	if err != nil {
 		c.addError(err.Error(), e.Range())
@@ -289,7 +295,7 @@ func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) t
 	lhs := c.evaluateExpression(expr.Target)
 	rhs := c.evaluateExpression(expr.Value)
 
-	_, err := c.validate(lhs, rhs, expr.Value)
+	_, err := c.validate(lhs, rhs)
 
 	if err != nil {
 		c.addError(err.Error(), expr.Range())

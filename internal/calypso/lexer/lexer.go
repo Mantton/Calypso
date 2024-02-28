@@ -239,7 +239,7 @@ func (l *Lexer) char() token.ScannedToken {
 		panic("invalid char literal")
 	}
 
-	s := string(l.source[l.anchor-1 : l.cursor])
+	s := string(l.source[l.anchor:l.cursor])
 
 	return token.ScannedToken{
 		Lit: s,

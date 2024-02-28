@@ -140,7 +140,7 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 					return b.CreateICmp(llvm.IntNE, lhs, rhs, "")
 				}
 
-			case types.Int:
+			case types.Int, types.IntegerLiteral, types.Int64, types.Int32, types.Int16, types.Int8:
 				switch op {
 				case token.ADD:
 					return b.CreateAdd(lhs, rhs, "")

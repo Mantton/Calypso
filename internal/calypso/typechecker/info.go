@@ -1,8 +1,6 @@
 package typechecker
 
 import (
-	"go/constant"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -11,19 +9,15 @@ type SymbolTable struct {
 
 	// Scopes of nodes
 	scopes map[ast.Node]*types.Scope
-	nodes  map[ast.Node]*TypedNode
-}
-
-type TypedNode struct {
-	Type   types.Type
-	Value  constant.Value
-	Symbol types.Symbol
+	fns    map[*ast.FunctionExpression]*types.Function
+	tNodes map[ast.Node]types.Type
 }
 
 func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{
 		scopes: make(map[ast.Node]*types.Scope),
-		nodes:  make(map[ast.Node]*TypedNode),
+		fns:    make(map[*ast.FunctionExpression]*types.Function),
+		tNodes: make(map[ast.Node]types.Type),
 	}
 }
 
@@ -36,16 +30,18 @@ func (t *SymbolTable) GetScope(n ast.Node) (*types.Scope, bool) {
 	return v, ok
 }
 
-func (t *SymbolTable) AddNode(n ast.Node, typ types.Type, val constant.Value, sym types.Symbol) {
-	t.nodes[n] = &TypedNode{
-		Type:   typ,
-		Value:  val,
-		Symbol: sym,
-	}
+func (t *SymbolTable) DefineFunction(n *ast.FunctionExpression, typ *types.Function) {
+	t.fns[n] = typ
 }
 
-func (t *SymbolTable) GetNode(n ast.Node) (*TypedNode, bool) {
-	v, ok := t.nodes[n]
+func (t *SymbolTable) GetFunction(n *ast.FunctionExpression) *types.Function {
+	return t.fns[n]
+}
 
-	return v, ok
+func (t *SymbolTable) SetNodeType(n ast.Node, typ types.Type) {
+	t.tNodes[n] = typ
+}
+
+func (t *SymbolTable) GetNodeType(n ast.Node) types.Type {
+	return t.tNodes[n]
 }

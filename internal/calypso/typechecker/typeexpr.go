@@ -46,10 +46,10 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 	// Annotated Return Type
 	if e.ReturnType != nil {
 		t := c.evaluateTypeExpression(e.ReturnType)
-		sg.ReturnType = t
+		sg.Result = types.NewVar("", t)
 	} else {
 		c.addError("missing return value in function signature", e.Range())
-		sg.ReturnType = unresolved
+		sg.Result = types.NewVar("", unresolved)
 	}
 
 	return sg

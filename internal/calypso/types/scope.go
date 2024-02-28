@@ -41,3 +41,14 @@ func (s *Scope) Resolve(name string) (Symbol, bool) {
 	}
 	return symbol, exists
 }
+
+func (s *Scope) String() string {
+	var str string
+	str += "------SCOPE-----\n"
+
+	for k, v := range s.Symbols {
+		str += fmt.Sprintf("%s : ", k)
+		str += fmt.Sprintf("%s\n", v.Type())
+	}
+	return str
+}
