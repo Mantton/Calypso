@@ -2,7 +2,6 @@ package typechecker
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -17,16 +16,22 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 		panic("generic specialization & checking not implemented")
 	}
 
-	match := reflect.TypeOf(expected) == reflect.TypeOf(provided)
-
-	if !match {
-		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
-	}
-
+	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 	switch expected := expected.(type) {
 	case *types.Basic:
-		return c.validateBasicTypes(expected, provided.(*types.Basic))
+		p := provided.(*types.Basic)
+
+		if p == nil {
+			return nil, standard
+		}
+
+		return c.validateBasicTypes(expected, p)
+
+	case *types.Pointer:
+		return c.validatePointerTypes(expected, provided)
+
 	}
+
 	return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 }
 
@@ -52,4 +57,26 @@ func (c *Checker) validateBasicTypes(expected *types.Basic, provided *types.Basi
 	}
 
 	return expected, nil
+}
+
+func (c *Checker) validatePointerTypes(expected *types.Pointer, provided types.Type) (types.Type, error) {
+
+	switch provided := provided.(type) {
+
+	case *types.Pointer:
+		_, err := c.validate(expected.PointerTo, provided.PointerTo)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return expected, nil
+
+	default:
+		if provided == types.LookUp(types.NilLiteral) {
+			return expected, nil
+		}
+	}
+	return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+
 }

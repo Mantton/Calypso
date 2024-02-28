@@ -54,6 +54,7 @@ type visitor interface {
 	VisitIdentifierTypeExpression(*IdentifierTypeExpression)
 	VisitArrayTypeExpression(*ArrayTypeExpression)
 	VisitMapTypeExpression(*MapTypeExpression)
+	VisitPointerTypeExpression(*PointerTypeExpression)
 }
 
 // Literal Conformance
@@ -188,4 +189,8 @@ func (n *ArrayTypeExpression) Accept(v visitor) {
 }
 func (n *MapTypeExpression) Accept(v visitor) {
 	v.VisitMapTypeExpression(n)
+}
+
+func (n *PointerTypeExpression) Accept(v visitor) {
+	v.VisitPointerTypeExpression(n)
 }

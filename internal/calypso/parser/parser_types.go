@@ -10,6 +10,8 @@ import (
 func (p *Parser) parseTypeExpression() ast.TypeExpression {
 
 	switch p.current() {
+	case token.MUL:
+		return p.parsePointerTypeExpression()
 	case token.IDENTIFIER:
 		return p.parseIdentifierTypeExpression()
 	case token.LBRACKET:
@@ -179,5 +181,16 @@ func (p *Parser) parseGenericParameterExpression() *ast.GenericParameterExpressi
 	return &ast.GenericParameterExpression{
 		Identifier: ident,
 		Standards:  standards,
+	}
+}
+
+func (p *Parser) parsePointerTypeExpression() *ast.PointerTypeExpression {
+	pos := p.expect(token.MUL)
+
+	expr := p.parseTypeExpression()
+
+	return &ast.PointerTypeExpression{
+		StarPos:   pos.Pos,
+		PointerTo: expr,
 	}
 }

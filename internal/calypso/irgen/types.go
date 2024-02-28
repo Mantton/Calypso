@@ -56,6 +56,10 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 		default:
 			panic("unhandled basic type")
 		}
+
+	case *types.Pointer:
+		pt := c.getType(t.PointerTo)
+		return llvm.PointerType(pt, 0)
 	}
 
 	panic(fmt.Sprintf("Unsupported Type: %T", t))

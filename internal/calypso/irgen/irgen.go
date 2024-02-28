@@ -102,35 +102,38 @@ func (c *compiler) Compile() string {
 }
 
 func (c *compiler) createConstant(n *ssa.Constant) llvm.Value {
-	t := n.Type().(*types.Basic)
 
-	if t == nil {
-		panic("invalid compile-time constant")
-	}
-
-	switch t.Literal {
-	case types.Int, types.Int64, types.IntegerLiteral, types.UInt, types.UInt64:
-		v := n.Value.(int64)
-		return llvm.ConstInt(c.context.Int64Type(), uint64(v), true)
-	case types.Char, types.Int32, types.UInt32:
-		v := n.Value.(int64)
-		return llvm.ConstInt(c.context.Int32Type(), uint64(v), true)
-	case types.Int16, types.UInt16:
-		v := n.Value.(int64)
-		return llvm.ConstInt(c.context.Int16Type(), uint64(v), true)
-	case types.Int8, types.UInt8:
-		v := n.Value.(int64)
-		return llvm.ConstInt(c.context.Int8Type(), uint64(v), true)
-	case types.Bool:
-		v := n.Value.(bool)
-		o := 0
-		if v {
-			o = 1
+	switch t := n.Type().(type) {
+	case *types.Basic:
+		switch t.Literal {
+		case types.Int, types.Int64, types.IntegerLiteral, types.UInt, types.UInt64:
+			v := n.Value.(int64)
+			return llvm.ConstInt(c.context.Int64Type(), uint64(v), true)
+		case types.Char, types.Int32, types.UInt32:
+			v := n.Value.(int64)
+			return llvm.ConstInt(c.context.Int32Type(), uint64(v), true)
+		case types.Int16, types.UInt16:
+			v := n.Value.(int64)
+			return llvm.ConstInt(c.context.Int16Type(), uint64(v), true)
+		case types.Int8, types.UInt8:
+			v := n.Value.(int64)
+			return llvm.ConstInt(c.context.Int8Type(), uint64(v), true)
+		case types.Bool:
+			v := n.Value.(bool)
+			o := 0
+			if v {
+				o = 1
+			}
+			return llvm.ConstInt(c.context.Int1Type(), uint64(o), true)
+		case types.NilLiteral:
+			panic("unreachable")
+		default:
+			panic("basic type constant type has not been defined yet")
 		}
-		return llvm.ConstInt(c.context.Int1Type(), uint64(o), true)
-	case types.NilLiteral:
-		panic("unreachable")
+	case *types.Pointer:
+		return llvm.ConstPointerNull(c.getType(t.PointerTo))
 	default:
-		panic("constant type has not been defined yet")
+		panic(" type constant type has not been defined yet")
 	}
+
 }

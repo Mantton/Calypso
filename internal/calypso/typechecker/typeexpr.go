@@ -11,6 +11,8 @@ func (c *Checker) evaluateTypeExpression(e ast.TypeExpression) types.Type {
 	switch expr := e.(type) {
 	case *ast.IdentifierTypeExpression:
 		return c.evaluateIdentifierTypeExpression(expr)
+	case *ast.PointerTypeExpression:
+		return c.evaluatePointerTypeExpression(expr)
 	default:
 		msg := fmt.Sprintf("type expression check not implemented, %T", e)
 		panic(msg)
@@ -30,6 +32,17 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	}
 
 	return def.Type()
+}
+
+func (c *Checker) evaluatePointerTypeExpression(expr *ast.PointerTypeExpression) types.Type {
+
+	n := expr.PointerTo
+
+	p := c.evaluateTypeExpression(n)
+
+	v := types.NewPointer(p)
+
+	return v
 }
 
 func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.FunctionSignature {

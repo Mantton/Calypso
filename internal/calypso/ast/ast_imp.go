@@ -324,6 +324,14 @@ func (e *GenericArgumentsClause) Range() token.SyntaxRange {
 	}
 }
 
+func (e *PointerTypeExpression) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.StarPos,
+		End:   e.PointerTo.Range().End,
+	}
+}
+
 func (e *IdentifierTypeExpression) typeNode() {}
 func (e *ArrayTypeExpression) typeNode()      {}
 func (e *MapTypeExpression) typeNode()        {}
+func (e *PointerTypeExpression) typeNode()    {}

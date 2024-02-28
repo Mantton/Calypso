@@ -288,6 +288,11 @@ type ArrayTypeExpression struct {
 	RBracketPos token.TokenPosition
 }
 
+type PointerTypeExpression struct {
+	PointerTo TypeExpression
+	StarPos   token.TokenPosition
+}
+
 type MapTypeExpression struct {
 	Key         TypeExpression
 	Value       TypeExpression
