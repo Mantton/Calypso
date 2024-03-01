@@ -142,39 +142,15 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 	c.enterScope()
 	defer c.leaveScope()
 
-	// 2 - TODO: Parse Generic Params
+	// 2  Parse Generic Params
 	if n.GenericParams != nil {
 		for _, p := range n.GenericParams.Parameters {
-			// TODO: Standards
-			d := types.NewTypeParam(p.Identifier.Value, nil)
-
-			for _, eI := range p.Standards {
-				sym, ok := c.find(eI.Value)
-
-				if !ok {
-					c.addError(
-						fmt.Sprintf("`%s` cannot be found", eI.Value),
-						p.Identifier.Range(),
-					)
-					return
-				}
-
-				s, ok := sym.Type().Parent().(*types.Standard)
-
-				if !ok {
-					if !ok {
-						c.addError(
-							fmt.Sprintf("`%s` is not a standard", eI.Value),
-							p.Identifier.Range(),
-						)
-						return
-					}
-				}
-
-				d.AddConstraint(s)
-
+			t := c.evaluateGenericParameterExpression(p)
+			if t == unresolved {
+				continue
 			}
-			def.AddTypeParameter(d)
+
+			def.AddTypeParameter(t.(*types.TypeParam))
 		}
 
 	}

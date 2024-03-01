@@ -9,23 +9,34 @@ import (
 func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type, error) {
 	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
 
+	if provided == unresolved {
+		// should have already been reported
+		return expected, nil
+	}
+
+	gE, isGeneric := expected.(*types.TypeParam)
+
+	if isGeneric {
+		// Check Constraints
+		err := c.validateConformance(gE.Constraints, provided)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return provided, nil
+	}
+
 	// Resolve both sides to their underlying types
 	expected = expected.Parent()
 	provided = provided.Parent()
 
-	_, isGeneric := expected.(*types.TypeParam)
-
-	if isGeneric {
-		// Check Constraints
-		panic("generic specialization & checking not implemented")
-	}
-
 	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 	switch expected := expected.(type) {
 	case *types.Basic:
-		p := provided.(*types.Basic)
+		p, ok := provided.(*types.Basic)
 
-		if p == nil {
+		if !ok {
 			return nil, standard
 		}
 
@@ -161,9 +172,8 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 	}
 
 	provided, ok := x.(*types.DefinedType)
-
 	if !ok {
-		return fmt.Errorf("%s is not a conforming type", x)
+		return fmt.Errorf("%s is not a conforming type, %T", x, x)
 	}
 	action := func(s *types.Standard) error {
 

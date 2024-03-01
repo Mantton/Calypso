@@ -10,18 +10,21 @@ import (
 func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expression) error {
 
 	// if LHS has not been assigned a value
-	if v.Type() == unresolved {
+	f := v.Type()
+	if f == unresolved {
 		if t == types.LookUp(types.NilLiteral) {
 			return fmt.Errorf("use of unspecialized nil in assignment")
 		}
 		v.SetType(t)
 	} else {
-		_, err := c.validate(v.Type(), t)
+		updated, err := c.validate(v.Type(), t)
 		if err != nil {
 			return err
 		}
+
+		f = updated
 	}
-	c.table.SetNodeType(n, v.Type())
-	fmt.Printf("[Validator] %p -> %s\n", n, v.Type())
+	c.table.SetNodeType(n, f)
+	fmt.Printf("[Validator] %p -> %s\n", n, f)
 	return nil
 }

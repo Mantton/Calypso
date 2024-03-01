@@ -125,3 +125,35 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 
 	return sg
 }
+
+func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpression) types.Type {
+	d := types.NewTypeParam(e.Identifier.Value, nil)
+
+	for _, eI := range e.Standards {
+		sym, ok := c.find(eI.Value)
+
+		if !ok {
+			c.addError(
+				fmt.Sprintf("`%s` cannot be found", eI.Value),
+				e.Identifier.Range(),
+			)
+			return unresolved
+		}
+
+		s, ok := sym.Type().Parent().(*types.Standard)
+
+		if !ok {
+			if !ok {
+				c.addError(
+					fmt.Sprintf("`%s` is not a standard", eI.Value),
+					e.Identifier.Range(),
+				)
+				return unresolved
+			}
+		}
+
+		d.AddConstraint(s)
+
+	}
+	return d
+}
