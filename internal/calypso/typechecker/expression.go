@@ -482,8 +482,45 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 				}
 			}
 
+		case *types.Pointer:
+			base := gT.PointerTo
+
+			// vT must be an instantiated struct of type fT
+			iT, ok := vT.(*types.Pointer)
+
+			if !ok {
+				c.addError(
+					fmt.Sprintf("expected pointer to type %s, received %s", gT, vT),
+					n.Range(),
+				)
+				hasError = true
+				continue
+			}
+			alt, ok := specializations[base]
+
+			// has not already been specialized
+			if !ok {
+				fmt.Println("specializing", base, ":", iT.PointerTo)
+
+				specializations[base] = iT.PointerTo
+				continue
+			}
+
+			// has been specialized, ensure strict match
+			temp := types.NewVar("", alt)
+			err := c.validateAssignment(temp, iT.PointerTo, v)
+
+			if err != nil {
+				c.addError(
+					err.Error(),
+					n.Range(),
+				)
+				hasError = true
+				continue
+			}
+
 		default:
-			panic("wut")
+			panic("invalid type with generic param")
 		}
 
 	}

@@ -13,6 +13,12 @@ func IsGeneric(t Type) bool {
 		return true
 	}
 
+	ptr, ok := t.(*Pointer)
+
+	if ok && IsGeneric(ptr.PointerTo) {
+		return true
+	}
+
 	_, ok = t.(*Instance)
 
 	return ok
