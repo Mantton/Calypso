@@ -21,6 +21,8 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 		c.checkFunctionExpression(expr)
 	case *ast.AssignmentExpression:
 		c.checkAssignmentExpression(expr)
+	case *ast.CallExpression:
+		c.checkCallExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression check not implemented, %T", expr)
 		panic(msg)
@@ -104,6 +106,17 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
 	// TODO: mutability checks
 	c.evaluateAssignmentExpression(expr)
+}
+
+func (c *Checker) checkCallExpression(expr *ast.CallExpression) {
+
+	retType := c.evaluateCallExpression(expr)
+
+	if retType.Parent() != types.LookUp(types.Void) {
+		fmt.Println("Add Warning here")
+
+	}
+
 }
 
 // ----------- Eval ------------------
