@@ -88,7 +88,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return unresolved
 	}
 
-	return types.NewInstance(typ, eArgs)
+	return types.NewStructInstance(typ, eArgs)
 
 }
 

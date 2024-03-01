@@ -1,12 +1,12 @@
 package types
 
-type Instance struct {
+type StructInstance struct {
 	TypeArgs []Type
 	Type     Type
 }
 
-func (t *Instance) clyT() {}
-func (t *Instance) String() string {
+func (t *StructInstance) clyT() {}
+func (t *StructInstance) String() string {
 
 	f := t.Type.String() + "<"
 
@@ -21,10 +21,10 @@ func (t *Instance) String() string {
 	f += ">"
 	return f
 }
-func (t *Instance) Parent() Type { return t }
+func (t *StructInstance) Parent() Type { return t }
 
-func NewInstance(f Type, args []Type) *Instance {
-	return &Instance{
+func NewStructInstance(f Type, args []Type) *StructInstance {
+	return &StructInstance{
 		Type:     f,
 		TypeArgs: args,
 	}

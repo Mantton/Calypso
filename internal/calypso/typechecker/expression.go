@@ -444,9 +444,9 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 			panic("not implemented")
 		case *types.DefinedType:
 			panic("bad path")
-		case *types.Instance:
+		case *types.StructInstance:
 			// vT must be an instantiated struct of type fT
-			iT, ok := vT.(*types.Instance)
+			iT, ok := vT.(*types.StructInstance)
 			if !ok || iT.Type != gT.Type {
 				c.addError(
 					fmt.Sprintf("expected instance of type %s, received %s", gT, vT),
@@ -546,5 +546,5 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 		args = append(args, v)
 	}
 
-	return types.NewInstance(base, args)
+	return types.NewStructInstance(base, args)
 }

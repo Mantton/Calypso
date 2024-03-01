@@ -19,7 +19,7 @@ func IsGeneric(t Type) bool {
 		return true
 	}
 
-	_, ok = t.(*Instance)
+	_, ok = t.(*StructInstance)
 
 	return ok
 }

@@ -34,7 +34,7 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 	case *types.Pointer:
 		return c.validatePointerTypes(expected, provided)
 
-	case *types.Instance:
+	case *types.StructInstance:
 		return c.validateInstanceTypes(expected, provided)
 	case *types.FunctionSignature:
 		return c.validateFunctionTypes(expected, provided)
@@ -90,8 +90,8 @@ func (c *Checker) validatePointerTypes(expected *types.Pointer, provided types.T
 
 }
 
-func (c *Checker) validateInstanceTypes(expected *types.Instance, p types.Type) (types.Type, error) {
-	provided, ok := p.(*types.Instance)
+func (c *Checker) validateInstanceTypes(expected *types.StructInstance, p types.Type) (types.Type, error) {
+	provided, ok := p.(*types.StructInstance)
 
 	if !ok || expected.Type.Parent() != provided.Type.Parent() {
 		return nil, fmt.Errorf("expected instance of %s got %s instead", expected, p)
