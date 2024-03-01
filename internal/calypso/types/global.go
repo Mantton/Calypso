@@ -47,7 +47,8 @@ func init() {
 	GlobalScope = NewScope(nil)
 	// Define Global Types
 	for _, t := range GlobalTypes {
-		ok := GlobalScope.Define(NewTypeDef(t.name, t))
+		d := NewDefinedType(t.name, t, nil)
+		ok := GlobalScope.Define(d)
 
 		if !ok {
 			panic("GLOBAL TYPE ALREADY DEFINED")

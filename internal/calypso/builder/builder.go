@@ -70,17 +70,14 @@ func Build(filepath, input string) *ast.File {
 		return nil
 	}
 	duration = time.Since(start)
-
 	fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
 	fmt.Println("\n[SSAGen] Starting")
 	start = time.Now()
-
 	exec := ssagen.Generate(file, sc)
 	duration = time.Since(start)
 
 	fmt.Println("[SSAGen] Completed.", "Took", duration)
-
 	fmt.Println("\n[IRGen] Starting")
 	start = time.Now()
 	irgen.Compile(exec)

@@ -10,7 +10,9 @@ func NewStandard() *Standard {
 	}
 }
 
-func (s *Standard) clyT()          {}
+func (s *Standard) clyT()        {}
+func (t *Standard) Parent() Type { return t }
+
 func (s *Standard) String() string { return "" }
 
 func (s *Standard) AddMethod(n string, f *FunctionSignature) bool {

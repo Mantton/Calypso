@@ -57,7 +57,7 @@ type Module struct {
 	Name            string
 	Functions       map[string]*Function
 	GlobalConstants map[string]*Global
-	Structs         map[string]any
+	Composites      map[string]types.Symbol
 	Files           []*ast.File
 }
 
@@ -66,6 +66,6 @@ func NewModule(file *ast.File, name string) *Module {
 		Name:            name,
 		Functions:       make(map[string]*Function),
 		GlobalConstants: make(map[string]*Global),
-		Structs:         make(map[string]any),
+		Composites:      make(map[string]types.Symbol),
 	}
 }

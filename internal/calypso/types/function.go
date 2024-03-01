@@ -13,7 +13,9 @@ type FunctionSignature struct {
 	Result         *Var
 }
 
-func (t *FunctionSignature) clyT() {}
+func (t *FunctionSignature) clyT()        {}
+func (t *FunctionSignature) Parent() Type { return t }
+
 func (t *FunctionSignature) String() string {
 
 	f := "fn (%s) -> %s"

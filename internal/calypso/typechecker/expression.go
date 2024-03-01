@@ -60,17 +60,14 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
 		for _, p := range e.GenericParams.Parameters {
-			d := types.NewTypeDef(p.Identifier.Value, unresolved)
-			c.scope.Define(d)
-			t := types.NewTypeParam(d, []types.Type{})
-			t.Definition.SetType(t)
+			t := types.NewTypeParam(p.Identifier.Value, []types.Type{})
 			sg.AddTypeParameter(t)
 		}
 	}
 
 	// Parameters
 	for _, p := range e.Params {
-		t := c.evaluateTypeExpression(p.AnnotatedType)
+		t := c.evaluateTypeExpression(p.AnnotatedType, nil)
 		v := types.NewVar(p.Value, t)
 		c.scope.Define(v)
 		sg.AddParameter(v)
@@ -78,7 +75,7 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 
 	// Annotated Return Type
 	if e.ReturnType != nil {
-		t := c.evaluateTypeExpression(e.ReturnType)
+		t := c.evaluateTypeExpression(e.ReturnType, nil)
 		sg.Result = types.NewVar("", t)
 	}
 
@@ -131,10 +128,11 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluateBinaryExpression(expr)
 	case *ast.AssignmentExpression:
 		return c.evaluateAssignmentExpression(expr)
+	case *ast.CompositeLiteral:
+		return c.evaluateCompositeLiteral(expr)
 
 	// case *ast.ArrayLiteral:
 	// case *ast.MapLiteral:
-	// case *ast.CompositeLiteral:
 
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
@@ -303,4 +301,213 @@ func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) t
 
 	// assignment yield void
 	return types.LookUp(types.Void)
+}
+
+func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
+
+	// 1 - Find Defined Type
+	name := n.Identifier.Value
+
+	sym, ok := c.find(name)
+
+	if !ok {
+		if !ok {
+			c.addError(
+				fmt.Sprintf("`%s` is not defined", n.Identifier.Value),
+				n.Range(),
+			)
+
+			return unresolved
+		}
+	}
+
+	base, ok := sym.(*types.DefinedType)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is not a type", n.Identifier.Value),
+			n.Identifier.Range(),
+		)
+		return unresolved
+	}
+
+	// 2 - Ensure Defined Type is Struct
+	if !types.IsStruct(base.Parent()) {
+		c.addError(
+			fmt.Sprintf("`%s` is not a struct", n.Identifier.Value),
+			n.Identifier.Range(),
+		)
+		return unresolved
+	}
+
+	// 3 - Get Struct Signature of Defined Type
+
+	sg := base.Parent().(*types.Struct)
+
+	seen := make(map[string]ast.Expression)
+	hasError := false
+
+	// Collect Fields
+	for _, p := range n.Pairs {
+		k := p.Key.Value
+		v := p.Value
+
+		f := sg.FindField(k)
+		// 1 - invalid field, report
+		if f == nil {
+			c.addError(
+				fmt.Sprintf("`%s` is not a valid field", k),
+				p.Range(),
+			)
+			hasError = true
+			continue
+		}
+
+		_, ok = seen[k]
+
+		// 2 - field has already been evaluated
+		if ok {
+			c.addError(
+				fmt.Sprintf("`%s` has already been provided", k),
+				p.Range(),
+			)
+			hasError = true
+			continue
+		}
+
+		seen[k] = v
+	}
+
+	if len(seen) != len(sg.Fields) {
+		c.addError(
+			fmt.Sprintf("missing fields, %d", len(sg.Fields)),
+			n.Range(),
+		)
+		hasError = true
+	}
+
+	if hasError {
+		return unresolved
+	}
+
+	specializations := make(map[types.Type]types.Type)
+
+	for k, v := range seen {
+
+		f := sg.FindField(k)
+		fT := f.Type()
+		vT := c.evaluateExpression(v)
+
+		if !types.IsGeneric(fT) {
+			fmt.Println("Skipping non generic", fT)
+			err := c.validateAssignment(f, vT, v)
+			if err != nil {
+				c.addError(
+					err.Error(),
+					n.Range(),
+				)
+				hasError = true
+			}
+			continue
+		}
+
+		// check constraints & specialize
+		// can either be a type param or generic struct or a generic function
+
+		switch gT := fT.(type) {
+		case *types.TypeParam:
+			alt, ok := specializations[gT]
+
+			// has not already been specialized
+			if !ok {
+				fmt.Println("specializing", gT, ":", vT)
+
+				specializations[gT] = vT
+				continue
+			}
+
+			// has been specialized, ensure strict match
+			temp := types.NewVar("", alt)
+			err := c.validateAssignment(temp, vT, v)
+
+			if err != nil {
+				c.addError(
+					err.Error(),
+					n.Range(),
+				)
+				hasError = true
+				continue
+			}
+
+			// no errors, type match
+		case *types.FunctionSignature:
+			panic("not implemented")
+		case *types.DefinedType:
+			panic("bad path")
+		case *types.Instance:
+			// vT must be an instantiated struct of type fT
+			iT, ok := vT.(*types.Instance)
+			if !ok || iT.Type != gT.Type {
+				c.addError(
+					fmt.Sprintf("expected instance of type %s, received %s", gT, vT),
+					n.Range(),
+				)
+				hasError = true
+				continue
+			}
+
+			for i, a := range iT.TypeArgs {
+				p := gT.TypeArgs[i]
+				if !types.IsGeneric(p) {
+					continue
+				}
+
+				alt, ok := specializations[p]
+
+				if !ok {
+					specializations[p] = a
+				} else {
+					temp := types.NewVar("", alt)
+
+					err := c.validateAssignment(temp, a, v)
+					if err != nil {
+						c.addError(
+							err.Error(),
+							n.Range(),
+						)
+						hasError = true
+						continue
+					}
+
+				}
+			}
+
+		default:
+			panic("wut")
+		}
+
+	}
+
+	fmt.Println("specs", specializations)
+	if hasError {
+		return unresolved
+	}
+
+	if len(base.TypeParameters) == 0 {
+		return base
+	}
+
+	var args []types.Type
+
+	for _, param := range base.TypeParameters {
+		v, ok := specializations[param]
+
+		if !ok {
+			panic("failed to resolve generic parameter")
+		}
+
+		args = append(args, v)
+	}
+
+	return types.NewInstance(base, args)
 }

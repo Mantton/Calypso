@@ -132,7 +132,7 @@ type StructStatement struct {
 	GenericParams *GenericParametersClause
 	LBracePos     token.TokenPosition
 	RBracePos     token.TokenPosition
-	Properties    []*IdentifierExpression
+	Fields        []*IdentifierExpression
 }
 
 // * Expressions

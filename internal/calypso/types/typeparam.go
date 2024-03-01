@@ -1,13 +1,13 @@
 package types
 
 type TypeParam struct {
-	Definition  *TypeDef
+	Name        string
 	Constraints []Type
 }
 
-func NewTypeParam(def *TypeDef, cns []Type) *TypeParam {
+func NewTypeParam(n string, cns []Type) *TypeParam {
 	return &TypeParam{
-		Definition:  def,
+		Name:        n,
 		Constraints: cns,
 	}
 }
@@ -15,4 +15,5 @@ func NewTypeParam(def *TypeDef, cns []Type) *TypeParam {
 type TypeParams []*TypeParam
 
 func (t *TypeParam) clyT()          {}
-func (t *TypeParam) String() string { return t.Definition.name }
+func (t *TypeParam) String() string { return t.Name }
+func (t *TypeParam) Parent() Type   { return t }

@@ -15,4 +15,4 @@ func (e *symbol) Name() string { return e.name }
 func (e *symbol) SetType(t Type) {
 	e.typ = ResolveLiteral(t)
 }
-func (e *symbol) Type() Type { return ResolveLiteral(e.typ) }
+func (e *symbol) Type() Type { return e.typ }

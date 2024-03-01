@@ -238,6 +238,6 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 		GenericParams: genericParams,
 		LBracePos:     lBrace.Pos,
 		RBracePos:     rBrace.Pos,
-		Properties:    properties,
+		Fields:        properties,
 	}
 }

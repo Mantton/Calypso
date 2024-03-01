@@ -10,7 +10,9 @@ func NewPointer(t Type) *Pointer {
 	return &Pointer{PointerTo: t}
 }
 
-func (t *Pointer) clyT() {}
+func (t *Pointer) clyT()        {}
+func (t *Pointer) Parent() Type { return t }
+
 func (t *Pointer) String() string {
 
 	f := "*%s"

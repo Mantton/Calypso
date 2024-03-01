@@ -8,6 +8,7 @@ import (
 type SymbolTable struct {
 
 	// Scopes of nodes
+	Main   *types.Scope
 	scopes map[ast.Node]*types.Scope
 	fns    map[*ast.FunctionExpression]*types.Function
 	tNodes map[ast.Node]types.Type

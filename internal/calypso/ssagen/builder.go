@@ -24,6 +24,8 @@ func build(e *ssa.Executable, t *typechecker.SymbolTable) {
 		switch d := decl.(type) {
 		case *ast.FunctionDeclaration:
 			b.resolveFunction(d.Func)
+		case *ast.StatementDeclaration:
+			b.resolveStmt(d.Stmt, nil, t.Main)
 		default:
 			panic(fmt.Sprintf("unknown decl %T\n", decl))
 		}
@@ -109,6 +111,15 @@ func (b builder) resolveStmt(n ast.Statement, fn *ssa.Function, s *types.Scope) 
 		}
 
 		fn.CurrentBlock = joinBlock
+
+	case *ast.StructStatement:
+		v, ok := s.Symbols[n.Identifier.Value]
+
+		if !ok {
+			panic("unable to locate struct")
+		}
+
+		b.Mod.Composites[n.Identifier.Value] = v
 
 	default:
 		panic(fmt.Sprintf("unknown statement %T\n", n))

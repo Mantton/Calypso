@@ -46,7 +46,7 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	// declare type & it's definition
 	typ := types.NewStandard()
-	s := types.NewTypeDef(d.Identifier.Value, typ)
+	s := types.NewDefinedType(d.Identifier.Value, typ, nil)
 
 	// define in scope
 	ok := c.define(s)

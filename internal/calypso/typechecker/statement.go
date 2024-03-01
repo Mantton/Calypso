@@ -24,8 +24,10 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkReturnStatement(stmt)
 	case *ast.IfStatement:
 		c.checkIfStatement(stmt)
+	case *ast.StructStatement:
+		c.checkStructStatement(stmt)
+
 	// case *ast.AliasStatement:
-	// case *ast.StructStatement:
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -60,7 +62,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
 	// Check Annotation
 	if t := stmt.Identifier.AnnotatedType; t != nil {
-		annotation = c.evaluateTypeExpression(t)
+		annotation = c.evaluateTypeExpression(t, nil)
 		def.SetType(annotation)
 	}
 
@@ -93,9 +95,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 	err := c.validateAssignment(fn.Result, provided, stmt.Value)
 
 	if err != nil {
-		if err != nil {
-			c.addError(err.Error(), stmt.Range())
-		}
+		c.addError(err.Error(), stmt.Range())
 
 		return
 	}
@@ -123,4 +123,45 @@ func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
 		c.checkBlockStatement(stmt.Alternative)
 		c.leaveScope()
 	}
+}
+
+func (c *Checker) checkStructStatement(n *ast.StructStatement) {
+
+	// 1 - Define
+	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil)
+	ok := c.define(def)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined", def.Name()),
+			n.Identifier.Range(),
+		)
+		return
+	}
+
+	c.enterScope()
+	defer c.leaveScope()
+
+	// 2 - TODO: Parse Generic Params
+	if n.GenericParams != nil {
+		for _, p := range n.GenericParams.Parameters {
+			// TODO: Standards
+			d := types.NewTypeParam(p.Identifier.Value, nil)
+			def.AddTypeParameter(d)
+		}
+
+	}
+
+	// 3 - Parse Fields
+	var fields []*types.Var
+
+	for _, f := range n.Fields {
+		d := types.NewVar(f.Value, unresolved)
+		t := c.evaluateTypeExpression(f.AnnotatedType, def.TypeParameters)
+		d.SetType(t)
+		fields = append(fields, d)
+	}
+
+	typ := types.NewStruct(fields)
+	def.SetType(typ)
 }

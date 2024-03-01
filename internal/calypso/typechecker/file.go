@@ -23,6 +23,7 @@ func (c *Checker) CheckFile(file *ast.File) *SymbolTable {
 		fmt.Println(s)
 	}
 
+	c.table.Main = main
 	return c.table
 
 }

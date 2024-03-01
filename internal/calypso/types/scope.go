@@ -32,7 +32,7 @@ func (s *Scope) Define(e Symbol) bool {
 
 // Resolve searches for a symbol in the current table and parent scopes.
 func (s *Scope) Resolve(name string) (Symbol, bool) {
-	fmt.Printf("Resolving %s\n", name)
+	fmt.Printf("Resolving %s @ %p\n", name, s)
 	// defer fmt.Println(s)
 
 	symbol, exists := s.Symbols[name]
