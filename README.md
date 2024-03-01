@@ -3,10 +3,12 @@
 Calypso is a Swift/Typescript/Go inspired language created to help me learn more about programming languages and compilers.
 
 # Data Types
-- Integers - `int`
-- Floats - `float`
+- Signed Integers - `int`, `i64`, `i32`, `i16`, `i8`
+- Unsigned Integers - `uint`, `u64`, `u32`, `u16`, `u8`
+- Floating Points - `float`, `double `
 - Booleans - `bool`
 - Strings - `string`
+- Characters - `char`
 - Nil/Null - `nil`
 
 
@@ -57,4 +59,3 @@ func Bar<T: Hashable>(a:T) -> T {
     return a;
 }
 ```
-
