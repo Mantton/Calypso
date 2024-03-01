@@ -1,27 +1,31 @@
 package types
 
 type Standard struct {
-	methods map[string]*FunctionSignature
+	Name string
+	Dna  map[string]*Function // core functions to implement
+	// possible default methods
+	// other methods that this standard shares
 }
 
-func NewStandard() *Standard {
+func NewStandard(name string) *Standard {
 	return &Standard{
-		methods: make(map[string]*FunctionSignature),
+		Name: name,
+		Dna:  make(map[string]*Function),
 	}
 }
 
 func (s *Standard) clyT()        {}
 func (t *Standard) Parent() Type { return t }
 
-func (s *Standard) String() string { return "" }
+func (s *Standard) String() string { return s.Name }
 
-func (s *Standard) AddMethod(n string, f *FunctionSignature) bool {
-	_, ok := s.methods[n]
+func (s *Standard) AddMethod(n string, f *Function) bool {
+	_, ok := s.Dna[n]
 
 	if ok {
 		return false
 	}
 
-	s.methods[n] = f
+	s.Dna[n] = f
 	return true
 }

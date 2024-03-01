@@ -6,11 +6,8 @@ import (
 	"time"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/irgen"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
-	"github.com/mantton/calypso/internal/calypso/resolver"
-	"github.com/mantton/calypso/internal/calypso/ssagen"
 	t "github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
@@ -40,28 +37,28 @@ func Build(filepath, input string) *ast.File {
 
 	fmt.Println("[Parser] Completed.", "Took", duration)
 
-	// Resolver
-	fmt.Println("\n[Resolver] Starting")
-	start = time.Now()
+	// // Resolver
+	// fmt.Println("\n[Resolver] Starting")
+	// start = time.Now()
 
-	resolver := resolver.New()
-	resolver.ResolveFile(file)
+	// resolver := resolver.New()
+	// resolver.ResolveFile(file)
 
-	if len(resolver.Errors) != 0 {
-		for _, err := range resolver.Errors {
-			fmt.Println(ErrorMessage(filepath, err, lines))
-		}
-		return nil
-	}
-	duration = time.Since(start)
+	// if len(resolver.Errors) != 0 {
+	// 	for _, err := range resolver.Errors {
+	// 		fmt.Println(ErrorMessage(filepath, err, lines))
+	// 	}
+	// 	return nil
+	// }
+	// duration = time.Since(start)
 
-	fmt.Println("[Resolver] Completed.", "Took", duration)
+	// fmt.Println("[Resolver] Completed.", "Took", duration)
 
 	fmt.Println("\n[TypeChecker] Starting")
 	start = time.Now()
 
 	checker := t.New(t.STD)
-	sc := checker.CheckFile(file)
+	_ = checker.CheckFile(file)
 
 	if len(checker.Errors) != 0 {
 		for _, err := range checker.Errors {
@@ -72,17 +69,17 @@ func Build(filepath, input string) *ast.File {
 	duration = time.Since(start)
 	fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
-	fmt.Println("\n[SSAGen] Starting")
-	start = time.Now()
-	exec := ssagen.Generate(file, sc)
-	duration = time.Since(start)
+	// fmt.Println("\n[SSAGen] Starting")
+	// start = time.Now()
+	// exec := ssagen.Generate(file, sc)
+	// duration = time.Since(start)
 
-	fmt.Println("[SSAGen] Completed.", "Took", duration)
-	fmt.Println("\n[IRGen] Starting")
-	start = time.Now()
-	irgen.Compile(exec)
-	duration = time.Since(start)
-	fmt.Println("[IRGen] Completed.", "Took", duration)
+	// fmt.Println("[SSAGen] Completed.", "Took", duration)
+	// fmt.Println("\n[IRGen] Starting")
+	// start = time.Now()
+	// irgen.Compile(exec)
+	// duration = time.Since(start)
+	// fmt.Println("[IRGen] Completed.", "Took", duration)
 	return file
 }
 

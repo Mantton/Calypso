@@ -4,6 +4,7 @@ type DefinedType struct {
 	symbol
 	wrapped        Type
 	TypeParameters TypeParams
+	Methods        map[string]*Function
 }
 
 func NewDefinedType(n string, t Type, p TypeParams) *DefinedType {
@@ -13,6 +14,7 @@ func NewDefinedType(n string, t Type, p TypeParams) *DefinedType {
 		},
 		TypeParameters: p,
 		wrapped:        t,
+		Methods:        make(map[string]*Function),
 	}
 }
 
@@ -32,4 +34,16 @@ func (t *DefinedType) String() string {
 }
 func (e *DefinedType) SetType(t Type) {
 	e.wrapped = ResolveLiteral(t)
+}
+
+func (s *DefinedType) AddMethod(n string, f *Function) bool {
+	_, ok := s.Methods[n]
+
+	if ok {
+		return false
+	}
+
+	s.Methods[n] = f
+	return true
+
 }

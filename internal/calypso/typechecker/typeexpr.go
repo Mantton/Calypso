@@ -36,7 +36,6 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 			}
 		}
 	} else {
-
 		typ = def.Type()
 	}
 
@@ -47,7 +46,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	}
 
 	var eArgs []types.Type
-	var tArgs types.TypeParams
+	var tParams types.TypeParams
 
 	if expr.Arguments != nil {
 		for _, n := range expr.Arguments.Arguments {
@@ -56,18 +55,37 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	}
 
 	if x, ok := typ.(*types.DefinedType); ok {
-		tArgs = append(tArgs, x.TypeParameters...)
+		tParams = append(tParams, x.TypeParameters...)
 	}
 
-	if len(eArgs) != len(tArgs) {
-		msg := fmt.Sprintf("expected %d type parameter(s), provided %d", len(tArgs), len(eArgs))
+	if len(eArgs) != len(tParams) {
+		msg := fmt.Sprintf("expected %d type parameter(s), provided %d", len(tParams), len(eArgs))
 		c.addError(msg, expr.Range())
 		return unresolved
 	}
 
-	// no generic instance
-	if len(tArgs) == 0 {
+	// not a generic instance
+	if len(tParams) == 0 {
 		return typ
+	}
+
+	hasErrors := false
+	// ensure conformance of LHS Arguments into RHS Parameters
+	for i, arg := range eArgs {
+		p := tParams[i]
+
+		err := c.validateConformance(p.Constraints, arg)
+
+		if err != nil {
+			hasErrors = true
+			c.addError(err.Error(), expr.Range())
+			continue
+		}
+
+	}
+
+	if hasErrors {
+		return unresolved
 	}
 
 	return types.NewInstance(typ, eArgs)

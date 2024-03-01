@@ -60,7 +60,7 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
 		for _, p := range e.GenericParams.Parameters {
-			t := types.NewTypeParam(p.Identifier.Value, []types.Type{})
+			t := types.NewTypeParam(p.Identifier.Value, []*types.Standard{})
 			sg.AddTypeParameter(t)
 		}
 	}

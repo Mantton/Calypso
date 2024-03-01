@@ -97,6 +97,7 @@ const (
 	EXTENSION
 	CONFORM
 	FOR
+	TO
 	kw_e // Keywords End
 )
 
@@ -125,6 +126,7 @@ var keywords = map[string]Token{
 	"extension": EXTENSION,
 	"conform":   CONFORM,
 	"for":       FOR,
+	"to":        TO,
 }
 
 func LookupIdent(ident string) Token {
@@ -197,6 +199,7 @@ var tokens = map[Token]string{
 	EXTENSION: "extension",
 	CONFORM:   "conform",
 	FOR:       "for",
+	TO:        "to",
 
 	IDENTIFIER: "IDENTIFIER",
 }

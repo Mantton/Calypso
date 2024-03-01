@@ -181,11 +181,11 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 
 	kw := p.expect(token.CONFORM)
 
-	standard := p.parseIdentifierWithoutAnnotation()
-
-	p.expect(token.FOR)
-
 	target := p.parseIdentifierWithoutAnnotation()
+
+	p.expect(token.TO)
+
+	standard := p.parseIdentifierWithoutAnnotation()
 
 	lBrace := p.expect(token.LBRACE)
 
