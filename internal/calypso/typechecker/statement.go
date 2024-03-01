@@ -26,8 +26,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkIfStatement(stmt)
 	case *ast.StructStatement:
 		c.checkStructStatement(stmt)
-
-	// case *ast.AliasStatement:
+	case *ast.AliasStatement:
+		c.checkAliasStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -167,4 +167,48 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 
 	typ := types.NewStruct(fields)
 	def.SetType(typ)
+}
+
+func (c *Checker) checkAliasStatement(n *ast.AliasStatement) {
+	name := n.Identifier.Value
+
+	// 1 - Define
+	def := types.NewDefinedType(name, unresolved, nil)
+	ok := c.define(def)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined", name),
+			n.Identifier.Range(),
+		)
+		return
+	}
+
+	// Get Type Params
+	hasError := false
+	if n.GenericParams != nil {
+		for _, p := range n.GenericParams.Parameters {
+			t := c.evaluateGenericParameterExpression(p)
+			if t == unresolved {
+				hasError = true
+				continue
+			}
+
+			def.AddTypeParameter(t.(*types.TypeParam))
+		}
+	}
+	if hasError {
+		return
+	}
+
+	// Target
+	RHS := c.evaluateTypeExpression(n.Target, def.TypeParameters)
+
+	if RHS == unresolved {
+		// already reported
+		return
+	}
+
+	a := types.NewAlias(name, RHS)
+	def.SetType(a)
 }

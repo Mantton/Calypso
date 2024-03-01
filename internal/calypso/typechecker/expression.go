@@ -57,16 +57,22 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	c.table.AddScope(e, c.scope)
 	defer c.leaveScope()
 
+	hasError := false
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
 		for _, p := range e.GenericParams.Parameters {
 			t := c.evaluateGenericParameterExpression(p)
 			if t == unresolved {
+				hasError = true
 				continue
 			}
 
 			sg.AddTypeParameter(t.(*types.TypeParam))
 		}
+	}
+
+	if hasError {
+		return
 	}
 
 	// Parameters

@@ -25,7 +25,7 @@ var GlobalTypes = map[BasicType]*Basic{
 
 	// floating points
 	Float:  {Float, "float"},
-	Double: {Double, "Double"},
+	Double: {Double, "double"},
 
 	// strings
 	String: {String, "string"},
