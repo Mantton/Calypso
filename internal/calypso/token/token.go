@@ -98,6 +98,7 @@ const (
 	CONFORM
 	FOR
 	TO
+	EXTERN
 	kw_e // Keywords End
 )
 
@@ -127,6 +128,7 @@ var keywords = map[string]Token{
 	"conform":   CONFORM,
 	"for":       FOR,
 	"to":        TO,
+	"extern":    EXTERN,
 }
 
 func LookupIdent(ident string) Token {
@@ -138,7 +140,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE, STANDARD, TYPE, EXTENSION, CONFORM:
+	case FUNC, CONST, MODULE, STANDARD, TYPE, EXTENSION, CONFORM, EXTERN:
 		return true
 	}
 	return false

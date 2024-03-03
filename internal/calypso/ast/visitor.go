@@ -49,6 +49,7 @@ type visitor interface {
 	VisitTypeDeclaration(*TypeDeclaration)
 	VisitExtensionDeclaration(*ExtensionDeclaration)
 	VisitConformanceDeclaration(*ConformanceDeclaration)
+	VisitExternDeclaration(*ExternDeclaration)
 
 	// Types
 	VisitIdentifierTypeExpression(*IdentifierTypeExpression)
@@ -178,6 +179,10 @@ func (n *ExtensionDeclaration) Accept(v visitor) {
 }
 func (n *ConformanceDeclaration) Accept(v visitor) {
 	v.VisitConformanceDeclaration(n)
+}
+
+func (n *ExternDeclaration) Accept(v visitor) {
+	v.VisitExternDeclaration(n)
 }
 
 // Types

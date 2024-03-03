@@ -77,6 +77,14 @@ type ConformanceDeclaration struct {
 	RBracePos token.TokenPosition
 }
 
+type ExternDeclaration struct {
+	KeyWPos   token.TokenPosition
+	Target    *StringLiteral
+	LBracePos token.TokenPosition
+	Content   []*FunctionStatement
+	RBracePos token.TokenPosition
+}
+
 // * Statements
 type BlockStatement struct {
 	LBrackPos  token.TokenPosition

@@ -27,6 +27,8 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 		return p.parseExtensionDeclaration()
 	case token.CONFORM:
 		return p.parseConformanceDeclaration()
+	case token.EXTERN:
+		return p.parseExternDeclaration()
 	default:
 		return p.parseStatementDeclaration()
 	}
@@ -210,6 +212,43 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 		LBracePos: lBrace.Pos,
 		Content:   content,
 		RBracePos: rBrace.Pos,
+	}
+
+}
+
+func (p *Parser) parseExternDeclaration() *ast.ExternDeclaration {
+
+	kw := p.expect(token.EXTERN)
+
+	lit, ok := p.parseExpression().(*ast.StringLiteral)
+
+	if !ok {
+		panic(p.error("expected string literal in extern path"))
+	}
+
+	lBrace := p.expect(token.LBRACE)
+
+	// Parse Functions in Extension
+
+	content := []*ast.FunctionStatement{}
+
+	for p.current() != token.RBRACE {
+
+		f := &ast.FunctionStatement{
+			Func: p.parseFunctionExpression(false),
+		}
+		content = append(content, f)
+	}
+
+	rBrace := p.expect(token.RBRACE)
+
+	fmt.Println(lit.Value)
+	return &ast.ExternDeclaration{
+		KeyWPos:   kw.Pos,
+		LBracePos: lBrace.Pos,
+		RBracePos: rBrace.Pos,
+		Content:   content,
+		Target:    lit,
 	}
 
 }
