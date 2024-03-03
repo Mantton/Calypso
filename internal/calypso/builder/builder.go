@@ -37,23 +37,7 @@ func Build(filepath, input string) *ast.File {
 
 	fmt.Println("[Parser] Completed.", "Took", duration)
 
-	// // Resolver
-	// fmt.Println("\n[Resolver] Starting")
-	// start = time.Now()
-
-	// resolver := resolver.New()
-	// resolver.ResolveFile(file)
-
-	// if len(resolver.Errors) != 0 {
-	// 	for _, err := range resolver.Errors {
-	// 		fmt.Println(ErrorMessage(filepath, err, lines))
-	// 	}
-	// 	return nil
-	// }
-	// duration = time.Since(start)
-
-	// fmt.Println("[Resolver] Completed.", "Took", duration)
-
+	// type checker
 	fmt.Println("\n[TypeChecker] Starting")
 	start = time.Now()
 
@@ -69,12 +53,14 @@ func Build(filepath, input string) *ast.File {
 	duration = time.Since(start)
 	fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
+	// LIRGen
 	// fmt.Println("\n[SSAGen] Starting")
 	// start = time.Now()
 	// exec := ssagen.Generate(file, sc)
 	// duration = time.Since(start)
-
 	// fmt.Println("[SSAGen] Completed.", "Took", duration)
+
+	// LLVM IRGen
 	// fmt.Println("\n[IRGen] Starting")
 	// start = time.Now()
 	// irgen.Compile(exec)

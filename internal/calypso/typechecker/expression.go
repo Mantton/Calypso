@@ -89,15 +89,12 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 	if e.ReturnType != nil {
 		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters)
 		sg.Result = types.NewVar("result", t)
+	} else {
+		sg.Result = types.NewVar("result", types.LookUp(types.Void))
 	}
 
 	// Body
 	c.checkBlockStatement(e.Body)
-
-	// No return statement with no annotated return type, return type is void
-	if sg.Result.Type() == unresolved {
-		sg.Result = types.NewVar("", types.LookUp(types.Void))
-	}
 
 	// Ensure All Generic Params are used
 	// Ensure All Params are used
