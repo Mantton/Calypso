@@ -50,7 +50,7 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 func (p *Parser) parseStatementDeclaration() *ast.StatementDeclaration {
 
 	switch p.current() {
-	case token.ALIAS, token.STRUCT:
+	case token.ALIAS, token.STRUCT, token.ENUM:
 		stmt := p.parseStatement()
 		return &ast.StatementDeclaration{
 			Stmt: stmt,
@@ -242,7 +242,6 @@ func (p *Parser) parseExternDeclaration() *ast.ExternDeclaration {
 
 	rBrace := p.expect(token.RBRACE)
 
-	fmt.Println(lit.Value)
 	return &ast.ExternDeclaration{
 		KeyWPos:   kw.Pos,
 		LBracePos: lBrace.Pos,

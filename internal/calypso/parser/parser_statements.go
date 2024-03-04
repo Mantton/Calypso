@@ -25,6 +25,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		}
 	case token.STRUCT:
 		return p.parseStructStatement()
+	case token.ENUM:
+		return p.parseEnumStatement()
 
 	}
 
@@ -240,4 +242,80 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 		RBracePos:     rBrace.Pos,
 		Fields:        properties,
 	}
+}
+
+func (p *Parser) parseEnumStatement() *ast.EnumStatement {
+	kwPos := p.expect(token.ENUM).Pos
+
+	ident := p.parseIdentifierWithoutAnnotation()
+
+	var genericParams *ast.GenericParametersClause
+
+	if p.currentMatches(token.LSS) {
+		genericParams = p.parseGenericParameterClause()
+	}
+
+	lbracePos := p.expect(token.LBRACE).Pos
+
+	stmt := &ast.EnumStatement{
+		KeyWPos:       kwPos,
+		Identifier:    ident,
+		GenericParams: genericParams,
+		LBracePos:     lbracePos,
+	}
+
+	for p.current() != token.RBRACE {
+
+		ident := p.parseIdentifierWithoutAnnotation()
+		var discriminator *ast.EnumDiscriminantExpression
+		var fields *ast.FieldListExpression
+
+		if p.match(token.ASSIGN) {
+			// Discriminator
+
+			discriminator = &ast.EnumDiscriminantExpression{
+				Value: p.parseExpression(),
+			}
+		} else if p.currentMatches(token.LPAREN) {
+			// Tuple
+			f := p.parseFieldList()
+			fields = &ast.FieldListExpression{
+				Fields: f,
+			}
+		}
+		p.expect(token.COMMA)
+
+		variant := &ast.EnumVariantExpression{
+			Identifier:   ident,
+			Discriminant: discriminator,
+			Fields:       fields,
+		}
+
+		stmt.Variants = append(stmt.Variants, variant)
+	}
+
+	rBrace := p.expect(token.RBRACE)
+
+	stmt.RBracePos = rBrace.Pos
+	return stmt
+}
+
+func (p *Parser) parseFieldList() []ast.TypeExpression {
+	params := []ast.TypeExpression{}
+
+	p.expect(token.LPAREN)
+	if p.match(token.RPAREN) {
+		return params
+	}
+
+	a := p.parseTypeExpression()
+	params = append(params, a)
+	for p.match(token.COMMA) {
+		expr := p.parseTypeExpression()
+		params = append(params, expr)
+	}
+
+	p.expect(token.RPAREN)
+
+	return params
 }

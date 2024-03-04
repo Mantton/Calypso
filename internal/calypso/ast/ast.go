@@ -7,7 +7,6 @@ import (
 
 type Node interface {
 	Range() token.SyntaxRange
-	Accept(visitor)
 }
 
 type Expression interface {
@@ -141,6 +140,32 @@ type StructStatement struct {
 	LBracePos     token.TokenPosition
 	RBracePos     token.TokenPosition
 	Fields        []*IdentifierExpression
+}
+
+type EnumStatement struct {
+	KeyWPos       token.TokenPosition
+	Identifier    *IdentifierExpression
+	GenericParams *GenericParametersClause
+	LBracePos     token.TokenPosition
+	Variants      []*EnumVariantExpression
+	RBracePos     token.TokenPosition
+}
+
+type EnumVariantExpression struct {
+	Identifier   *IdentifierExpression
+	Fields       *FieldListExpression
+	Discriminant *EnumDiscriminantExpression
+}
+
+type FieldListExpression struct {
+	LParenPos token.TokenPosition
+	Fields    []TypeExpression
+	RParenPos token.TokenPosition
+}
+
+type EnumDiscriminantExpression struct {
+	EqPos token.TokenPosition
+	Value Expression
 }
 
 // * Expressions

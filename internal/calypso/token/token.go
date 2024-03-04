@@ -99,6 +99,15 @@ const (
 	FOR
 	TO
 	EXTERN
+
+	/// Modifiers
+	ASYNC
+	STATIC
+	MUT
+	PUB
+	PRIVATE
+	ENUM
+	CASE
 	kw_e // Keywords End
 )
 
@@ -129,6 +138,8 @@ var keywords = map[string]Token{
 	"for":       FOR,
 	"to":        TO,
 	"extern":    EXTERN,
+	"enum":      ENUM,
+	"case":      CASE,
 }
 
 func LookupIdent(ident string) Token {
@@ -148,7 +159,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM:
 		return true
 	}
 

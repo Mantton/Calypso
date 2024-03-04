@@ -28,6 +28,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkStructStatement(stmt)
 	case *ast.AliasStatement:
 		c.checkAliasStatement(stmt)
+	case *ast.EnumStatement:
+		c.checkEnumStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -139,9 +141,6 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 		return
 	}
 
-	c.enterScope()
-	defer c.leaveScope()
-
 	// 2  Parse Generic Params
 	if n.GenericParams != nil {
 		for _, p := range n.GenericParams.Parameters {
@@ -211,4 +210,100 @@ func (c *Checker) checkAliasStatement(n *ast.AliasStatement) {
 
 	a := types.NewAlias(name, RHS)
 	def.SetType(a)
+}
+
+func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
+	name := n.Identifier.Value
+
+	// 1 - Define
+	def := types.NewDefinedType(name, unresolved, nil)
+	ok := c.define(def)
+
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined", name),
+			n.Identifier.Range(),
+		)
+		return
+	}
+
+	// 2  Parse Generic Params
+	if n.GenericParams != nil {
+		for _, p := range n.GenericParams.Parameters {
+			t := c.evaluateGenericParameterExpression(p)
+			if t == unresolved {
+				continue
+			}
+
+			def.AddTypeParameter(t.(*types.TypeParam))
+		}
+
+	}
+
+	cases := make(map[string]bool)
+	discs := make(map[int]bool)
+	gDisc := 0
+	variants := []*types.EnumVariant{}
+	// 3 Parse Variants
+	for _, v := range n.Variants {
+
+		name := v.Identifier.Value
+		if _, ok := cases[name]; ok {
+			c.addError(fmt.Sprintf("`%s` is already a variant", name), v.Identifier.Range())
+			continue
+		}
+
+		// define
+		cases[name] = ok
+
+		// set fields
+		var fields *[]types.Type
+
+		if v.Fields != nil {
+			o := []types.Type{}
+			for _, f := range v.Fields.Fields {
+				t := c.evaluateTypeExpression(f, def.TypeParameters)
+				o = append(o, t)
+			}
+
+			if len(o) == 0 {
+				c.addError("tuple enum must provide at least 1 parameter", v.Identifier.Range())
+				continue
+			}
+
+			fields = &o
+		}
+
+		// set discriminant
+		discriminant := gDisc
+
+		if v.Discriminant != nil {
+			d, ok := v.Discriminant.Value.(*ast.IntegerLiteral)
+			if !ok {
+				c.addError("discriminant must be an integer", v.Discriminant.Value.Range())
+				continue
+			}
+
+			discriminant = int(d.Value)
+			if _, ok := discs[discriminant]; ok {
+				c.addError(fmt.Sprintf("`%d` is already assigned to a variant", discriminant), v.Identifier.Range())
+				continue
+			}
+			gDisc = discriminant
+		}
+
+		v := types.NewEnumVariant(name, discriminant, fields)
+
+		variants = append(variants, v)
+		discs[discriminant] = true
+		gDisc += 1
+
+	}
+
+	if len(variants) == 0 {
+		c.addError("expected at least 1 enum variant", n.Identifier.Range())
+	}
+
+	e := types.NewEnum(name, variants)
+	def.SetType(e)
 }
