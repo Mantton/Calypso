@@ -192,7 +192,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 	// Ensure Target is callable
 	if !ok {
 		c.addError(
-			fmt.Sprintf("`%s` is not invocable", expr.Target),
+			"expression is not invocable",
 			expr.Target.Range(),
 		)
 		return unresolved
@@ -578,10 +578,17 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 
 	a := c.evaluateExpression(n.Target)
 
-	b, ok := a.(*types.DefinedType)
+	var b types.Type
 
-	if !ok {
-		c.addError("unable to get target type", n.Range())
+	switch def := a.(type) {
+	case *types.DefinedType:
+		b = def
+	case *types.EnumInstance:
+		b = def.Type
+	case *types.StructInstance:
+		b = def.Type
+	default:
+		c.addError("unable to resolve type of expression", n.Target.Range())
 		return unresolved
 	}
 
@@ -596,10 +603,12 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 	}
 
 	// Resolve Method
-	fn, ok := b.Methods[field]
+	if x, ok := b.(*types.DefinedType); ok {
+		fn, ok := x.Methods[field]
 
-	if ok {
-		return fn.Type()
+		if ok {
+			return fn.Type()
+		}
 	}
 
 	if types.IsGeneric(b) {
@@ -628,5 +637,77 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 }
 
 func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression) types.Type {
-	panic("???")
+	// 1- Find Target
+	sym, ok := c.find(e.Identifier.Value)
+
+	if !ok {
+		msg := fmt.Sprintf("could not find `%s` in scope", e.Identifier.Value)
+		c.addError(msg, e.Range())
+		return unresolved
+	}
+
+	// 2 - Collect Type Parameters
+
+	args := []types.Type{}
+	params := []*types.TypeParam{}
+
+	switch sym := sym.(type) {
+	case *types.Function:
+		sg := sym.Sg()
+		params = sg.TypeParameters
+	case *types.DefinedType:
+		params = sym.TypeParameters
+	}
+
+	// 3 - Ensure Type is generic
+	if len(params) == 0 {
+		msg := fmt.Sprintf("`%s` cannot be specialized", e.Identifier.Value)
+		c.addError(msg, e.Identifier.Range())
+		return unresolved
+	}
+
+	// 4 - Collect Args
+	for _, t := range e.Clause.Arguments {
+		args = append(args, c.evaluateTypeExpression(t, nil))
+	}
+
+	// 5 - Ensure Length match
+	if len(params) != len(args) {
+		c.addError(fmt.Sprintf("expected %d arguments provided %d", len(params), len(args)), e.Range())
+		return unresolved
+	}
+
+	// 6 - Ensure Conformance For Each Argument
+	hasError := false
+	for i, arg := range args {
+		param := params[i]
+
+		err := c.validateConformance(param.Constraints, arg)
+
+		if err != nil {
+			c.addError(err.Error(), e.Clause.Arguments[i].Range())
+			hasError = true
+		}
+	}
+
+	if hasError {
+		return unresolved
+	}
+
+	// 7 - Return instance of type
+	switch sym := sym.(type) {
+	case *types.Function:
+		return types.NewFunctionInstance(sym.Sg(), args)
+	case *types.DefinedType:
+		switch sym.Parent().(type) {
+		case *types.Enum:
+			return types.NewEnumInstance(sym, args)
+		case *types.Struct:
+			return types.NewStructInstance(sym, args)
+		}
+	}
+
+	c.addError("unknown generic type", e.Range())
+	return unresolved
+
 }

@@ -55,3 +55,7 @@ func (sg *FunctionSignature) AddTypeParameter(t *TypeParam) {
 func (sg *FunctionSignature) AddParameter(t *Var) {
 	sg.Parameters = append(sg.Parameters, t)
 }
+
+func (n *Function) Sg() *FunctionSignature {
+	return n.typ.(*FunctionSignature)
+}

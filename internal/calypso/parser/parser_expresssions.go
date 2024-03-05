@@ -181,15 +181,15 @@ func (p *Parser) parseSpecializationExpression() ast.Expression {
 	expr := p.parsePrimaryExpression()
 
 	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.LSS) {
-		c := p.parseGenericParameterClause()
+		c := p.parseGenericArgumentsClause()
 
 		// check if is composite initializer
 		if p.currentMatches(token.LBRACE) {
 			body := p.parseCompositeLiteralBody()
 			expr = &ast.CompositeLiteral{
-				Identifier:     ident,
-				TypeParameters: c,
-				Body:           body,
+				Identifier:    ident,
+				TypeArguments: c,
+				Body:          body,
 			}
 
 		} else {

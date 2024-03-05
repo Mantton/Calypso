@@ -222,7 +222,7 @@ type KeyValueExpression struct {
 
 type GenericSpecializationExpression struct {
 	Identifier *IdentifierExpression
-	Clause     *GenericParametersClause
+	Clause     *GenericArgumentsClause
 }
 
 // * Literal Expressions
@@ -290,9 +290,9 @@ type MapLiteral struct {
 }
 
 type CompositeLiteral struct {
-	Identifier     *IdentifierExpression
-	TypeParameters *GenericParametersClause
-	Body           *CompositeLiteralBody
+	Identifier    *IdentifierExpression
+	TypeArguments *GenericArgumentsClause
+	Body          *CompositeLiteralBody
 }
 
 type CompositeLiteralBody struct {
