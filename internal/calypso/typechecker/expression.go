@@ -150,6 +150,10 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluateAssignmentExpression(expr)
 	case *ast.CompositeLiteral:
 		return c.evaluateCompositeLiteral(expr)
+	case *ast.PropertyExpression:
+		return c.evaluatePropertyExpression(expr)
+	case *ast.GenericSpecializationExpression:
+		return c.evaluateGenericSpecializationExpression(expr)
 
 	// case *ast.ArrayLiteral:
 	// case *ast.MapLiteral:
@@ -388,7 +392,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	hasError := false
 
 	// Collect Fields
-	for _, p := range n.Pairs {
+	for _, p := range n.Body.Fields {
 		k := p.Key.Value
 		v := p.Value
 
@@ -568,4 +572,61 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 	}
 
 	return nil
+}
+
+func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Type {
+
+	a := c.evaluateExpression(n.Target)
+
+	b, ok := a.(*types.DefinedType)
+
+	if !ok {
+		c.addError("unable to get target type", n.Range())
+		return unresolved
+	}
+
+	// Collect Property
+	var field string
+	switch p := n.Property.(type) {
+	case *ast.IdentifierExpression:
+		field = p.Value
+	default:
+		c.addError("invalid property key", n.Range())
+		return unresolved
+	}
+
+	// Resolve Method
+	fn, ok := b.Methods[field]
+
+	if ok {
+		return fn.Type()
+	}
+
+	if types.IsGeneric(b) {
+		panic("this is a generic type, ensure t")
+	}
+
+	// resolve field
+	switch t := b.Parent().(type) {
+	case *types.Enum:
+		for _, c := range t.Cases {
+			if c.Name == field {
+				return b
+			}
+		}
+
+	case *types.Struct:
+		for _, c := range t.Fields {
+			if c.Name() == field {
+				return c.Type()
+			}
+		}
+	}
+
+	c.addError(fmt.Sprintf("unknown field `%s`", field), n.Range())
+	return unresolved
+}
+
+func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression) types.Type {
+	panic("???")
 }

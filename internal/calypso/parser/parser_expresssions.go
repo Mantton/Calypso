@@ -158,7 +158,7 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 }
 
 func (p *Parser) parseIndexExpression() ast.Expression {
-	expr := p.parsePrimaryExpression()
+	expr := p.parseSpecializationExpression()
 
 	for p.match(token.LBRACKET) {
 		lbrackPos := p.previousScannedToken().Pos
@@ -174,6 +174,32 @@ func (p *Parser) parseIndexExpression() ast.Expression {
 		}
 	}
 
+	return expr
+}
+
+func (p *Parser) parseSpecializationExpression() ast.Expression {
+	expr := p.parsePrimaryExpression()
+
+	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.LSS) {
+		c := p.parseGenericParameterClause()
+
+		// check if is composite initializer
+		if p.currentMatches(token.LBRACE) {
+			body := p.parseCompositeLiteralBody()
+			expr = &ast.CompositeLiteral{
+				Identifier:     ident,
+				TypeParameters: c,
+				Body:           body,
+			}
+
+		} else {
+			expr = &ast.GenericSpecializationExpression{
+				Identifier: ident,
+				Clause:     c,
+			}
+		}
+
+	}
 	return expr
 }
 
@@ -255,8 +281,13 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 	case token.IDENTIFIER:
 
 		// is identifier, but token is `{` or `<`
-		if tok, ok := p.peakAheadScannedToken(); ok && (tok.Tok == token.LBRACE || tok.Tok == token.LSS) {
-			expr = p.parseCompositeLiteral()
+		if tok, ok := p.peakAheadScannedToken(); ok && (tok.Tok == token.LBRACE) {
+			ident := p.parseIdentifierWithoutAnnotation()
+			body := p.parseCompositeLiteralBody()
+			expr = &ast.CompositeLiteral{
+				Identifier: ident,
+				Body:       body,
+			}
 
 		} else {
 			expr = &ast.IdentifierExpression{
@@ -504,12 +535,11 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 	return lit
 }
 
-func (p *Parser) parseCompositeLiteral() *ast.CompositeLiteral {
-	ident := p.parseIdentifierWithOptionalAnnotation()
+func (p *Parser) parseCompositeLiteralBody() *ast.CompositeLiteralBody {
 
 	lBrace := p.expect(token.LBRACE)
 
-	pairs := []*ast.CompositeLiteralBodyClause{}
+	pairs := []*ast.CompositeLiteralField{}
 	// Loop until match with RBRACE
 	for !p.match(token.RBRACE) {
 
@@ -523,7 +553,7 @@ func (p *Parser) parseCompositeLiteral() *ast.CompositeLiteral {
 
 		value := p.parseExpression()
 
-		expr := &ast.CompositeLiteralBodyClause{
+		expr := &ast.CompositeLiteralField{
 			Key:      key,
 			Value:    value,
 			ColonPos: colon.Pos,
@@ -542,10 +572,9 @@ func (p *Parser) parseCompositeLiteral() *ast.CompositeLiteral {
 	// parse kv expression
 	rBrace := p.expect(token.RBRACE)
 
-	return &ast.CompositeLiteral{
-		Identifier: ident,
-		LBracePos:  lBrace.Pos,
-		Pairs:      pairs,
-		RBracePos:  rBrace.Pos,
+	return &ast.CompositeLiteralBody{
+		LBracePos: lBrace.Pos,
+		Fields:    pairs,
+		RBracePos: rBrace.Pos,
 	}
 }

@@ -220,6 +220,11 @@ type KeyValueExpression struct {
 	ColonPos token.TokenPosition
 }
 
+type GenericSpecializationExpression struct {
+	Identifier *IdentifierExpression
+	Clause     *GenericParametersClause
+}
+
 // * Literal Expressions
 
 type IdentifierExpression struct {
@@ -285,13 +290,18 @@ type MapLiteral struct {
 }
 
 type CompositeLiteral struct {
-	Identifier *IdentifierExpression
-	LBracePos  token.TokenPosition
-	RBracePos  token.TokenPosition
-	Pairs      []*CompositeLiteralBodyClause
+	Identifier     *IdentifierExpression
+	TypeParameters *GenericParametersClause
+	Body           *CompositeLiteralBody
 }
 
-type CompositeLiteralBodyClause struct {
+type CompositeLiteralBody struct {
+	LBracePos token.TokenPosition
+	RBracePos token.TokenPosition
+	Fields    []*CompositeLiteralField
+}
+
+type CompositeLiteralField struct {
 	Key      *IdentifierExpression
 	Value    Expression
 	ColonPos token.TokenPosition
