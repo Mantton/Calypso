@@ -16,8 +16,6 @@ func NewScope(p *Scope) *Scope {
 
 // Defines a new entity in the scope
 func (s *Scope) Define(e Symbol) bool {
-	// fmt.Printf("defining %s as %s\n", e.Name(), e.Type())
-	// defer fmt.Println(s)
 	k := e.Name()
 	_, ok := s.Symbols[k]
 
@@ -32,9 +30,6 @@ func (s *Scope) Define(e Symbol) bool {
 
 // Resolve searches for a symbol in the current table and parent scopes.
 func (s *Scope) Resolve(name string) (Symbol, bool) {
-	fmt.Printf("Resolving %s @ %p\n", name, s)
-	// defer fmt.Println(s)
-
 	symbol, exists := s.Symbols[name]
 	if !exists && s.Parent != nil {
 		return s.Parent.Resolve(name)

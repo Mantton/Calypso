@@ -88,7 +88,15 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return unresolved
 	}
 
-	return types.NewStructInstance(typ, eArgs)
+	switch typ.Parent().(type) {
+	case *types.Enum:
+		return types.NewEnumInstance(typ, eArgs)
+	case *types.Struct:
+		return types.NewStructInstance(typ, eArgs)
+	default:
+		panic("unknown generic")
+
+	}
 
 }
 

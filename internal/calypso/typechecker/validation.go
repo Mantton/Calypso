@@ -26,36 +26,37 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 
 		return provided, nil
 	}
+	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 
 	// Resolve both sides to their underlying types
 	expected = expected.Parent()
 	provided = provided.Parent()
 
-	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 	switch expected := expected.(type) {
 	case *types.Basic:
-		p, ok := provided.(*types.Basic)
-
-		if !ok {
-			return nil, standard
-		}
-
-		return c.validateBasicTypes(expected, p)
+		return c.validateBasicTypes(expected, provided)
 
 	case *types.Pointer:
 		return c.validatePointerTypes(expected, provided)
 
 	case *types.StructInstance:
-		return c.validateInstanceTypes(expected, provided)
+		return c.validateStructInstanceTypes(expected, provided)
 	case *types.FunctionSignature:
 		return c.validateFunctionTypes(expected, provided)
+	case *types.EnumInstance:
+		return c.validateEnumInstanceType(expected, provided)
 
 	}
 
-	return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+	return nil, standard
 }
 
-func (c *Checker) validateBasicTypes(expected *types.Basic, provided *types.Basic) (types.Type, error) {
+func (c *Checker) validateBasicTypes(expected *types.Basic, p types.Type) (types.Type, error) {
+	provided, ok := p.(*types.Basic)
+
+	if !ok {
+		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, p)
+	}
 
 	if expected == types.LookUp(types.Any) {
 		return expected, nil
@@ -101,7 +102,7 @@ func (c *Checker) validatePointerTypes(expected *types.Pointer, provided types.T
 
 }
 
-func (c *Checker) validateInstanceTypes(expected *types.StructInstance, p types.Type) (types.Type, error) {
+func (c *Checker) validateStructInstanceTypes(expected *types.StructInstance, p types.Type) (types.Type, error) {
 	provided, ok := p.(*types.StructInstance)
 
 	if !ok || expected.Type.Parent() != provided.Type.Parent() {
@@ -203,4 +204,51 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 	}
 
 	return nil
+}
+
+func (c *Checker) validateEnumInstanceType(expected *types.EnumInstance, p types.Type) (types.Type, error) {
+	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, p)
+
+	switch provided := p.(type) {
+	case *types.EnumInstance:
+		// ensure types are the same
+		if expected.Type.Parent() != provided.Type.Parent() {
+			return nil, standard
+		}
+
+		// ensure arguments count match
+		if len(expected.TypeArgs) != len(provided.TypeArgs) {
+			return nil, fmt.Errorf("expected %d arguments got %d", len(expected.TypeArgs), len(provided.TypeArgs))
+		}
+
+		// ensure arguments match
+
+		for idx, eArg := range expected.TypeArgs {
+			pArg := provided.TypeArgs[idx]
+
+			_, err := c.validate(eArg, pArg)
+
+			if err != nil {
+				return nil, err
+			}
+
+		}
+
+	case *types.Enum:
+		def, ok := expected.Type.(*types.DefinedType)
+		if !ok {
+			return nil, standard
+		}
+
+		e, ok := def.Parent().(*types.Enum)
+
+		if !ok || e != p {
+			return nil, standard
+		}
+
+		return expected, nil
+
+	}
+
+	return expected, nil
 }

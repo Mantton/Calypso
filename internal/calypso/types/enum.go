@@ -8,7 +8,7 @@ type Enum struct {
 type EnumVariant struct {
 	Name         string
 	Discriminant int
-	Fields       *[]Type
+	Fields       []*Var
 }
 
 func (t *Enum) clyT()          {}
@@ -22,7 +22,7 @@ func NewEnum(name string, cases []*EnumVariant) *Enum {
 	}
 }
 
-func NewEnumVariant(name string, discriminant int, fields *[]Type) *EnumVariant {
+func NewEnumVariant(name string, discriminant int, fields []*Var) *EnumVariant {
 	return &EnumVariant{
 		Name:         name,
 		Discriminant: discriminant,

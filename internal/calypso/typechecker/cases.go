@@ -14,6 +14,9 @@ func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expressio
 	if f == unresolved {
 		if t == types.LookUp(types.NilLiteral) {
 			return fmt.Errorf("use of unspecialized nil in assignment")
+		} else if types.IsGeneric(t) {
+			err := fmt.Errorf("unable to infer specialization of generic type `%s`", t)
+			return err
 		}
 		v.SetType(t)
 	} else {

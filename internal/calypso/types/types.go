@@ -7,19 +7,16 @@ type Type interface {
 }
 
 func IsGeneric(t Type) bool {
-	_, ok := t.(*TypeParam)
-
-	if ok {
+	switch t := t.(type) {
+	case *Pointer:
+		return IsGeneric(t.PointerTo)
+	case *TypeParam:
 		return true
+	case *DefinedType:
+		return len(t.TypeParameters) != 0
+	case *FunctionSignature:
+		return len(t.TypeParameters) != 0
+	default:
+		return false
 	}
-
-	ptr, ok := t.(*Pointer)
-
-	if ok && IsGeneric(ptr.PointerTo) {
-		return true
-	}
-
-	_, ok = t.(*StructInstance)
-
-	return ok
 }

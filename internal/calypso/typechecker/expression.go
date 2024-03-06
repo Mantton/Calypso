@@ -185,74 +185,100 @@ func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) types.T
 }
 
 func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
-	t := c.evaluateExpression(expr.Target)
 
-	fn, ok := t.(*types.FunctionSignature)
-
-	// Ensure Target is callable
-	if !ok {
-		c.addError(
-			"expression is not invocable",
-			expr.Target.Range(),
-		)
-		return unresolved
-	}
-
-	// Guard Argument Count == Parameter Count
-	if len(expr.Arguments) != len(fn.Parameters) {
-		c.addError(
-			fmt.Sprintf("expected %d arguments, provided %d",
-				len(fn.Parameters),
-				len(expr.Arguments)),
-			expr.Range(),
-		)
-		return fn.Result.Type()
-	}
-
-	// Check Arguments
-	specializations := make(map[types.Type]types.Type)
-	hasError := false
-
-	for i, arg := range expr.Arguments {
-		expected := fn.Parameters[i]
-		err := c.resolveVar(expected, arg, specializations)
-
-		if err != nil {
-			hasError = true
-			c.addError(err.Error(), arg.Range())
-		}
-	}
-
-	if hasError {
-		return unresolved
-	}
-
-	if len(fn.TypeParameters) == 0 {
-		return fn.Result.Type()
-	}
-
-	fmt.Println("specializations :", specializations)
-
-	var args []types.Type
-
-	for _, param := range fn.TypeParameters {
-		v, ok := specializations[param]
-
-		if !ok {
-			panic("failed to resolve generic parameter")
+	switch t := c.evaluateExpression(expr.Target).(type) {
+	case *types.FunctionSignature:
+		fn := t
+		// Guard Argument Count == Parameter Count
+		if len(expr.Arguments) != len(fn.Parameters) {
+			c.addError(
+				fmt.Sprintf("expected %d arguments, provided %d",
+					len(fn.Parameters),
+					len(expr.Arguments)),
+				expr.Range(),
+			)
+			return fn.Result.Type()
 		}
 
-		args = append(args, v)
-	}
+		// Check Arguments
+		specializations := make(map[types.Type]types.Type)
+		hasError := false
 
-	if types.IsGeneric(fn.Result.Type()) {
-		// Record Function Instance
-		x := types.NewFunctionInstance(fn, args)
-		c.table.SetFunctionInstance(expr, x)
-		return specializations[fn.Result.Type()]
-	} else {
-		return fn.Result.Type()
+		for i, arg := range expr.Arguments {
+			expected := fn.Parameters[i]
+			err := c.resolveVar(expected, arg, specializations)
+
+			if err != nil {
+				hasError = true
+				c.addError(err.Error(), arg.Range())
+			}
+		}
+
+		if hasError {
+			return unresolved
+		}
+
+		if len(fn.TypeParameters) == 0 {
+			return fn.Result.Type()
+		}
+
+		fmt.Println("[DEBUG] specializations map :", specializations)
+
+		var args []types.Type
+
+		for _, param := range fn.TypeParameters {
+			v, ok := specializations[param]
+
+			if !ok {
+				panic("failed to resolve generic parameter")
+			}
+
+			args = append(args, v)
+		}
+
+		res := fn.Result.Type()
+
+		if types.IsGeneric(res) {
+			// Record Function Instance
+			x := types.NewFunctionInstance(fn, args)
+			c.table.SetFunctionInstance(expr, x)
+
+			// Specialization found in table, i.e result is a type param, return specialized value
+			if t, ok := specializations[res]; ok {
+				return t
+			} else {
+
+				// spec not found in map, type is complex, collect parameters and resolve specialization, return instance of type
+				args := []types.Type{}
+				params := types.GetTypeParams(res)
+
+				for _, p := range params {
+					spec, ok := specializations[p]
+
+					// should never path here as checks to ensure full specialization happen above
+					if !ok {
+						panic("unable to find specialization of type parameter")
+					}
+					args = append(args, spec)
+				}
+
+				t, ok := types.NewInstance(res, args)
+
+				if !ok {
+					panic("unknown generic  type")
+				}
+
+				return t
+			}
+		} else {
+			return fn.Result.Type()
+		}
 	}
+	c.addError(
+		"expression is not invocable",
+		expr.Target.Range(),
+	)
+	return unresolved
 }
 
 func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type {
@@ -472,28 +498,19 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 }
 
 func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map[types.Type]types.Type) error {
-	fT := f.Type()
 	vT := c.evaluateExpression(v)
-	if !types.IsGeneric(fT) {
-		fmt.Println("Skipping non generic", fT)
-		err := c.validateAssignment(f, vT, v)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 
 	// check constraints & specialize
 	// can either be a type param or generic struct or a generic function
 
-	switch gT := fT.(type) {
+	switch gT := f.Type().(type) {
 	case *types.TypeParam:
 		alt, ok := specializations[gT]
 
 		// has not already been specialized
 		if !ok {
-			fmt.Println("specializing", gT, ":", vT)
-
+			fmt.Println("specializing type param", gT, ":", vT)
+			// TODO: Conformance checks before specialization
 			specializations[gT] = vT
 			return nil
 		}
@@ -510,7 +527,9 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 	case *types.FunctionSignature:
 		panic("not implemented")
 	case *types.DefinedType:
-		panic("bad path")
+		if types.IsGeneric(gT) {
+			panic("not implemented")
+		}
 	case *types.StructInstance:
 		// vT must be an instantiated struct of type fT
 		iT, ok := vT.(*types.StructInstance)
@@ -552,8 +571,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 
 		// has not already been specialized
 		if !ok {
-			fmt.Println("specializing", base, ":", iT.PointerTo)
-
+			fmt.Println("[DEBUG]specializing ptr type", base, ":", iT.PointerTo)
 			specializations[base] = iT.PointerTo
 			return nil
 		}
@@ -563,12 +581,16 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 		err := c.validateAssignment(temp, iT.PointerTo, v)
 
 		if err != nil {
-
 			return err
 		}
 
 	default:
-		panic("invalid type with generic param")
+		fmt.Println("Skipping non generic", gT)
+		err := c.validateAssignment(f, vT, v)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return nil
@@ -603,6 +625,7 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 	}
 
 	// Resolve Method
+	fmt.Printf("[DEBUG] Property Target as type of %T\n", b)
 	if x, ok := b.(*types.DefinedType); ok {
 		fn, ok := x.Methods[field]
 
@@ -611,8 +634,8 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 		}
 	}
 
-	if types.IsGeneric(b) {
-		panic("this is a generic type, ensure t")
+	if types.IsGeneric(a) {
+		fmt.Println("[DEBUG] TODO: Generic Type, Handle Field")
 	}
 
 	// resolve field
@@ -620,7 +643,21 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 	case *types.Enum:
 		for _, c := range t.Cases {
 			if c.Name == field {
-				return b
+				if len(c.Fields) != 0 {
+					sg := types.NewFunctionSignature()
+					sg.Result.SetType(a)
+					sg.TypeParameters = a.(*types.DefinedType).TypeParameters
+					for _, f := range c.Fields {
+						sg.AddParameter(f)
+					}
+
+					if c := types.AsDefined(a); c != nil {
+						sg.TypeParameters = c.TypeParameters
+					}
+					return sg
+				} else {
+					return a
+				}
 			}
 		}
 

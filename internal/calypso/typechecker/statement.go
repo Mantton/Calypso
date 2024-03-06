@@ -69,7 +69,6 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 
 	initializer := c.evaluateExpression(stmt.Value)
-
 	err := c.validateAssignment(def, initializer, stmt.Value)
 	if err != nil {
 		c.addError(
@@ -257,21 +256,18 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 		cases[name] = ok
 
 		// set fields
-		var fields *[]types.Type
+		fields := []*types.Var{}
 
 		if v.Fields != nil {
-			o := []types.Type{}
 			for _, f := range v.Fields.Fields {
 				t := c.evaluateTypeExpression(f, def.TypeParameters)
-				o = append(o, t)
+				fields = append(fields, types.NewVar("", t))
 			}
 
-			if len(o) == 0 {
+			if len(fields) == 0 {
 				c.addError("tuple enum must provide at least 1 parameter", v.Identifier.Range())
 				continue
 			}
-
-			fields = &o
 		}
 
 		// set discriminant
