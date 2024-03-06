@@ -169,7 +169,7 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 	expr := p.parseExpression()
 
 	switch expr := expr.(type) {
-	case *ast.AssignmentExpression, *ast.CallExpression:
+	case *ast.AssignmentExpression, *ast.FunctionCallExpression:
 		p.expect(token.SEMICOLON)
 		return &ast.ExpressionStatement{
 			Expr: expr,

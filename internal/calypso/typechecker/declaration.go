@@ -36,7 +36,9 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 			c.checkStandardDeclaration(decl)
 		case *ast.ConformanceDeclaration:
 			c.checkConformanceDeclaration(decl)
-		// case *ast.ExtensionDeclaration:
+		case *ast.ExtensionDeclaration:
+			c.checkExtensionDeclaration(decl)
+
 		// case *ast.TypeDeclaration:
 		default:
 			msg := fmt.Sprintf("declaration check not implemented, %T", decl)
@@ -48,7 +50,7 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	// declare type & it's definition
 	typ := types.NewStandard(d.Identifier.Value)
-	s := types.NewDefinedType(d.Identifier.Value, typ, nil)
+	s := types.NewDefinedType(d.Identifier.Value, typ, nil, c.scope)
 
 	// define in scope
 	ok := c.define(s)
@@ -109,43 +111,29 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 		return
 	}
 
-	t, ok := xx.Type().(*types.DefinedType)
+	typ := types.AsDefined(xx.Type())
 
-	if !ok {
+	if typ == nil {
 		c.addError(fmt.Sprintf("%s is not a defined type", d.Target.Value), d.Target.Range())
 		return
 	}
 
-	c.enterScope()
-	defer c.leaveScope()
-	for _, stmt := range d.Content {
-		c.checkFunctionExpression(stmt.Func)
-		n := stmt.Func.Identifier.Value
-		fn, ok := c.find(n)
+	// add functions to type
+	c.injectFunctionsInType(typ, d.Content)
 
-		if !ok {
-			panic("wut")
-		}
+	// Ensure All Functions of Standard are implemented
+	for _, eFn := range s.Dna {
 
-		if x := fn.(*types.Function); x != nil {
-			ok := t.AddMethod(x.Name(), x)
-			if !ok {
-				panic("method already in type")
-			}
-			continue
-		}
-
-		panic("x is not a function")
-	}
-
-	for _, x := range s.Dna {
-		n, ok := t.Methods[x.Name()]
+		// Get Implemented Method
+		pFn, ok := typ.Methods[eFn.Name()]
 
 		if !ok {
 			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing %s", d.Target.Value, s.Name, x.Name()), d.Target.Range())
 			return
 		}
-		_, err := c.validate(x.Type(), n.Type())
+
+		// Ensure Function Is of same signature
+		_, err := c.validate(x.Type(), pFn.Type())
 
 		if err != nil {
 			c.addError(err.Error(), d.Target.Range())
@@ -153,4 +141,54 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 		}
 	}
 
+}
+
+func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
+
+	// Find Symbol
+	name := d.Identifier.Value
+	sym, ok := c.find(name)
+
+	if !ok {
+		c.addError(fmt.Sprintf("cannot find %s", name), d.Identifier.Range())
+		return
+	}
+
+	// Cast as Type
+	typ := types.AsDefined(sym.Type())
+
+	if typ == nil {
+		c.addError(fmt.Sprintf("%s is not a type", name), d.Identifier.Range())
+	}
+
+	c.injectFunctionsInType(typ, d.Content)
+}
+
+func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement) {
+	// Define Functions in Type Scope
+	for _, stmt := range fns {
+
+		// eval function
+		sg := c.evaluateFunctionExpression(stmt.Func, typ)
+
+		// error already reported
+		if sg == unresolved {
+			continue
+		}
+
+		fn := types.NewFunction(stmt.Func.Identifier.Value, sg.(*types.FunctionSignature))
+
+		// Define in type scope
+		ok := typ.Scope.Define(fn)
+		if !ok {
+			c.addError(fmt.Sprintf("%s is already defined in %s", fn.Name(), typ), stmt.Func.Identifier.Range())
+		}
+
+		// add to methods
+		ok = typ.AddMethod(fn.Name(), fn)
+
+		if !ok {
+			panic("unreachable")
+		}
+	}
 }

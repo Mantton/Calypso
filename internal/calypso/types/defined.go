@@ -1,13 +1,16 @@
 package types
 
+import "fmt"
+
 type DefinedType struct {
 	symbol
 	wrapped        Type
 	TypeParameters TypeParams
 	Methods        map[string]*Function
+	Scope          *Scope
 }
 
-func NewDefinedType(n string, t Type, p TypeParams) *DefinedType {
+func NewDefinedType(n string, t Type, p TypeParams, parentScope *Scope) *DefinedType {
 	return &DefinedType{
 		symbol: symbol{
 			name: n,
@@ -15,6 +18,7 @@ func NewDefinedType(n string, t Type, p TypeParams) *DefinedType {
 		TypeParameters: p,
 		wrapped:        t,
 		Methods:        make(map[string]*Function),
+		Scope:          NewScope(parentScope),
 	}
 }
 
@@ -95,4 +99,109 @@ func NewInstance(t Type, args []Type) (Type, bool) {
 	}
 
 	return nil, false
+}
+
+func ResolveInstanceParent(t Type) *DefinedType {
+	switch t := t.(type) {
+	case *DefinedType:
+		return t
+	case *EnumInstance:
+		return AsDefined(t.Type)
+	case *StructInstance:
+		return AsDefined(t.Type)
+	default:
+		return nil
+	}
+}
+
+func ResolveTypeArguments(t Type) []Type {
+
+	switch t := t.(type) {
+	case *FunctionInstance:
+		return t.Arguments
+	case *StructInstance:
+		return t.TypeArgs
+	case *EnumInstance:
+		return t.TypeArgs
+	}
+
+	return nil
+}
+
+func ResolveTypeParameters(t Type) TypeParams {
+	switch t := t.(type) {
+	case *DefinedType:
+		return t.TypeParameters
+	case *FunctionSignature:
+		return t.TypeParameters
+	}
+	return nil
+}
+
+func ResolveField(field string, typ Type) Type {
+	fmt.Printf("Resolving `%s` for type `%s`\n", field, typ) // Resolve Field
+	parent := ResolveInstanceParent(typ)
+
+	if parent == nil {
+		return nil
+	}
+
+	args := ResolveTypeArguments(typ)
+	params := ResolveTypeParameters(parent)
+
+	switch t := parent.Parent().(type) {
+	case *Enum:
+		for _, c := range t.Cases {
+			if c.Name == field {
+				if len(c.Fields) != 0 {
+					sg := NewFunctionSignature()
+					sg.Result.SetType(typ)
+					sg.TypeParameters = params
+					for _, f := range c.Fields {
+						sg.AddParameter(f)
+					}
+
+					if c := AsDefined(typ); c != nil {
+						sg.TypeParameters = c.TypeParameters
+					}
+					return sg
+				} else {
+					return typ
+				}
+			}
+		}
+
+	case *Struct:
+		for _, c := range t.Fields {
+			if c.Name() == field {
+				return c.Type()
+			}
+		}
+	}
+
+	fn, ok := parent.Methods[field]
+
+	if !ok {
+		fmt.Println("not found:", field)
+		return nil
+	}
+
+	if len(args) != len(params) {
+		fmt.Println(args, "|", params)
+		panic("argument & parameter counts do not match")
+	}
+
+	specializations := make(map[Type]Type)
+	for idx, p := range params {
+		specializations[p] = args[idx]
+	}
+
+	panic("unhandled")
+
+	if IsGeneric(fn.Type()) {
+		return NewFunctionInstance(fn.Sg(), args)
+	} else {
+		fmt.Println(fn.Type(), "non generic")
+		return fn.Type()
+	}
 }

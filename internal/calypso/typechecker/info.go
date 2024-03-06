@@ -12,7 +12,7 @@ type SymbolTable struct {
 	scopes      map[ast.Node]*types.Scope
 	fns         map[*ast.FunctionExpression]*types.Function
 	tNodes      map[ast.Node]types.Type
-	fnInstances map[*ast.CallExpression]*types.FunctionInstance
+	fnInstances map[*ast.FunctionCallExpression]*types.FunctionInstance
 }
 
 func NewSymbolTable() *SymbolTable {
@@ -20,7 +20,7 @@ func NewSymbolTable() *SymbolTable {
 		scopes:      make(map[ast.Node]*types.Scope),
 		fns:         make(map[*ast.FunctionExpression]*types.Function),
 		tNodes:      make(map[ast.Node]types.Type),
-		fnInstances: make(map[*ast.CallExpression]*types.FunctionInstance),
+		fnInstances: make(map[*ast.FunctionCallExpression]*types.FunctionInstance),
 	}
 }
 
@@ -49,10 +49,10 @@ func (t *SymbolTable) GetNodeType(n ast.Node) types.Type {
 	return t.tNodes[n]
 }
 
-func (t *SymbolTable) SetFunctionInstance(n *ast.CallExpression, typ *types.FunctionInstance) {
+func (t *SymbolTable) SetFunctionInstance(n *ast.FunctionCallExpression, typ *types.FunctionInstance) {
 	t.fnInstances[n] = typ
 }
 
-func (t *SymbolTable) GetFunctionInstance(n *ast.CallExpression) *types.FunctionInstance {
+func (t *SymbolTable) GetFunctionInstance(n *ast.FunctionCallExpression) *types.FunctionInstance {
 	return t.fnInstances[n]
 }

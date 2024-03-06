@@ -194,7 +194,7 @@ type AssignmentExpression struct {
 	Value  Expression
 }
 
-type CallExpression struct {
+type FunctionCallExpression struct {
 	Target    Expression
 	Arguments []Expression
 	LParenPos token.TokenPosition
@@ -208,10 +208,10 @@ type IndexExpression struct {
 	RBracketPos token.TokenPosition
 }
 
-type PropertyExpression struct {
-	Target   Expression
-	Property Expression
-	DotPos   token.TokenPosition
+type FieldAccessExpression struct {
+	Target Expression
+	Field  Expression
+	DotPos token.TokenPosition
 }
 
 type KeyValueExpression struct {

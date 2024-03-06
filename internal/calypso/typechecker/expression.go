@@ -21,7 +21,7 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 		c.checkFunctionExpression(expr)
 	case *ast.AssignmentExpression:
 		c.checkAssignmentExpression(expr)
-	case *ast.CallExpression:
+	case *ast.FunctionCallExpression:
 		c.checkCallExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression check not implemented, %T", expr)
@@ -30,21 +30,9 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 }
 
 func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
-
-	prevFn := c.fn
-	defer func() {
-		c.fn = prevFn
-	}()
-
-	sg := types.NewFunctionSignature()
-	def := types.NewFunction(e.Identifier.Value, sg)
+	def := types.NewFunction(e.Identifier.Value, nil)
+	def.SetType(unresolved)
 	ok := c.define(def)
-	defer func() {
-		c.table.DefineFunction(e, def)
-	}()
-
-	// set current checking function to sg
-	c.fn = sg
 
 	if !ok {
 		c.addError(
@@ -54,50 +42,10 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 		return
 	}
 
-	c.enterScope()
-	sg.Scope = c.scope
-	c.table.AddScope(e, c.scope)
-	defer c.leaveScope()
+	typ := c.evaluateFunctionExpression(e, nil)
 
-	hasError := false
-	// Type/Generic Parameters
-	if e.GenericParams != nil {
-		for _, p := range e.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p)
-			if t == unresolved {
-				hasError = true
-				continue
-			}
-
-			sg.AddTypeParameter(t.(*types.TypeParam))
-		}
-	}
-
-	if hasError {
-		return
-	}
-
-	// Parameters
-	for _, p := range e.Params {
-		t := c.evaluateTypeExpression(p.AnnotatedType, sg.TypeParameters)
-		v := types.NewVar(p.Value, t)
-		c.scope.Define(v)
-		sg.AddParameter(v)
-	}
-
-	// Annotated Return Type
-	if e.ReturnType != nil {
-		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters)
-		sg.Result = types.NewVar("result", t)
-	} else {
-		sg.Result = types.NewVar("result", types.LookUp(types.Void))
-	}
-
-	// Body
-	c.checkBlockStatement(e.Body)
-
-	// Ensure All Generic Params are used
-	// Ensure All Params are used
+	def.SetType(typ)
+	c.table.DefineFunction(e, def)
 }
 
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
@@ -105,7 +53,7 @@ func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
 	c.evaluateAssignmentExpression(expr)
 }
 
-func (c *Checker) checkCallExpression(expr *ast.CallExpression) {
+func (c *Checker) checkCallExpression(expr *ast.FunctionCallExpression) {
 
 	retType := c.evaluateCallExpression(expr)
 
@@ -140,7 +88,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluateIdentifierExpression(expr)
 	case *ast.GroupedExpression:
 		return c.evaluateGroupedExpression(expr)
-	case *ast.CallExpression:
+	case *ast.FunctionCallExpression:
 		return c.evaluateCallExpression(expr)
 	case *ast.UnaryExpression:
 		return c.evaluateUnaryExpression(expr)
@@ -150,7 +98,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluateAssignmentExpression(expr)
 	case *ast.CompositeLiteral:
 		return c.evaluateCompositeLiteral(expr)
-	case *ast.PropertyExpression:
+	case *ast.FieldAccessExpression:
 		return c.evaluatePropertyExpression(expr)
 	case *ast.GenericSpecializationExpression:
 		return c.evaluateGenericSpecializationExpression(expr)
@@ -184,9 +132,9 @@ func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) types.T
 	return c.evaluateExpression(expr.Expr)
 }
 
-func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
-
-	switch t := c.evaluateExpression(expr.Target).(type) {
+func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types.Type {
+	typ := c.evaluateExpression(expr.Target)
+	switch t := typ.(type) {
 	case *types.FunctionSignature:
 		fn := t
 		// Guard Argument Count == Parameter Count
@@ -197,7 +145,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 					len(expr.Arguments)),
 				expr.Range(),
 			)
-			return fn.Result.Type()
+			return unresolved
 		}
 
 		// Check Arguments
@@ -218,11 +166,13 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 			return unresolved
 		}
 
-		if len(fn.TypeParameters) == 0 {
+		if len(fn.TypeParameters) == 0 && !types.IsGeneric(fn.Result.Type()) {
 			return fn.Result.Type()
 		}
 
 		fmt.Println("[DEBUG] specializations map :", specializations)
+		fmt.Println(fn.Result.Type())
+		panic("GUARD HERE")
 
 		var args []types.Type
 
@@ -271,9 +221,17 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 				return t
 			}
 		} else {
-			return fn.Result.Type()
+			return res
 		}
+
 	}
+
+	// already reported error
+	if typ == unresolved {
+		return typ
+	}
+
+	fmt.Println("un invocable typ", typ, fmt.Sprintf("%T", typ))
 	c.addError(
 		"expression is not invocable",
 		expr.Target.Range(),
@@ -596,27 +554,13 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 	return nil
 }
 
-func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Type {
+func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types.Type {
 
 	a := c.evaluateExpression(n.Target)
 
-	var b types.Type
-
-	switch def := a.(type) {
-	case *types.DefinedType:
-		b = def
-	case *types.EnumInstance:
-		b = def.Type
-	case *types.StructInstance:
-		b = def.Type
-	default:
-		c.addError("unable to resolve type of expression", n.Target.Range())
-		return unresolved
-	}
-
 	// Collect Property
 	var field string
-	switch p := n.Property.(type) {
+	switch p := n.Field.(type) {
 	case *ast.IdentifierExpression:
 		field = p.Value
 	default:
@@ -624,49 +568,14 @@ func (c *Checker) evaluatePropertyExpression(n *ast.PropertyExpression) types.Ty
 		return unresolved
 	}
 
-	// Resolve Method
-	fmt.Printf("[DEBUG] Property Target as type of %T\n", b)
-	if x, ok := b.(*types.DefinedType); ok {
-		fn, ok := x.Methods[field]
-
-		if ok {
-			return fn.Type()
-		}
-	}
-
 	if types.IsGeneric(a) {
-		fmt.Println("[DEBUG] TODO: Generic Type, Handle Field")
+		fmt.Println("\n[DEBUG] TODO: Generic Type, Handle Field")
 	}
 
-	// resolve field
-	switch t := b.Parent().(type) {
-	case *types.Enum:
-		for _, c := range t.Cases {
-			if c.Name == field {
-				if len(c.Fields) != 0 {
-					sg := types.NewFunctionSignature()
-					sg.Result.SetType(a)
-					sg.TypeParameters = a.(*types.DefinedType).TypeParameters
-					for _, f := range c.Fields {
-						sg.AddParameter(f)
-					}
+	f := types.ResolveField(field, a)
 
-					if c := types.AsDefined(a); c != nil {
-						sg.TypeParameters = c.TypeParameters
-					}
-					return sg
-				} else {
-					return a
-				}
-			}
-		}
-
-	case *types.Struct:
-		for _, c := range t.Fields {
-			if c.Name() == field {
-				return c.Type()
-			}
-		}
+	if f != nil {
+		return f
 	}
 
 	c.addError(fmt.Sprintf("unknown field `%s`", field), n.Range())
@@ -747,4 +656,72 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	c.addError("unknown generic type", e.Range())
 	return unresolved
 
+}
+
+func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType) types.Type {
+
+	// Create new Signature
+	sg := types.NewFunctionSignature()
+	prevFn := c.fn
+	defer func() {
+		c.fn = prevFn
+	}()
+
+	c.fn = sg
+
+	// Enter Function Scope
+	c.enterScope()
+	sg.Scope = c.scope
+	c.table.AddScope(e, c.scope)
+	defer c.leaveScope()
+
+	// inject `self`
+	if self != nil {
+		s := types.NewVar("self", self)
+		c.scope.Parent = self.Scope
+		c.scope.Define(s)
+	}
+
+	// Type/Generic Parameters
+	hasError := false
+	if e.GenericParams != nil {
+		for _, p := range e.GenericParams.Parameters {
+			t := c.evaluateGenericParameterExpression(p)
+			if t == unresolved {
+				hasError = true
+				continue
+			}
+
+			sg.AddTypeParameter(t.(*types.TypeParam))
+		}
+	}
+
+	if hasError {
+		return unresolved
+	}
+
+	// Parameters
+	for _, p := range e.Params {
+		t := c.evaluateTypeExpression(p.AnnotatedType, sg.TypeParameters)
+		v := types.NewVar(p.Value, t)
+		c.scope.Define(v)
+		sg.AddParameter(v)
+	}
+
+	// Annotated Return Type
+	if e.ReturnType != nil {
+		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters)
+		sg.Result = types.NewVar("result", t)
+	} else {
+		sg.Result = types.NewVar("result", types.LookUp(types.Void))
+	}
+
+	// Body
+	c.checkBlockStatement(e.Body)
+
+	// TODO:
+	// Ensure All Generic Params are used
+	// Ensure All Params are used
+
+	return sg
 }

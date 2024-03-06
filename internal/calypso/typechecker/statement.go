@@ -129,7 +129,7 @@ func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
 func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 
 	// 1 - Define
-	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil)
+	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, c.scope)
 	ok := c.define(def)
 
 	if !ok {
@@ -171,7 +171,7 @@ func (c *Checker) checkAliasStatement(n *ast.AliasStatement) {
 	name := n.Identifier.Value
 
 	// 1 - Define
-	def := types.NewDefinedType(name, unresolved, nil)
+	def := types.NewDefinedType(name, unresolved, nil, c.scope)
 	ok := c.define(def)
 
 	if !ok {
@@ -215,7 +215,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 	name := n.Identifier.Value
 
 	// 1 - Define
-	def := types.NewDefinedType(name, unresolved, nil)
+	def := types.NewDefinedType(name, unresolved, nil, c.scope)
 	ok := c.define(def)
 
 	if !ok {
@@ -234,7 +234,13 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 				continue
 			}
 
-			def.AddTypeParameter(t.(*types.TypeParam))
+			tP := t.(*types.TypeParam)
+			def.AddTypeParameter(tP)
+			ok := def.Scope.Define(types.NewDefinedType(tP.Name, t, nil, c.scope))
+
+			if !ok {
+				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())
+			}
 		}
 
 	}

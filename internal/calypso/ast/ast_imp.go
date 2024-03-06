@@ -110,7 +110,7 @@ func (e *GroupedExpression) Range() token.SyntaxRange {
 	}
 }
 
-func (e *CallExpression) Range() token.SyntaxRange {
+func (e *FunctionCallExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.Target.Range().Start,
 		End:   e.RParenPos,
@@ -145,10 +145,10 @@ func (e *IndexExpression) Range() token.SyntaxRange {
 	}
 }
 
-func (e *PropertyExpression) Range() token.SyntaxRange {
+func (e *FieldAccessExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.Target.Range().Start,
-		End:   e.Property.Range().End,
+		End:   e.Field.Range().End,
 	}
 }
 
@@ -180,12 +180,12 @@ func (e *GenericSpecializationExpression) Range() token.SyntaxRange {
 }
 
 func (e *GroupedExpression) expressionNode()               {}
-func (e *CallExpression) expressionNode()                  {}
+func (e *FunctionCallExpression) expressionNode()          {}
 func (e *UnaryExpression) expressionNode()                 {}
 func (e *BinaryExpression) expressionNode()                {}
 func (e *AssignmentExpression) expressionNode()            {}
 func (e *IndexExpression) expressionNode()                 {}
-func (e *PropertyExpression) expressionNode()              {}
+func (e *FieldAccessExpression) expressionNode()           {}
 func (e *KeyValueExpression) expressionNode()              {}
 func (e *CompositeLiteralField) expressionNode()           {}
 func (e *GenericParametersClause) expressionNode()         {}

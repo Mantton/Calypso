@@ -13,9 +13,17 @@ func IsGeneric(t Type) bool {
 	case *TypeParam:
 		return true
 	case *DefinedType:
-		return len(t.TypeParameters) != 0
+		return len(t.TypeParameters) != 0 || IsGeneric(t.Parent())
 	case *FunctionSignature:
 		return len(t.TypeParameters) != 0
+	case *EnumInstance:
+		for _, arg := range t.TypeArgs {
+			if IsGeneric(arg) {
+				return true
+			}
+		}
+
+		return false
 	default:
 		return false
 	}

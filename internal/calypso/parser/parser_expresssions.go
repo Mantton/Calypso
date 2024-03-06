@@ -119,17 +119,17 @@ func (p *Parser) parseUnaryExpression() ast.Expression {
 			Expr:       right,
 		}
 	}
-	return p.parseCallExpression()
+	return p.parseFunctionCallExpression()
 }
 
-func (p *Parser) parseCallExpression() ast.Expression {
+func (p *Parser) parseFunctionCallExpression() ast.Expression {
 	expr := p.parsePropertyExpression()
 
 	if p.currentMatches(token.LPAREN) {
 
 		list, start, end := p.parseExpressionList(token.LPAREN, token.RPAREN)
 
-		return &ast.CallExpression{
+		return &ast.FunctionCallExpression{
 			Target:    expr,
 			Arguments: list,
 			LParenPos: start,
@@ -147,10 +147,10 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 		dotPos := p.previousScannedToken().Pos
 
 		property := p.parseIndexExpression()
-		expr = &ast.PropertyExpression{
-			Target:   expr,
-			Property: property,
-			DotPos:   dotPos,
+		expr = &ast.FieldAccessExpression{
+			Target: expr,
+			Field:  property,
+			DotPos: dotPos,
 		}
 	}
 
