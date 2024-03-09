@@ -139,7 +139,7 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 
 		if !ok {
 			c.addError(
-				fmt.Sprintf("`%s` cannot be found", eI.Value),
+				fmt.Sprintf("`%s` cannot be found in context.", eI.Value),
 				e.Identifier.Range(),
 			)
 			return unresolved

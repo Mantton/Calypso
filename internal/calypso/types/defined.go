@@ -3,6 +3,7 @@ package types
 type DefinedType struct {
 	symbol
 	wrapped        Type
+	InstanceOf     Type
 	TypeParameters TypeParams
 	Methods        map[string]*Function
 	Scope          *Scope

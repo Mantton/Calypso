@@ -16,6 +16,7 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 				if err, y := r.(lexer.Error); y {
 					c.Errors.Add(err)
 				} else {
+					fmt.Println(c.scope)
 					panic(r)
 				}
 			}
@@ -128,16 +129,15 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 		pFn, ok := typ.Methods[eFn.Name()]
 
 		if !ok {
-			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing %s", d.Target.Value, s.Name, x.Name()), d.Target.Range())
+			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing `%s`", d.Target.Value, s.Name, eFn.Name()), d.Target.Range())
 			return
 		}
 
 		// Ensure Function Is of same signature
-		_, err := c.validate(x.Type(), pFn.Type())
+		_, err := c.validate(eFn.Sg(), pFn.Type())
 
 		if err != nil {
 			c.addError(err.Error(), d.Target.Range())
-			return
 		}
 	}
 

@@ -31,3 +31,10 @@ func AsTypeParam(t Type) *TypeParam {
 	return nil
 
 }
+
+func (n *TypeParam) Unwrapped() Type {
+	if n.Bound != nil {
+		return n.Bound
+	}
+	return n
+}

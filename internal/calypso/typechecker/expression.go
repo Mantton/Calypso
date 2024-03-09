@@ -70,19 +70,26 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 	// Literals
 	case *ast.IntegerLiteral:
 		// c.table.AddNode(expr, types.LookUp(types.IntegerLiteral), nil, nil)
-		return types.LookUp(types.IntegerLiteral)
+		x, _ := types.GlobalScope.Resolve("literal int")
+		return x.Type()
 	case *ast.BooleanLiteral:
-		return types.LookUp(types.Bool)
+		x, _ := types.GlobalScope.Resolve("bool")
+		return x.Type()
 	case *ast.FloatLiteral:
-		return types.LookUp(types.FloatLiteral)
+		x, _ := types.GlobalScope.Resolve("literal float")
+		return x.Type()
 	case *ast.StringLiteral:
-		return types.LookUp(types.String)
+		x, _ := types.GlobalScope.Resolve("string")
+		return x.Type()
 	case *ast.CharLiteral:
-		return types.LookUp(types.Char)
+		x, _ := types.GlobalScope.Resolve("char")
+		return x.Type()
 	case *ast.NilLiteral:
-		return types.LookUp(types.NilLiteral)
+		x, _ := types.GlobalScope.Resolve("literal nil")
+		return x.Type()
 	case *ast.VoidLiteral:
-		return types.LookUp(types.Void)
+		x, _ := types.GlobalScope.Resolve("void")
+		return x.Type()
 
 	case *ast.IdentifierExpression:
 		return c.evaluateIdentifierExpression(expr)
@@ -422,9 +429,16 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 
 		// has not already been specialized
 		if !ok {
-			fmt.Println("Specialized Type Param", gT, ":", vT)
-			// TODO: Conformance checks before specialization
+
+			// Ensure Conformance
+			err := c.validateConformance(gT.Constraints, vT)
+			if err != nil {
+				return err
+			}
+
 			specializations[gT.Name] = vT
+			fmt.Println("Specialized Type Param", gT, ":", vT)
+
 			return nil
 		}
 
@@ -596,8 +610,10 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	// Create new Signature
 	sg := types.NewFunctionSignature()
 	prevFn := c.fn
+	prevSc := c.scope
 	defer func() {
 		c.fn = prevFn
+		c.scope = prevSc
 	}()
 
 	c.fn = sg

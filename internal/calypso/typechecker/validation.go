@@ -14,30 +14,65 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 		return expected, nil
 	}
 
-	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
-
-	// Resolve both sides to their underlying types
-	expected = expected.Parent()
-	provided = provided.Parent()
-
+	// Non Defined Types
 	switch expected := expected.(type) {
-	case *types.Basic:
-		return c.validateBasicTypes(expected, provided)
-
 	case *types.Pointer:
 		return c.validatePointerTypes(expected, provided)
-
 	case *types.FunctionSignature:
 		return c.validateFunctionTypes(expected, provided)
 	case *types.TypeParam:
 		if expected == provided {
 			return expected, nil
 		}
-
-	default:
-		panic(fmt.Errorf("unhandled case: %T", expected))
-
 	}
+	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+
+	defExpected := types.AsDefined(expected)
+	defProvided := types.AsDefined(provided)
+
+	if defExpected == nil {
+		panic("bad path")
+	}
+
+	if defProvided == nil {
+		// resolve basic
+		if typ, ok := defExpected.Parent().(*types.Basic); ok {
+			return c.validateBasicTypes(typ, provided.Parent())
+		}
+
+		fmt.Println("[Validation] not a defined type", defExpected, defProvided, "Actual", expected, provided)
+		return nil, standard
+	}
+
+	// resolve basic
+	if typ, ok := defExpected.Parent().(*types.Basic); ok {
+		return c.validateBasicTypes(typ, provided.Parent())
+	}
+
+	if defExpected.InstanceOf == provided {
+		print("parent, child")
+	} else if defExpected.InstanceOf == defProvided.InstanceOf {
+		// same instance, rather than compare each field, compare type arguments instead
+		// safety check, theoretically not possible
+		if len(defExpected.TypeParameters) != len(defProvided.TypeParameters) {
+			err := fmt.Errorf("expected %d type arguments got %d instead", len(defExpected.TypeParameters), len(defProvided.TypeParameters))
+			return nil, err
+		}
+
+		for idx, pEx := range defExpected.TypeParameters {
+			pProv := defProvided.TypeParameters[idx]
+
+			_, err := c.validate(pEx.Unwrapped(), pProv.Unwrapped())
+
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return expected, nil
+	}
+
+	fmt.Println(defExpected, defProvided)
 
 	return nil, standard
 }
@@ -46,7 +81,7 @@ func (c *Checker) validateBasicTypes(expected *types.Basic, p types.Type) (types
 	provided, ok := p.(*types.Basic)
 
 	if !ok {
-		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, p)
+		return nil, fmt.Errorf("expected `%s`, received `%s`. Type %T, %T", expected, p, expected, p)
 	}
 
 	if expected == types.LookUp(types.Any) {
@@ -133,7 +168,7 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 			_, ok := seen[o]
 
 			if !ok {
-				return fmt.Errorf("%s does not conform to %s", provided, o.Name)
+				return fmt.Errorf("%s does not conform to standard: %s", provided, o.Name)
 			}
 		}
 
@@ -144,13 +179,18 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 	if !ok {
 		return fmt.Errorf("%s is not a conforming type, %T", x, x)
 	}
+
+	if provided == types.GlobalScope.MustResolve("literal int").Type() {
+		provided = types.AsDefined(types.GlobalScope.MustResolve("int").Type())
+	}
+
 	action := func(s *types.Standard) error {
 
 		for _, expectedMethod := range s.Dna {
 			providedMethod, ok := provided.Methods[expectedMethod.Name()]
 
 			if !ok {
-				return fmt.Errorf("%s does does not conform to standard `%s`", x, s)
+				return fmt.Errorf("%s does does not conform to standard: `%s`", x, s)
 			}
 
 			_, err := c.validate(expectedMethod.Type(), providedMethod.Type())

@@ -64,7 +64,6 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 
 			return v
 		}
-		panic("????")
 		return t
 	case *types.DefinedType:
 
@@ -109,6 +108,12 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 				fields = append(fields, spec)
 			}
 			copy := types.NewDefinedType(t.Name(), types.NewStruct(fields), params, t.Scope.Parent)
+
+			if t.InstanceOf == nil {
+				copy.InstanceOf = t
+			} else {
+				copy.InstanceOf = t.InstanceOf
+			}
 			return copy
 
 		}
@@ -186,6 +191,12 @@ func apply(ctx mappings, typ types.Type) types.Type {
 				}
 			}
 			copy := types.NewDefinedType(t.Name(), types.NewStruct(fields), params, t.Scope.Parent)
+
+			if t.InstanceOf == nil {
+				copy.InstanceOf = t
+			} else {
+				copy.InstanceOf = t.InstanceOf
+			}
 			return copy
 		default:
 			panic("not implemented")

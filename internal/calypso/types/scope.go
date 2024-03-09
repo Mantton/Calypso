@@ -37,6 +37,14 @@ func (s *Scope) Resolve(name string) (Symbol, bool) {
 	return symbol, exists
 }
 
+func (s *Scope) MustResolve(name string) Symbol {
+	symbol, exists := s.Symbols[name]
+	if !exists && s.Parent != nil {
+		return s.Parent.MustResolve(name)
+	}
+	return symbol
+}
+
 func (s *Scope) String() string {
 	var str string
 	str += "------SCOPE-----\n"
