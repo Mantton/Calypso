@@ -18,7 +18,23 @@ func (t *FunctionSignature) Parent() Type { return t }
 
 func (t *FunctionSignature) String() string {
 
-	f := "fn (%s) -> %s"
+	f := "fn "
+
+	if len(t.TypeParameters) != 0 {
+		f += "<"
+
+		for i, p := range t.TypeParameters {
+			f += p.String()
+
+			if i != len(t.TypeParameters)-1 {
+				f += ", "
+			}
+		}
+
+		f += ">"
+	}
+
+	f += "(%s) -> %s"
 	params := ""
 	ret := t.Result.Type().String()
 

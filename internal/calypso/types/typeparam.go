@@ -1,14 +1,16 @@
 package types
 
 type TypeParam struct {
-	Name        string
-	Constraints []*Standard
+	Name        string      // the name of the type parameter, e.g T, V
+	Constraints []*Standard // standards, this param is constrained to
+	Bound       Type        // the type this param is bound to after initialization
 }
 
-func NewTypeParam(n string, cns []*Standard) *TypeParam {
+func NewTypeParam(n string, cns []*Standard, b Type) *TypeParam {
 	return &TypeParam{
 		Name:        n,
 		Constraints: cns,
+		Bound:       b,
 	}
 }
 
@@ -20,4 +22,12 @@ func (t *TypeParam) Parent() Type   { return t }
 
 func (n *TypeParam) AddConstraint(s *Standard) {
 	n.Constraints = append(n.Constraints, s)
+}
+
+func AsTypeParam(t Type) *TypeParam {
+	if a, ok := t.(*TypeParam); ok {
+		return a
+	}
+	return nil
+
 }

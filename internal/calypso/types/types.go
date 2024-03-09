@@ -12,18 +12,28 @@ func IsGeneric(t Type) bool {
 		return IsGeneric(t.PointerTo)
 	case *TypeParam:
 		return true
+		// if t.Bound != nil {
+		// 	return true
+		// } else {
+		// 	return false
+		// }
 	case *DefinedType:
-		return len(t.TypeParameters) != 0 || IsGeneric(t.Parent())
-	case *FunctionSignature:
-		return len(t.TypeParameters) != 0
-	case *EnumInstance:
-		for _, arg := range t.TypeArgs {
-			if IsGeneric(arg) {
+		// No Type Parameters
+		if len(t.TypeParameters) == 0 {
+			return false
+		}
+
+		// All Type Parameters are bounded
+		for _, param := range t.TypeParameters {
+			if param.Bound == nil {
 				return true
 			}
 		}
 
 		return false
+
+	case *FunctionSignature:
+		return len(t.TypeParameters) != 0
 	default:
 		return false
 	}

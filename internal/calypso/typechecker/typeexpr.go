@@ -88,15 +88,12 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return unresolved
 	}
 
-	switch typ.Parent().(type) {
-	case *types.Enum:
-		return types.NewEnumInstance(typ, eArgs)
-	case *types.Struct:
-		return types.NewStructInstance(typ, eArgs)
-	default:
-		panic("unknown generic")
+	fmt.Println(typ, eArgs)
 
-	}
+	o := instantiate(typ, eArgs, nil)
+	fmt.Println("Instantiated:", o, "from", typ)
+	fmt.Println()
+	return o
 
 }
 
@@ -135,7 +132,7 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 }
 
 func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpression) types.Type {
-	d := types.NewTypeParam(e.Identifier.Value, nil)
+	d := types.NewTypeParam(e.Identifier.Value, nil, nil)
 
 	for _, eI := range e.Standards {
 		sym, ok := c.find(eI.Value)
