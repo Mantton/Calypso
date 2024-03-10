@@ -498,7 +498,6 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 
 	}
 
-	fmt.Println("Skipping non generic", f.Type())
 	err := c.validateAssignment(f, vT, v)
 	if err != nil {
 		return err

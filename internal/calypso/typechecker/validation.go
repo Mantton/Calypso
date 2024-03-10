@@ -61,14 +61,14 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 		panic("bad path")
 	}
 
-	if defProvided == nil {
-		fmt.Println("[Validation] not a defined type", defExpected, defProvided, "Actual", expected, provided)
-		return nil, standard
-	}
-
 	// resolve basic
 	if typ, ok := defExpected.Parent().(*types.Basic); ok {
 		return c.validateBasicTypes(typ, provided.Parent())
+	}
+
+	if defProvided == nil {
+		fmt.Printf("[VALIDATOR] %s is not a DefinedType: %T\n", provided, provided)
+		return nil, standard
 	}
 
 	if defExpected.InstanceOf == provided {
@@ -202,7 +202,7 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 	}
 
 	if provided == types.LookUp(types.IntegerLiteral) {
-		provided = types.AsDefined(types.GlobalScope.MustResolve("int").Type())
+		provided = types.LookUp(types.Int).(*types.DefinedType)
 	}
 
 	action := func(s *types.Standard) error {

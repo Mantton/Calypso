@@ -2,7 +2,7 @@ package types
 
 var GlobalScope *Scope
 
-var GlobalTypes = map[BasicType]*Basic{
+var globalTypes = map[BasicType]*Basic{
 	Unresolved: {Unresolved, "unresolved type"},
 	Bool:       {Bool, "bool"},
 
@@ -46,7 +46,7 @@ var GlobalTypes = map[BasicType]*Basic{
 func init() {
 	GlobalScope = NewScope(nil)
 	// Define Global Types
-	for _, t := range GlobalTypes {
+	for _, t := range globalTypes {
 		d := NewDefinedType(t.name, t, nil, GlobalScope)
 		ok := GlobalScope.Define(d)
 
@@ -57,10 +57,10 @@ func init() {
 }
 
 func LookUp(t BasicType) Type {
-	v, ok := GlobalTypes[t]
+	v, ok := globalTypes[t]
 
 	if !ok {
-		return GlobalScope.MustResolve(GlobalTypes[Unresolved].name).Type()
+		return GlobalScope.MustResolve(globalTypes[Unresolved].name).Type()
 	}
 
 	return GlobalScope.MustResolve(v.name).Type()

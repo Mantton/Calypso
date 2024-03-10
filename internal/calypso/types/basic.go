@@ -75,6 +75,8 @@ func IsFloatingPoint(t Type) bool {
 		case Float, Double:
 			return true
 		}
+	case *DefinedType:
+		return IsFloatingPoint(t.Parent())
 	}
 	return false
 }
@@ -88,7 +90,8 @@ func IsUnsigned(t Type) bool {
 		case Char, Byte:
 			return true
 		}
-
+	case *DefinedType:
+		return IsUnsigned(t.Parent())
 	}
 	return false
 }
@@ -101,7 +104,8 @@ func IsGroupLiteral(t Type) bool {
 		case IntegerLiteral, FloatLiteral:
 			return true
 		}
-
+	case *DefinedType:
+		return IsGroupLiteral(t.Parent())
 	}
 	return false
 }
@@ -115,6 +119,8 @@ func ResolveLiteral(t Type) Type {
 		case FloatLiteral:
 			return LookUp(Double)
 		}
+	case *DefinedType:
+		return ResolveLiteral(t.Parent())
 	}
 	return t
 }
