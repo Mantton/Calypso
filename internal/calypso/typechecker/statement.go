@@ -32,6 +32,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkEnumStatement(stmt)
 	case *ast.SwitchStatement:
 		c.checkSwitchStatement(stmt)
+	case *ast.BreakStatement:
+		return // nothing to TC on break
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)

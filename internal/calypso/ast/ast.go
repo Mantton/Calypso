@@ -184,6 +184,10 @@ type SwitchCaseExpression struct {
 	Action    *BlockStatement
 }
 
+type BreakStatement struct {
+	KeyWPos token.TokenPosition
+}
+
 // * Expressions
 
 type GroupedExpression struct {

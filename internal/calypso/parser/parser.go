@@ -10,7 +10,8 @@ type Parser struct {
 	tokens []token.ScannedToken
 	errors lexer.ErrorList
 
-	cursor int
+	inSwitch bool
+	cursor   int
 }
 
 func New(tokens []token.ScannedToken) *Parser {

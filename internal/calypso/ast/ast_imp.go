@@ -275,6 +275,13 @@ func (e *SwitchStatement) Range() token.SyntaxRange {
 	}
 }
 
+func (e *BreakStatement) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.KeyWPos,
+	}
+}
+
 func (s *IfStatement) statementNode()         {}
 func (s *ExpressionStatement) statementNode() {}
 func (s *WhileStatement) statementNode()      {}
@@ -286,6 +293,7 @@ func (s *AliasStatement) statementNode()      {}
 func (s *StructStatement) statementNode()     {}
 func (s *EnumStatement) statementNode()       {}
 func (s *SwitchStatement) statementNode()     {}
+func (s *BreakStatement) statementNode()      {}
 
 // * Declarations
 func (e *ConstantDeclaration) Range() token.SyntaxRange {

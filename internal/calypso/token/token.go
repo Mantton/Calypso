@@ -103,6 +103,7 @@ const (
 	ENUM
 	CASE
 	DEFAULT
+	BREAK
 	/// Modifiers
 	ASYNC
 	STATIC
@@ -143,6 +144,7 @@ var keywords = map[string]Token{
 	"switch":    SWITCH,
 	"case":      CASE,
 	"default":   DEFAULT,
+	"break":     BREAK,
 }
 
 func LookupIdent(ident string) Token {
@@ -162,7 +164,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH, BREAK:
 		return true
 	}
 
@@ -218,6 +220,7 @@ var tokens = map[Token]string{
 	TO:        "to",
 	SWITCH:    "switch",
 	DEFAULT:   "default",
+	BREAK:     "break",
 
 	IDENTIFIER: "IDENTIFIER",
 }

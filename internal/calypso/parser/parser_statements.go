@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
@@ -29,10 +31,12 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseEnumStatement()
 	case token.SWITCH:
 		return p.parseSwitchStatement()
+	case token.BREAK:
+		return p.parseBreakStatement()
 
 	}
 
-	panic(p.error("expected statement"))
+	panic(p.error(fmt.Sprintf("expected statement, got %s", p.currentScannedToken().Lit)))
 }
 
 func (p *Parser) parseVariableStatement() *ast.VariableStatement {
@@ -323,6 +327,16 @@ func (p *Parser) parseFieldList() []ast.TypeExpression {
 }
 
 func (p *Parser) parseSwitchStatement() *ast.SwitchStatement {
+	prevState := p.inSwitch
+	defer func() {
+		p.inSwitch = prevState
+	}()
+
+	p.inSwitch = true
+	defer func() {
+		p.inSwitch = false
+	}()
+
 	// 1 - Keyword
 	kwPos := p.expect(token.SWITCH).Pos
 
@@ -438,4 +452,17 @@ func (p *Parser) parseSwitchCase() *ast.SwitchCaseExpression {
 		Condition: nil,
 	}
 
+}
+
+func (p *Parser) parseBreakStatement() *ast.BreakStatement {
+
+	if !p.inSwitch {
+		panic(p.error("cannot break outside switch statement"))
+	}
+
+	kwPos := p.expect(token.BREAK).Pos
+	p.expect(token.SEMICOLON)
+	return &ast.BreakStatement{
+		KeyWPos: kwPos,
+	}
 }
