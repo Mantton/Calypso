@@ -168,6 +168,22 @@ type EnumDiscriminantExpression struct {
 	Value Expression
 }
 
+type SwitchStatement struct {
+	KeyWPos   token.TokenPosition
+	Condition Expression
+	LBracePos token.TokenPosition
+	Cases     []*SwitchCaseExpression
+	RBracePos token.TokenPosition
+}
+
+type SwitchCaseExpression struct {
+	IsDefault bool
+	KeyWPos   token.TokenPosition
+	Condition Expression
+	ColonPos  token.TokenPosition
+	Action    *BlockStatement
+}
+
 // * Expressions
 
 type GroupedExpression struct {

@@ -27,6 +27,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseStructStatement()
 	case token.ENUM:
 		return p.parseEnumStatement()
+	case token.SWITCH:
+		return p.parseSwitchStatement()
 
 	}
 
@@ -318,4 +320,122 @@ func (p *Parser) parseFieldList() []ast.TypeExpression {
 	p.expect(token.RPAREN)
 
 	return params
+}
+
+func (p *Parser) parseSwitchStatement() *ast.SwitchStatement {
+	// 1 - Keyword
+	kwPos := p.expect(token.SWITCH).Pos
+
+	// 2 - Condition
+	cond := p.parseExpression()
+
+	// 3 - L Brace
+
+	lBracePos := p.expect(token.LBRACE).Pos
+
+	//  4 - Cases
+	cases := p.parseSwitchCases()
+
+	// 5 - R Brace
+	rBracePos := p.expect(token.RBRACE).Pos
+
+	return &ast.SwitchStatement{
+		KeyWPos:   kwPos,
+		LBracePos: lBracePos,
+		RBracePos: rBracePos,
+		Condition: cond,
+		Cases:     cases,
+	}
+
+}
+
+func (p *Parser) parseSwitchCases() []*ast.SwitchCaseExpression {
+
+	cases := []*ast.SwitchCaseExpression{}
+
+	for p.currentMatches(token.CASE) || p.currentMatches(token.DEFAULT) {
+		cases = append(cases, p.parseSwitchCase())
+	}
+
+	return cases
+}
+
+func (p *Parser) parseSwitchCase() *ast.SwitchCaseExpression {
+
+	if p.currentMatches(token.CASE) {
+
+		// 1 - Case Keyword
+		kwPos := p.expect(token.CASE).Pos
+
+		// 2 - Condition
+		cond := p.parseExpression()
+
+		// 3 - Body
+		var body *ast.BlockStatement
+		var colonPos token.TokenPosition
+		if p.currentMatches(token.LBRACE) {
+			body = p.parseBlockStatement()
+			colonPos = body.LBrackPos
+		} else {
+			colonPos = p.expect(token.COLON).Pos
+			stmts := []ast.Statement{}
+			for !p.currentMatches(token.CASE) &&
+				!p.currentMatches(token.RBRACE) &&
+				!p.currentMatches(token.DEFAULT) {
+				s := p.parseStatement()
+				stmts = append(stmts, s)
+			}
+
+			body = &ast.BlockStatement{
+				LBrackPos:  colonPos,
+				Statements: stmts,
+				RBrackPos:  stmts[len(stmts)-1].Range().End,
+			}
+		}
+
+		return &ast.SwitchCaseExpression{
+			KeyWPos:   kwPos,
+			Condition: cond,
+			ColonPos:  colonPos,
+			Action:    body,
+		}
+
+	}
+
+	// Default Case
+
+	// 1 - Keyword
+	kwPos := p.expect(token.DEFAULT).Pos
+
+	// 2 - Body
+	var body *ast.BlockStatement
+	var colonPos token.TokenPosition
+	if p.currentMatches(token.LBRACE) {
+		body = p.parseBlockStatement()
+		colonPos = body.LBrackPos
+	} else {
+		colonPos = p.expect(token.COLON).Pos
+		stmts := []ast.Statement{}
+		for !p.currentMatches(token.CASE) &&
+			!p.currentMatches(token.RBRACE) &&
+			!p.currentMatches(token.DEFAULT) {
+			s := p.parseStatement()
+			stmts = append(stmts, s)
+		}
+
+		body = &ast.BlockStatement{
+			LBrackPos:  colonPos,
+			Statements: stmts,
+			RBrackPos:  stmts[len(stmts)-1].Range().End,
+		}
+	}
+
+	return &ast.SwitchCaseExpression{
+		KeyWPos:   kwPos,
+		ColonPos:  colonPos,
+		Action:    body,
+		IsDefault: true,
+		Condition: nil,
+	}
+
 }

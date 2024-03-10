@@ -179,6 +179,13 @@ func (e *GenericSpecializationExpression) Range() token.SyntaxRange {
 	}
 }
 
+func (e *SwitchCaseExpression) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.Action.RBrackPos,
+	}
+}
+
 func (e *GroupedExpression) expressionNode()               {}
 func (e *FunctionCallExpression) expressionNode()          {}
 func (e *UnaryExpression) expressionNode()                 {}
@@ -261,6 +268,12 @@ func (e *EnumStatement) Range() token.SyntaxRange {
 		End:   e.RBracePos,
 	}
 }
+func (e *SwitchStatement) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.RBracePos,
+	}
+}
 
 func (s *IfStatement) statementNode()         {}
 func (s *ExpressionStatement) statementNode() {}
@@ -272,6 +285,7 @@ func (s *FunctionStatement) statementNode()   {}
 func (s *AliasStatement) statementNode()      {}
 func (s *StructStatement) statementNode()     {}
 func (s *EnumStatement) statementNode()       {}
+func (s *SwitchStatement) statementNode()     {}
 
 // * Declarations
 func (e *ConstantDeclaration) Range() token.SyntaxRange {

@@ -99,15 +99,16 @@ const (
 	FOR
 	TO
 	EXTERN
-
+	SWITCH
+	ENUM
+	CASE
+	DEFAULT
 	/// Modifiers
 	ASYNC
 	STATIC
 	MUT
 	PUB
 	PRIVATE
-	ENUM
-	CASE
 	kw_e // Keywords End
 )
 
@@ -139,7 +140,9 @@ var keywords = map[string]Token{
 	"to":        TO,
 	"extern":    EXTERN,
 	"enum":      ENUM,
+	"switch":    SWITCH,
 	"case":      CASE,
+	"default":   DEFAULT,
 }
 
 func LookupIdent(ident string) Token {
@@ -159,7 +162,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH:
 		return true
 	}
 
@@ -213,6 +216,8 @@ var tokens = map[Token]string{
 	CONFORM:   "conform",
 	FOR:       "for",
 	TO:        "to",
+	SWITCH:    "switch",
+	DEFAULT:   "default",
 
 	IDENTIFIER: "IDENTIFIER",
 }
