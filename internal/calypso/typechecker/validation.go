@@ -62,11 +62,6 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 	}
 
 	if defProvided == nil {
-		// resolve basic
-		if typ, ok := defExpected.Parent().(*types.Basic); ok {
-			return c.validateBasicTypes(typ, provided.Parent())
-		}
-
 		fmt.Println("[Validation] not a defined type", defExpected, defProvided, "Actual", expected, provided)
 		return nil, standard
 	}
@@ -77,7 +72,7 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 	}
 
 	if defExpected.InstanceOf == provided {
-		print("parent, child")
+		return expected, nil
 	} else if defExpected.InstanceOf == defProvided.InstanceOf {
 		// same instance, rather than compare each field, compare type arguments instead
 		// safety check, theoretically not possible
@@ -99,8 +94,7 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 		return expected, nil
 	}
 
-	fmt.Println(defExpected, defProvided)
-
+	fmt.Println("[VALIDATION] Failing", defExpected, "&", defProvided)
 	return nil, standard
 }
 
@@ -207,7 +201,7 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 		return fmt.Errorf("%s is not a conforming type, %T", x, x)
 	}
 
-	if provided == types.GlobalScope.MustResolve("literal int").Type() {
+	if provided == types.LookUp(types.IntegerLiteral) {
 		provided = types.AsDefined(types.GlobalScope.MustResolve("int").Type())
 	}
 

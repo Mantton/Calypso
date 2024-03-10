@@ -237,7 +237,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 
 			tP := t.(*types.TypeParam)
 			def.AddTypeParameter(tP)
-			ok := def.Scope.Define(types.NewDefinedType(tP.Name, t, nil, c.scope))
+			ok := def.Scope.Define(tP)
 
 			if !ok {
 				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())

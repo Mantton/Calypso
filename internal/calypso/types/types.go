@@ -33,7 +33,21 @@ func IsGeneric(t Type) bool {
 		return false
 
 	case *FunctionSignature:
-		return len(t.TypeParameters) != 0
+		if len(t.TypeParameters) != 0 {
+			return true
+		}
+
+		for _, p := range t.Parameters {
+			if IsGeneric(p.Type()) {
+				return true
+			}
+		}
+
+		if IsGeneric(t.Result.Type()) {
+			return true
+		}
+
+		return false
 	default:
 		return false
 	}

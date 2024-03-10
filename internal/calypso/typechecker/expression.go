@@ -181,7 +181,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 		}
 
 		t := apply(specializations, fn)
-		fmt.Println("\nInstantiated:", t)
+		fmt.Println("\nInstantiated Function:", t)
 		fmt.Println("Original:", fn)
 		fmt.Println()
 		return t.(*types.FunctionSignature).Result.Type()
@@ -400,7 +400,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	}
 
 	for _, param := range base.TypeParameters {
-		_, ok := specializations[param.Name]
+		_, ok := specializations[param.Name()]
 
 		if !ok {
 			panic(fmt.Errorf("failed to resolve generic parameter: %s in %s", param, specializations))
@@ -422,7 +422,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 
 	switch gT := f.Type().(type) {
 	case *types.TypeParam:
-		alt, ok := specializations[gT.Name]
+		alt, ok := specializations[gT.Name()]
 
 		// has not already been specialized
 		if !ok {
@@ -433,7 +433,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 				return err
 			}
 
-			specializations[gT.Name] = vT
+			specializations[gT.Name()] = vT
 			fmt.Println("Specialized Type Param", gT, ":", vT)
 
 			return nil
@@ -464,7 +464,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 
 		// TODO -> These two have to match
 		for i, x := range gT.TypeParameters {
-			specializations[x.Name] = vT.TypeParameters[i]
+			specializations[x.Name()] = vT.TypeParameters[i]
 		}
 
 		fmt.Println("Specialized", gT, "as", vT, "with", specializations)
@@ -510,6 +510,10 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types
 
 	a := c.evaluateExpression(n.Target)
 
+	if a == unresolved {
+		return unresolved
+	}
+
 	// Collect Property
 	var field string
 	switch p := n.Field.(type) {
@@ -522,6 +526,8 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types
 
 	switch a := a.(type) {
 	case *types.DefinedType:
+
+		// Access Field
 		switch parent := a.Parent().(type) {
 		case *types.Struct:
 			for _, f := range parent.Fields {
@@ -530,13 +536,40 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types
 				}
 			}
 
+		case *types.Enum:
+			for _, v := range parent.Variants {
+				if v.Name == field {
+					// Not tuple type, return parent type
+					if len(v.Fields) == 0 {
+						return a
+					}
+
+					// Tuple Type, Return Function Returning Parent Type
+					sg := types.NewFunctionSignature()
+					for _, p := range v.Fields {
+						sg.AddParameter(p)
+					}
+
+					sg.Result.SetType(a)
+					return sg
+				}
+			}
 		default:
+			fmt.Println(a)
 			panic("TODO")
 		}
+
+		// Access Method
+		method, ok := a.Methods[field]
+		if ok {
+			return method.Sg()
+		}
+
 	default:
 		panic("TODO")
 	}
 
+	c.addError(fmt.Sprintf("unknown method or field: \"%s\" on type \"%s\"", field, a), n.Range())
 	return unresolved
 }
 
@@ -599,7 +632,8 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	}
 
 	// 7 - Return instance of type
-	panic("TODO:")
+	instance := instantiate(sym.Type(), args, nil)
+	return instance
 }
 
 func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType, sg *types.FunctionSignature) types.Type {

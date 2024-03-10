@@ -9,9 +9,11 @@ import (
 
 func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expression) error {
 
+	fmt.Println("[ASSIGNMENT]", v.Name(), "of Type", v.Type(), "to", t)
 	// if LHS has not been assigned a value
 	f := v.Type()
 	if f == unresolved {
+
 		if t == types.LookUp(types.NilLiteral) {
 			return fmt.Errorf("use of unspecialized nil in assignment")
 		} else if types.IsGeneric(t) {
@@ -60,7 +62,7 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 	switch t := t.(type) {
 
 	case *types.TypeParam:
-		if v, ok := ctx[t.Name]; ok {
+		if v, ok := ctx[t.Name()]; ok {
 
 			return v
 		}
@@ -76,24 +78,34 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 			return t
 		}
 
+		// Params
 		params := types.TypeParams{}
 		for i, p := range t.TypeParameters {
 
 			// check constraints
 			arg := args[i]
-			fmt.Println("Mapping", arg, "to", p)
+			fmt.Println("\tMapping", arg, "to", p)
 
-			ctx[p.Name] = arg
+			ctx[p.Name()] = arg
+
 			switch aT := arg.(type) {
 			case *types.TypeParam:
 				if aT.Bound != nil {
-					params = append(params, types.NewTypeParam(arg.String(), nil, arg))
+					params = append(params, types.NewTypeParam(aT.Name(), nil, arg))
 				} else {
-					params = append(params, types.NewTypeParam(aT.Name, aT.Constraints, nil))
+					params = append(params, types.NewTypeParam(aT.Name(), aT.Constraints, nil))
 				}
 			default:
 				params = append(params, types.NewTypeParam(arg.String(), nil, arg))
 			}
+		}
+
+		// Methods
+		methods := make(map[string]*types.Function)
+		for _, m := range t.Methods {
+			fn := apply(ctx, m.Sg()).(*types.FunctionSignature)
+			fmt.Println("\tInstantiated Method:", fn)
+			methods[m.Name()] = types.NewFunction(m.Name(), fn)
 		}
 
 		switch parent := t.Parent().(type) {
@@ -103,11 +115,42 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 			fields := []*types.Var{}
 			for _, field := range parent.Fields {
 				s := apply(ctx, field.Type())
-				fmt.Println("Instantiated Field", field.Name(), field.Type(), "to", s)
+				fmt.Println("\tInstantiated Field", field.Name(), field.Type(), "to", s)
 				spec := types.NewVar(field.Name(), s)
 				fields = append(fields, spec)
 			}
 			copy := types.NewDefinedType(t.Name(), types.NewStruct(fields), params, t.Scope.Parent)
+			copy.Methods = methods
+			if t.InstanceOf == nil {
+				copy.InstanceOf = t
+			} else {
+				copy.InstanceOf = t.InstanceOf
+			}
+			return copy
+		case *types.Enum:
+
+			variants := types.EnumVariants{}
+
+			for _, variant := range parent.Variants {
+				if len(variant.Fields) == 0 {
+					variants = append(variants, types.NewEnumVariant(variant.Name, variant.Discriminant, nil))
+					continue
+				}
+
+				fields := []*types.Var{}
+
+				for _, f := range variant.Fields {
+					v := types.NewVar(f.Name(), nil)
+					s := apply(ctx, f.Type())
+					v.SetType(s)
+					fields = append(fields, v)
+				}
+
+				variants = append(variants, types.NewEnumVariant(variant.Name, variant.Discriminant, fields))
+			}
+			e := types.NewEnum(parent.Name, variants)
+			copy := types.NewDefinedType(t.Name(), e, params, t.Scope.Parent)
+			copy.Methods = methods
 
 			if t.InstanceOf == nil {
 				copy.InstanceOf = t
@@ -116,8 +159,10 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 			}
 			return copy
 
+		default:
+			panic(fmt.Sprintf("unhandled case %T", parent))
+
 		}
-		panic("not done!")
 	case *types.FunctionSignature:
 
 		for i, p := range t.Parameters {
@@ -130,7 +175,7 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 			switch t1 := p.Type().(type) {
 			case *types.TypeParam:
 				// TODO: Validation
-				ctx[t1.Name] = arg
+				ctx[t1.Name()] = arg
 			default:
 				instantiate(t1, args, ctx)
 			}
@@ -146,18 +191,45 @@ func apply(ctx mappings, typ types.Type) types.Type {
 
 	fmt.Printf("Substituting %s with %s\n", typ, ctx)
 	if !types.IsGeneric(typ) {
+		fmt.Println("\tSkipping Non Generic", typ)
 		return typ
 	}
 	switch t := typ.(type) {
 
 	case *types.TypeParam:
-		sp, ok := ctx[t.Name]
+		sp, ok := ctx[t.Name()]
 		if !ok {
 			return unresolved
 		}
 
 		return sp
 	case *types.DefinedType:
+		params := types.TypeParams{}
+		for _, p := range t.TypeParameters {
+
+			arg, ok := ctx[p.Name()]
+
+			if !ok {
+				return unresolved
+			}
+
+			switch aT := arg.(type) {
+			case *types.TypeParam:
+				if aT.Bound != nil {
+					params = append(params, types.NewTypeParam(aT.Name(), nil, arg))
+				} else {
+					params = append(params, types.NewTypeParam(aT.Name(), aT.Constraints, nil))
+				}
+			default:
+				params = append(params, types.NewTypeParam(arg.String(), nil, arg))
+			}
+		}
+
+		// Methods
+		methods := make(map[string]*types.Function)
+		for _, m := range t.Methods {
+			methods[m.Name()] = types.NewFunction(m.Name(), apply(ctx, m.Sg()).(*types.FunctionSignature))
+		}
 		switch parent := t.Parent().(type) {
 		case *types.Basic:
 			return typ // basic cannot have instantiation
@@ -169,27 +241,8 @@ func apply(ctx mappings, typ types.Type) types.Type {
 				fields = append(fields, spec)
 			}
 
-			params := types.TypeParams{}
-			for _, p := range t.TypeParameters {
-
-				arg, ok := ctx[p.Name]
-
-				if !ok {
-					return unresolved
-				}
-
-				switch aT := arg.(type) {
-				case *types.TypeParam:
-					if aT.Bound != nil {
-						params = append(params, types.NewTypeParam(arg.String(), nil, arg))
-					} else {
-						params = append(params, types.NewTypeParam(aT.Name, aT.Constraints, nil))
-					}
-				default:
-					params = append(params, types.NewTypeParam(arg.String(), nil, arg))
-				}
-			}
 			copy := types.NewDefinedType(t.Name(), types.NewStruct(fields), params, t.Scope.Parent)
+			copy.Methods = methods
 
 			if t.InstanceOf == nil {
 				copy.InstanceOf = t
@@ -197,8 +250,41 @@ func apply(ctx mappings, typ types.Type) types.Type {
 				copy.InstanceOf = t.InstanceOf
 			}
 			return copy
+		case *types.Enum:
+
+			variants := types.EnumVariants{}
+
+			for _, variant := range parent.Variants {
+				if len(variant.Fields) == 0 {
+					variants = append(variants, types.NewEnumVariant(variant.Name, variant.Discriminant, nil))
+					continue
+				}
+
+				fields := []*types.Var{}
+
+				for _, f := range variant.Fields {
+					v := types.NewVar(f.Name(), nil)
+					s := apply(ctx, f.Type())
+					v.SetType(s)
+					fields = append(fields, v)
+				}
+
+				variants = append(variants, types.NewEnumVariant(variant.Name, variant.Discriminant, fields))
+			}
+
+			e := types.NewEnum(parent.Name, variants)
+			copy := types.NewDefinedType(t.Name(), e, params, t.Scope.Parent)
+			copy.Methods = methods
+
+			if t.InstanceOf == nil {
+				copy.InstanceOf = t
+			} else {
+				copy.InstanceOf = t.InstanceOf
+			}
+			return copy
+
 		default:
-			panic("not implemented")
+			panic(fmt.Sprintf("unhandled case %T", parent))
 
 		}
 	case *types.FunctionSignature:

@@ -30,7 +30,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	if !ok {
 		// Find in T Params
 		for _, p := range tPs {
-			if p.Name == n {
+			if p.Name() == n {
 				typ = p
 				break
 			}
@@ -87,8 +87,6 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	if hasErrors {
 		return unresolved
 	}
-
-	fmt.Println(typ, eArgs)
 
 	o := instantiate(typ, eArgs, nil)
 	fmt.Println("Instantiated:", o, "from", typ)

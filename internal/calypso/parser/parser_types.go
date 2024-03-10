@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
@@ -81,7 +79,6 @@ func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
 
 	// First Argument
 	expr := p.parseTypeExpression()
-	fmt.Println(expr)
 	args = append(args, expr)
 
 	// Check For Others
