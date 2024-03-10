@@ -61,7 +61,10 @@ func IsNumeric(t Type) bool {
 		case Float, Double:
 			return true
 		}
+	case *DefinedType:
+		return IsNumeric(t.Parent())
 	}
+
 	return false
 }
 

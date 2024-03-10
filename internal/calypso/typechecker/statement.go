@@ -69,6 +69,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 
 	initializer := c.evaluateExpression(stmt.Value)
+
 	err := c.validateAssignment(def, initializer, stmt.Value)
 	if err != nil {
 		c.addError(

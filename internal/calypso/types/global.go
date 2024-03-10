@@ -56,12 +56,12 @@ func init() {
 	}
 }
 
-func LookUp(t BasicType) *Basic {
+func LookUp(t BasicType) Type {
 	v, ok := GlobalTypes[t]
 
 	if !ok {
-		return GlobalTypes[Unresolved]
+		return GlobalScope.MustResolve(GlobalTypes[Unresolved].name).Type()
 	}
 
-	return v
+	return GlobalScope.MustResolve(v.name).Type()
 }

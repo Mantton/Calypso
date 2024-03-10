@@ -169,14 +169,15 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 	for _, stmt := range fns {
 
 		// eval function
-		sg := c.evaluateFunctionExpression(stmt.Func, typ)
+		sg := types.NewFunctionSignature()
+		t := c.evaluateFunctionExpression(stmt.Func, typ, sg)
 
 		// error already reported
-		if sg == unresolved {
+		if t == unresolved {
 			continue
 		}
 
-		fn := types.NewFunction(stmt.Func.Identifier.Value, sg.(*types.FunctionSignature))
+		fn := types.NewFunction(stmt.Func.Identifier.Value, sg)
 
 		// Define in type scope
 		ok := typ.Scope.Define(fn)

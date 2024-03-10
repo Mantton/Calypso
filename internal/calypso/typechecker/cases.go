@@ -153,8 +153,7 @@ func apply(ctx mappings, typ types.Type) types.Type {
 	case *types.TypeParam:
 		sp, ok := ctx[t.Name]
 		if !ok {
-			fmt.Printf("NOT FOUND: %s\n", t)
-			panic("generic not specialized")
+			return unresolved
 		}
 
 		return sp
@@ -176,7 +175,7 @@ func apply(ctx mappings, typ types.Type) types.Type {
 				arg, ok := ctx[p.Name]
 
 				if !ok {
-					panic("--")
+					return unresolved
 				}
 
 				switch aT := arg.(type) {

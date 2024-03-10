@@ -41,10 +41,11 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 		)
 		return
 	}
+	sg := types.NewFunctionSignature()
+	def.SetType(sg)
+	t := c.evaluateFunctionExpression(e, nil, sg)
+	def.SetType(t)
 
-	typ := c.evaluateFunctionExpression(e, nil)
-
-	def.SetType(typ)
 	c.table.DefineFunction(e, def)
 }
 
@@ -70,26 +71,19 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 	// Literals
 	case *ast.IntegerLiteral:
 		// c.table.AddNode(expr, types.LookUp(types.IntegerLiteral), nil, nil)
-		x, _ := types.GlobalScope.Resolve("literal int")
-		return x.Type()
+		return types.LookUp(types.IntegerLiteral)
 	case *ast.BooleanLiteral:
-		x, _ := types.GlobalScope.Resolve("bool")
-		return x.Type()
+		return types.LookUp(types.Bool)
 	case *ast.FloatLiteral:
-		x, _ := types.GlobalScope.Resolve("literal float")
-		return x.Type()
+		return types.LookUp(types.FloatLiteral)
 	case *ast.StringLiteral:
-		x, _ := types.GlobalScope.Resolve("string")
-		return x.Type()
+		return types.LookUp(types.String)
 	case *ast.CharLiteral:
-		x, _ := types.GlobalScope.Resolve("char")
-		return x.Type()
+		return types.LookUp(types.Char)
 	case *ast.NilLiteral:
-		x, _ := types.GlobalScope.Resolve("literal nil")
-		return x.Type()
+		return types.LookUp(types.NilLiteral)
 	case *ast.VoidLiteral:
-		x, _ := types.GlobalScope.Resolve("void")
-		return x.Type()
+		return types.LookUp(types.Void)
 
 	case *ast.IdentifierExpression:
 		return c.evaluateIdentifierExpression(expr)
@@ -173,7 +167,6 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 					c.addError(err.Error(), arg.Range())
 				}
 			}
-
 			return fn.Result.Type()
 		}
 
@@ -277,7 +270,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 	}
 
 	// no matching operand
-	err = fmt.Errorf("unsupported binary operand `%s`", token.LookUp(op))
+	err = fmt.Errorf("unsupported binary operand `%s` on `%s`", token.LookUp(op), lhs)
 	c.addError(err.Error(), e.Range())
 	return unresolved
 
@@ -419,6 +412,10 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 
 func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map[string]types.Type) error {
 	vT := c.evaluateExpression(v)
+
+	if vT == unresolved {
+		return fmt.Errorf("unresolved type assigned for `%s`", f.Name())
+	}
 
 	// check constraints & specialize
 	// can either be a type param or generic struct or a generic function
@@ -605,10 +602,9 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	panic("TODO:")
 }
 
-func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType) types.Type {
+func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType, sg *types.FunctionSignature) types.Type {
 
 	// Create new Signature
-	sg := types.NewFunctionSignature()
 	prevFn := c.fn
 	prevSc := c.scope
 	defer func() {

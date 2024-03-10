@@ -21,16 +21,43 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 	case *types.FunctionSignature:
 		return c.validateFunctionTypes(expected, provided)
 	case *types.TypeParam:
-		if expected == provided {
+
+		if prov := types.AsTypeParam(provided); prov != nil {
+			if expected == prov {
+				return expected, nil
+			} else if prov.Bound != nil {
+				err := c.validateConformance(expected.Constraints, prov.Bound)
+
+				if err != nil {
+					return nil, err
+				}
+
+				return expected, nil
+			} else {
+				return nil, fmt.Errorf("params not matching")
+
+			}
+		} else {
+			err := c.validateConformance(expected.Constraints, provided)
+
+			if err != nil {
+				return nil, err
+			}
+
 			return expected, nil
 		}
+
+	case *types.Basic:
+		return c.validateBasicTypes(expected, provided)
 	}
+
 	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 
 	defExpected := types.AsDefined(expected)
 	defProvided := types.AsDefined(provided)
 
 	if defExpected == nil {
+		fmt.Printf("%T\n", expected)
 		panic("bad path")
 	}
 
