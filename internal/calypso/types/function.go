@@ -4,6 +4,11 @@ import "fmt"
 
 type Function struct {
 	symbol
+	Target *FunctionTarget
+}
+
+type FunctionTarget struct {
+	Target string
 }
 
 type FunctionSignature struct {
@@ -62,6 +67,10 @@ func NewFunction(name string, sg *FunctionSignature) *Function {
 			typ:  sg,
 		},
 	}
+}
+
+func (n *Function) SetSignature(sg *FunctionSignature) {
+	n.SetType(sg)
 }
 
 func (sg *FunctionSignature) AddTypeParameter(t *TypeParam) {

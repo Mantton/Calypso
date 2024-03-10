@@ -68,20 +68,20 @@ type ExtensionDeclaration struct {
 }
 
 type ConformanceDeclaration struct {
-	KeyWPos   token.TokenPosition
-	Standard  *IdentifierExpression
-	Target    *IdentifierExpression
-	LBracePos token.TokenPosition
-	Content   []*FunctionStatement
-	RBracePos token.TokenPosition
+	KeyWPos    token.TokenPosition
+	Standard   *IdentifierExpression
+	Target     *IdentifierExpression
+	LBracePos  token.TokenPosition
+	Signatures []*FunctionStatement
+	RBracePos  token.TokenPosition
 }
 
 type ExternDeclaration struct {
-	KeyWPos   token.TokenPosition
-	Target    *StringLiteral
-	LBracePos token.TokenPosition
-	Content   []*FunctionStatement
-	RBracePos token.TokenPosition
+	KeyWPos    token.TokenPosition
+	Target     *StringLiteral
+	LBracePos  token.TokenPosition
+	Signatures []*FunctionStatement
+	RBracePos  token.TokenPosition
 }
 
 // * Statements

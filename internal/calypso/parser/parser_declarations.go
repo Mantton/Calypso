@@ -206,12 +206,12 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 	rBrace := p.expect(token.RBRACE)
 
 	return &ast.ConformanceDeclaration{
-		KeyWPos:   kw.Pos,
-		Standard:  standard,
-		Target:    target,
-		LBracePos: lBrace.Pos,
-		Content:   content,
-		RBracePos: rBrace.Pos,
+		KeyWPos:    kw.Pos,
+		Standard:   standard,
+		Target:     target,
+		LBracePos:  lBrace.Pos,
+		Signatures: content,
+		RBracePos:  rBrace.Pos,
 	}
 
 }
@@ -243,11 +243,11 @@ func (p *Parser) parseExternDeclaration() *ast.ExternDeclaration {
 	rBrace := p.expect(token.RBRACE)
 
 	return &ast.ExternDeclaration{
-		KeyWPos:   kw.Pos,
-		LBracePos: lBrace.Pos,
-		RBracePos: rBrace.Pos,
-		Content:   content,
-		Target:    lit,
+		KeyWPos:    kw.Pos,
+		LBracePos:  lBrace.Pos,
+		RBracePos:  rBrace.Pos,
+		Signatures: content,
+		Target:     lit,
 	}
 
 }

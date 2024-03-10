@@ -39,7 +39,8 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 			c.checkConformanceDeclaration(decl)
 		case *ast.ExtensionDeclaration:
 			c.checkExtensionDeclaration(decl)
-
+		case *ast.ExternDeclaration:
+			c.checkExternDeclaration(decl)
 		// case *ast.TypeDeclaration:
 		default:
 			msg := fmt.Sprintf("declaration check not implemented, %T", decl)
@@ -120,7 +121,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	}
 
 	// add functions to type
-	c.injectFunctionsInType(typ, d.Content)
+	c.injectFunctionsInType(typ, d.Signatures)
 
 	// Ensure All Functions of Standard are implemented
 	for _, eFn := range s.Dna {
@@ -173,16 +174,17 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 		fn := types.NewFunction(stmt.Func.Identifier.Value, sg)
 		ok := typ.Scope.Define(fn)
 
+		// Define in type scope
+		if !ok {
+			c.addError(fmt.Sprintf("%s is already defined in %s", fn.Name(), typ), stmt.Func.Identifier.Range())
+			continue
+		}
+
 		t := c.evaluateFunctionExpression(stmt.Func, typ, sg)
 
 		// error already reported
 		if t == unresolved {
 			continue
-		}
-
-		// Define in type scope
-		if !ok {
-			c.addError(fmt.Sprintf("%s is already defined in %s", fn.Name(), typ), stmt.Func.Identifier.Range())
 		}
 
 		// add to methods
@@ -191,5 +193,33 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 		if !ok {
 			panic("unreachable")
 		}
+	}
+}
+
+func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
+
+	target := n.Target
+	fmt.Printf("[DEBUG] External Target \"%s\"\n", target.Value)
+
+	for _, node := range n.Signatures {
+		// eval function
+		fn := types.NewFunction(node.Func.Identifier.Value, nil)
+		fn.Target = &types.FunctionTarget{
+			Target: target.Value,
+		}
+
+		ok := c.scope.Define(fn)
+
+		// Define in type scope
+		if !ok {
+			c.addError(
+				fmt.Sprintf("%s is already defined in context", fn.Name()),
+				node.Func.Identifier.Range())
+			continue
+		}
+
+		// Resolve Function Body
+		sg := c.evaluateFunctionSignature(node.Func)
+		fn.SetSignature(sg)
 	}
 }
