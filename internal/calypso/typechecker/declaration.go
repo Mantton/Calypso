@@ -170,6 +170,9 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 
 		// eval function
 		sg := types.NewFunctionSignature()
+		fn := types.NewFunction(stmt.Func.Identifier.Value, sg)
+		ok := typ.Scope.Define(fn)
+
 		t := c.evaluateFunctionExpression(stmt.Func, typ, sg)
 
 		// error already reported
@@ -177,10 +180,7 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 			continue
 		}
 
-		fn := types.NewFunction(stmt.Func.Identifier.Value, sg)
-
 		// Define in type scope
-		ok := typ.Scope.Define(fn)
 		if !ok {
 			c.addError(fmt.Sprintf("%s is already defined in %s", fn.Name(), typ), stmt.Func.Identifier.Range())
 		}

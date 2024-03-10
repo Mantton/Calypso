@@ -148,7 +148,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 			specializations := make(map[string]types.Type)
 
 			for _, p := range lhsTyp.TypeParameters {
-				specializations[p.Name()] = p.Bound
+				specializations[p.Name()] = p
 			}
 
 			sg := apply(specializations, fn).(*types.FunctionSignature)

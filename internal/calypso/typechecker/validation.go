@@ -212,7 +212,9 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 
 	provided, ok := x.(*types.DefinedType)
 	if !ok {
-		return fmt.Errorf("%s is not a conforming type, %T", x, x)
+		panic(
+			fmt.Errorf("%s is not a conforming type, %T", x, x),
+		)
 	}
 
 	if provided == types.LookUp(types.IntegerLiteral) {
