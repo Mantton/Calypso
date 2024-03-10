@@ -60,7 +60,6 @@ func (c *Checker) checkCallExpression(expr *ast.FunctionCallExpression) {
 
 	if retType.Parent() != types.LookUp(types.Void) {
 		fmt.Println("Add Warning here")
-
 	}
 
 }

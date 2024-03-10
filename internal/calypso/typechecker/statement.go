@@ -30,6 +30,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkAliasStatement(stmt)
 	case *ast.EnumStatement:
 		c.checkEnumStatement(stmt)
+	case *ast.SwitchStatement:
+		c.checkSwitchStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -309,4 +311,61 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 
 	e := types.NewEnum(name, variants)
 	def.SetType(e)
+}
+
+func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
+
+	b := types.LookUp(types.Bool)
+	// 1 - Condition
+	condition := c.evaluateExpression(n.Condition)
+
+	_, err := c.validate(b, condition)
+
+	if err != nil {
+		c.addError(err.Error(), n.Condition.Range())
+		return
+	}
+
+	// 2 - Cases
+
+	seenDefault := false
+
+	if len(n.Cases) == 0 {
+		c.addError("expected at least one case", n.Range())
+		return
+	}
+
+	for _, cs := range n.Cases {
+
+		// Scope
+		c.enterScope()
+		c.table.AddScope(cs, c.scope)
+		defer c.leaveScope()
+
+		// Default Case
+		if cs.IsDefault {
+			// 1 - Check default has already been seen
+			if seenDefault {
+				c.addError("default case already added", cs.Range())
+				continue
+			}
+
+			// 2 - Block
+			c.checkBlockStatement(cs.Action)
+			seenDefault = true
+			continue
+		}
+
+		// 1 - Condition
+		condition := c.evaluateExpression(cs.Condition)
+		_, err := c.validate(b, condition)
+
+		if err != nil {
+			c.addError(err.Error(), cs.Condition.Range())
+			continue
+		}
+
+		// 2 - Block
+		c.checkBlockStatement(cs.Action)
+	}
 }
