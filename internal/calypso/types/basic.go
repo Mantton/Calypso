@@ -120,7 +120,7 @@ func ResolveLiteral(t Type) Type {
 			return LookUp(Double)
 		}
 	case *DefinedType:
-		return ResolveLiteral(t.Parent())
+		return t
 	}
 	return t
 }

@@ -21,7 +21,7 @@ type TypeParams []*TypeParam
 func (t *TypeParam) clyT() {}
 func (t *TypeParam) String() string {
 	if t.Bound != nil {
-		return fmt.Sprintf("T[%s]", t.Bound)
+		return fmt.Sprintf("%s[%s]", t.name, t.Bound)
 	} else {
 		return t.name
 	}

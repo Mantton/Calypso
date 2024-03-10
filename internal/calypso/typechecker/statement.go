@@ -317,16 +317,8 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 
 func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 
-	b := types.LookUp(types.Bool)
 	// 1 - Condition
 	condition := c.evaluateExpression(n.Condition)
-
-	_, err := c.validate(b, condition)
-
-	if err != nil {
-		c.addError(err.Error(), n.Condition.Range())
-		return
-	}
 
 	// 2 - Cases
 
@@ -341,8 +333,13 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 
 		// Scope
 		c.enterScope()
-		c.table.AddScope(cs, c.scope)
-		defer c.leaveScope()
+
+		defer func() {
+			if len(c.scope.Symbols) != 0 {
+				c.table.AddScope(cs, c.scope)
+			}
+			c.leaveScope()
+		}()
 
 		// Default Case
 		if cs.IsDefault {
@@ -359,8 +356,12 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 		}
 
 		// 1 - Condition
-		condition := c.evaluateExpression(cs.Condition)
-		_, err := c.validate(b, condition)
+		// For Tuple types, provide lhsType, which provides the generic specializations & correct fn signature when required
+		c.lhsType = condition
+		caseCondition := c.evaluateExpression(cs.Condition)
+		c.lhsType = nil
+
+		_, err := c.validate(condition, caseCondition)
 
 		if err != nil {
 			c.addError(err.Error(), cs.Condition.Range())

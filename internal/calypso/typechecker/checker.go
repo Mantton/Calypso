@@ -16,12 +16,13 @@ const (
 )
 
 type Checker struct {
-	Errors lexer.ErrorList
-	depth  int
-	mode   CheckerMode
-	scope  *types.Scope
-	fn     *types.FunctionSignature
-	table  *SymbolTable
+	Errors  lexer.ErrorList
+	depth   int
+	mode    CheckerMode
+	scope   *types.Scope
+	fn      *types.FunctionSignature
+	table   *SymbolTable
+	lhsType types.Type
 }
 
 func New(mode CheckerMode) *Checker {

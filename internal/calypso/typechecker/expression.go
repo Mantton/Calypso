@@ -58,8 +58,8 @@ func (c *Checker) checkCallExpression(expr *ast.FunctionCallExpression) {
 
 	retType := c.evaluateCallExpression(expr)
 
-	if retType.Parent() != types.LookUp(types.Void) {
-		fmt.Println("Add Warning here")
+	if retType != types.LookUp(types.Void) {
+		fmt.Println("[WARNING] Call Expression returning non void value is unused")
 	}
 
 }
@@ -136,6 +136,50 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 	typ := c.evaluateExpression(expr.Target)
 	switch fn := typ.(type) {
 	case *types.FunctionSignature:
+
+		if c.lhsType != nil {
+			lhsTyp, ok := c.lhsType.(*types.DefinedType)
+
+			if !ok {
+				c.addError(fmt.Sprintf("expected defined type, got %s, %s", c.lhsType, fn), expr.Range())
+				return unresolved
+			}
+
+			specializations := make(map[string]types.Type)
+
+			for _, p := range lhsTyp.TypeParameters {
+				specializations[p.Name()] = p.Bound
+			}
+
+			sg := apply(specializations, fn).(*types.FunctionSignature)
+
+			fmt.Println("Instantiated: ", sg)
+
+			if len(sg.Parameters) != len(expr.Arguments) {
+				c.addError(fmt.Sprintf("expected %d variables, got %d", len(sg.Parameters), len(fn.Parameters)), expr.Range())
+				return unresolved
+			}
+
+			for i, t := range sg.Parameters {
+				arg := expr.Arguments[i]
+				ident, ok := arg.(*ast.IdentifierExpression)
+
+				if !ok {
+					c.addError("expected identifier", arg.Range())
+					return unresolved
+				}
+
+				ok = c.define(types.NewVar(ident.Value, t.Type()))
+
+				if !ok {
+					c.addError(fmt.Sprintf("\"%s\" already exists in current context", ident.Value), arg.Range())
+					return unresolved
+				}
+			}
+
+			return sg.Result.Type()
+		}
+
 		isGeneric := types.IsGeneric(fn)
 
 		// Guard Argument Count == Parameter Count

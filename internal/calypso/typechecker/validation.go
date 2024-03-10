@@ -7,7 +7,7 @@ import (
 )
 
 func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type, error) {
-	fmt.Printf("Validating `%s`(provided) |> `%s`(expected)\n", provided, expected)
+	fmt.Printf("\t[VALIDATOR] Validating `%s`(provided) || `%s`(expected)\n", provided, expected)
 
 	if provided == unresolved {
 		// should have already been reported
@@ -71,35 +71,49 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 		return nil, standard
 	}
 
-	if defExpected.InstanceOf == provided {
-		return expected, nil
-	} else if defExpected.InstanceOf == defProvided.InstanceOf {
-		// same instance, rather than compare each field, compare type arguments instead
-		// safety check, theoretically not possible
-		if len(defExpected.TypeParameters) != len(defProvided.TypeParameters) {
-			err := fmt.Errorf("expected %d type arguments got %d instead", len(defExpected.TypeParameters), len(defProvided.TypeParameters))
-			return nil, err
+	// TODO: this needs some serious work...
+	if defExpected.InstanceOf == nil && defProvided.InstanceOf == nil {
+		if defExpected == defProvided {
+			return expected, nil
 		}
-
-		for idx, pEx := range defExpected.TypeParameters {
-			pProv := defProvided.TypeParameters[idx]
-
-			_, err := c.validate(pEx.Unwrapped(), pProv.Unwrapped())
-
-			if err != nil {
+	} else if defExpected.InstanceOf != nil && defProvided.InstanceOf == nil {
+		if defExpected.InstanceOf == defProvided {
+			return defExpected, nil
+		}
+	} else if defExpected.InstanceOf == nil && defProvided.InstanceOf != nil {
+		if defProvided.InstanceOf == defExpected {
+			return defExpected, nil
+		}
+	} else {
+		// Both Instances are Non nil
+		if defExpected.InstanceOf == defProvided.InstanceOf {
+			// same instance, rather than compare each field, compare type arguments instead
+			// safety check, theoretically not possible
+			if len(defExpected.TypeParameters) != len(defProvided.TypeParameters) {
+				err := fmt.Errorf("expected %d type arguments got %d instead", len(defExpected.TypeParameters), len(defProvided.TypeParameters))
 				return nil, err
 			}
-		}
 
-		return expected, nil
+			for idx, pEx := range defExpected.TypeParameters {
+				pProv := defProvided.TypeParameters[idx]
+
+				_, err := c.validate(pEx.Unwrapped(), pProv.Unwrapped())
+
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return expected, nil
+		}
 	}
 
-	fmt.Println("[VALIDATION] Failing", defExpected, "&", defProvided)
+	fmt.Printf("\t[VALIDATOR] Failed: `%s`(provided) || `%s`(expected)\n", provided, expected)
 	return nil, standard
 }
 
 func (c *Checker) validateBasicTypes(expected *types.Basic, p types.Type) (types.Type, error) {
-	provided, ok := p.(*types.Basic)
+	provided, ok := p.Parent().(*types.Basic)
 
 	if !ok {
 		return nil, fmt.Errorf("expected `%s`, received `%s`. Type %T, %T", expected, p, expected, p)

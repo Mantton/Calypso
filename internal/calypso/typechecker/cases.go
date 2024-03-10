@@ -9,7 +9,7 @@ import (
 
 func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expression) error {
 
-	fmt.Println("[ASSIGNMENT]", v.Name(), "of Type", v.Type(), "to", t)
+	// fmt.Println("[ASSIGNMENT]", v.Name(), "of Type", v.Type(), "to", t)
 	// if LHS has not been assigned a value
 	f := v.Type()
 	if f == unresolved {
@@ -40,7 +40,7 @@ func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expressio
 		f = updated
 	}
 	c.table.SetNodeType(n, f)
-	fmt.Printf("[Validator] %p -> %s\n", n, f)
+	fmt.Printf("\t[NODE ASSIGNMENT] %p -> %s\n", n, f)
 	return nil
 }
 
@@ -96,7 +96,7 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 					params = append(params, types.NewTypeParam(aT.Name(), aT.Constraints, nil))
 				}
 			default:
-				params = append(params, types.NewTypeParam(arg.String(), nil, arg))
+				params = append(params, types.NewTypeParam(p.Name(), nil, arg))
 			}
 		}
 
@@ -221,7 +221,7 @@ func apply(ctx mappings, typ types.Type) types.Type {
 					params = append(params, types.NewTypeParam(aT.Name(), aT.Constraints, nil))
 				}
 			default:
-				params = append(params, types.NewTypeParam(arg.String(), nil, arg))
+				params = append(params, types.NewTypeParam(p.Name(), nil, arg))
 			}
 		}
 
