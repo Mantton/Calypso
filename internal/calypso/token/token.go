@@ -164,7 +164,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH, BREAK:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH, BREAK, WHILE:
 		return true
 	}
 

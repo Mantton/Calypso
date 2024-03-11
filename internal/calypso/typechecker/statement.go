@@ -34,6 +34,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkSwitchStatement(stmt)
 	case *ast.BreakStatement:
 		return // nothing to TC on break
+	case *ast.WhileStatement:
+		c.checkWhileStatement(stmt)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -371,4 +373,20 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 		// 2 - Block
 		c.checkBlockStatement(cs.Action)
 	}
+}
+
+func (c *Checker) checkWhileStatement(n *ast.WhileStatement) {
+	condition := c.evaluateExpression(n.Condition)
+
+	_, err := c.validate(types.LookUp(types.Bool), condition)
+
+	if err != nil {
+		c.addError(err.Error(), n.Condition.Range())
+		return
+	}
+
+	c.enterScope()
+	c.table.AddScope(n, c.scope)
+	defer c.leaveScope()
+	c.checkBlockStatement(n.Action)
 }
