@@ -68,6 +68,10 @@ func AsDefined(t Type) *DefinedType {
 	if a, ok := t.(*DefinedType); ok {
 		return a
 	}
+
+	if b, ok := t.(*Alias); ok {
+		return AsDefined(b.RHS)
+	}
 	return nil
 
 }
@@ -77,6 +81,8 @@ func GetTypeParams(t Type) []*TypeParam {
 	case *DefinedType:
 		return t.TypeParameters
 	case *FunctionSignature:
+		return t.TypeParameters
+	case *Alias:
 		return t.TypeParameters
 	}
 
@@ -92,53 +98,3 @@ func ResolveTypeParameters(t Type) TypeParams {
 	}
 	return nil
 }
-
-// func ResolveField(field string, typ Type) Type {
-// 	fmt.Printf("Resolving `%s` for type `%s`\n", field, typ) // Resolve Field
-// 	parent := ResolveInstanceParent(typ)
-
-// 	if parent == nil {
-// 		return nil
-// 	}
-
-// 	params := ResolveTypeParameters(parent)
-
-// 	switch t := parent.Parent().(type) {
-// 	case *Enum:
-// 		for _, c := range t.Cases {
-// 			if c.Name == field {
-// 				if len(c.Fields) != 0 {
-// 					sg := NewFunctionSignature()
-// 					sg.Result.SetType(typ)
-// 					sg.TypeParameters = params
-// 					for _, f := range c.Fields {
-// 						sg.AddParameter(f)
-// 					}
-
-// 					if c := AsDefined(typ); c != nil {
-// 						sg.TypeParameters = c.TypeParameters
-// 					}
-// 					return sg
-// 				} else {
-// 					return typ
-// 				}
-// 			}
-// 		}
-
-// 	case *Struct:
-// 		for _, c := range t.Fields {
-// 			if c.Name() == field {
-// 				return c.Type()
-// 			}
-// 		}
-// 	}
-
-// 	fn, ok := parent.Methods[field]
-
-// 	if !ok {
-// 		fmt.Println("not found:", field)
-// 		return nil
-// 	}
-
-// 	return fn.Sg()
-// }

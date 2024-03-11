@@ -41,7 +41,6 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 			c.checkExtensionDeclaration(decl)
 		case *ast.ExternDeclaration:
 			c.checkExternDeclaration(decl)
-		// case *ast.TypeDeclaration:
 		default:
 			msg := fmt.Sprintf("declaration check not implemented, %T", decl)
 			panic(msg)
@@ -62,31 +61,40 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 		c.addError(msg, d.Identifier.Range())
 	}
 
+	c.enterScope()
+	c.table.AddScope(d, c.scope)
+	defer c.leaveScope()
+
 	// Loop through statements in standard definition
 	for _, expr := range d.Block.Statements {
 
-		fn, ok := expr.(*ast.FunctionStatement)
-		n := fn.Func.Identifier.Value
+		switch node := expr.(type) {
 
-		if !ok {
-			c.addError("Only Functions are allowed in a Standards body", expr.Range())
+		case *ast.FunctionStatement:
+			n := node.Func.Identifier.Value
+			// Parser ensures only signatures & no function bodies in standard decl
+
+			// evaluate Function Signature
+			sg := c.evaluateFunctionSignature(node.Func)
+
+			f := types.NewFunction(n, sg)
+			// Add method
+			ok = typ.AddMethod(n, f)
+
+			// already defined in standard, add error
+			if !ok {
+				c.addError(fmt.Sprintf("`%s` is already defined in `%s`", n, s.Name()), node.Range())
+				continue
+			}
+
+		case *ast.TypeStatement:
+			c.checkTypeStatement(node, typ)
+
+		default:
+			c.addError("cannot use statement in standard declaration", node.Range())
 			continue
 		}
 
-		// Parser ensures only signatures & no function bodies in standard decl
-
-		// evaluate Function Signature
-		sg := c.evaluateFunctionSignature(fn.Func)
-
-		f := types.NewFunction(n, sg)
-		// Add method
-		ok = typ.AddMethod(n, f)
-
-		// already defined in standard, add error
-		if !ok {
-			c.addError(fmt.Sprintf("`%s` is already defined in `%s`", n, s.Name()), fn.Range())
-			continue
-		}
 	}
 }
 
@@ -106,25 +114,55 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 		return
 	}
 
-	xx, ok := c.find(d.Target.Value)
+	target, ok := c.find(d.Target.Value)
 
 	if !ok {
 		c.addError(fmt.Sprintf("cannot find %s", d.Target.Value), d.Target.Range())
 		return
 	}
 
-	typ := types.AsDefined(xx.Type())
+	typ := types.AsDefined(target.Type())
 
 	if typ == nil {
 		c.addError(fmt.Sprintf("%s is not a defined type", d.Target.Value), d.Target.Range())
 		return
 	}
 
+	// inject types
+	prevSc := c.scope
+	c.scope = typ.Scope
+	defer func() {
+		c.scope = prevSc
+	}()
+
+	// Inject types into scope
+	for _, node := range d.Types {
+		c.checkTypeStatement(node, nil)
+	}
+
+	// ensure all required types have been injected
+	for _, t := range s.Types {
+		sym := c.scope.ResolveInCurrent(t.Name())
+
+		if sym == nil {
+			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing `%s`", d.Target.Value, s.Name, t.Name()), d.Target.Range())
+			return
+		}
+
+		_, ok := sym.(*types.Alias)
+
+		if !ok {
+			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing `%s`", d.Target.Value, s.Name, t.Name()), d.Target.Range())
+			return
+		}
+
+	}
+
 	// add functions to type
 	c.injectFunctionsInType(typ, d.Signatures)
 
 	// Ensure All Functions of Standard are implemented
-	for _, eFn := range s.Dna {
+	for _, eFn := range s.Signature {
 
 		// Get Implemented Method
 		pFn, ok := typ.Methods[eFn.Name()]

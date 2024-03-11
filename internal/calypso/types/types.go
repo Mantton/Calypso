@@ -6,17 +6,17 @@ type Type interface {
 	Parent() Type
 }
 
+type TParam interface {
+	TypeParameters() TypeParams
+}
+
 func IsGeneric(t Type) bool {
+	t = ResolveAliases(t)
 	switch t := t.(type) {
 	case *Pointer:
 		return IsGeneric(t.PointerTo)
 	case *TypeParam:
 		return true
-		// if t.Bound != nil {
-		// 	return true
-		// } else {
-		// 	return false
-		// }
 	case *DefinedType:
 		// No Type Parameters
 		if len(t.TypeParameters) == 0 {

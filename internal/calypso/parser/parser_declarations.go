@@ -21,8 +21,6 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 		return p.parseFunctionDeclaration()
 	case token.STANDARD:
 		return p.parseStandardDeclaration()
-	case token.TYPE:
-		return p.parseTypeDeclaration()
 	case token.EXTENSION:
 		return p.parseExtensionDeclaration()
 	case token.CONFORM:
@@ -50,7 +48,7 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 func (p *Parser) parseStatementDeclaration() *ast.StatementDeclaration {
 
 	switch p.current() {
-	case token.ALIAS, token.STRUCT, token.ENUM:
+	case token.ALIAS, token.STRUCT, token.ENUM, token.TYPE:
 		stmt := p.parseStatement()
 		return &ast.StatementDeclaration{
 			Stmt: stmt,
@@ -97,53 +95,14 @@ func (p *Parser) parseStatementList() []ast.Statement {
 }
 
 func (p *Parser) parseStandardDeclaration() *ast.StandardDeclaration {
-
 	keyw := p.expect(token.STANDARD)
-
 	ident := p.parseIdentifierWithoutAnnotation()
-
-	/*
-		TODO:
-			Standards should behave similarly to rust traits,
-			They should have constants, methods & types
-	*/
-
 	block := p.parseBlockStatement()
 
 	return &ast.StandardDeclaration{
 		KeyWPos:    keyw.Pos,
 		Identifier: ident,
 		Block:      block,
-	}
-}
-
-func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
-	// Consume Keyword
-	kwPos := p.expect(token.TYPE).Pos
-
-	// Consume TypeExpression
-
-	ident := p.parseIdentifierWithoutAnnotation()
-
-	// Has Generic Parameters
-	var params *ast.GenericParametersClause
-	if p.currentMatches(token.LSS) {
-		params = p.parseGenericParameterClause()
-	}
-
-	// Assign
-	eqPos := p.expect(token.ASSIGN).Pos
-
-	value := p.parseTypeExpression()
-
-	p.expect(token.SEMICOLON)
-
-	return &ast.TypeDeclaration{
-		KeyWPos:       kwPos,
-		EqPos:         eqPos,
-		GenericParams: params,
-		Value:         value,
-		Identifier:    ident,
 	}
 }
 
@@ -194,13 +153,20 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 	// Parse Functions in Extension
 
 	content := []*ast.FunctionStatement{}
+	types := []*ast.TypeStatement{}
 
 	for p.current() != token.RBRACE {
 
-		f := &ast.FunctionStatement{
-			Func: p.parseFunctionExpression(true),
+		if p.currentMatches(token.TYPE) {
+			t := p.parseTypeStatement()
+			types = append(types, t)
+		} else {
+			f := &ast.FunctionStatement{
+				Func: p.parseFunctionExpression(true),
+			}
+			content = append(content, f)
 		}
-		content = append(content, f)
+
 	}
 
 	rBrace := p.expect(token.RBRACE)
@@ -211,6 +177,7 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 		Target:     target,
 		LBracePos:  lBrace.Pos,
 		Signatures: content,
+		Types:      types,
 		RBracePos:  rBrace.Pos,
 	}
 

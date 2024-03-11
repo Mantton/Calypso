@@ -3,18 +3,59 @@ package types
 import "fmt"
 
 type Alias struct {
-	Name string
-	RHS  Type
+	symbol
+	TypeParameters TypeParams
+	RHS            Type
 }
 
 func (t *Alias) clyT()        {}
 func (t *Alias) Parent() Type { return t.RHS.Parent() }
 
-func (t *Alias) String() string { return fmt.Sprintf("%s(alias of %s)", t.Name, t.RHS.String()) }
+func (t *Alias) String() string {
+	if len(t.TypeParameters) == 0 {
+		return fmt.Sprintf("%s / %s", t.Name(), t.RHS)
+	} else {
+		f := t.Name() + "<"
+
+		for i, p := range t.TypeParameters {
+			f += p.String()
+
+			if i != len(t.TypeParameters)-1 {
+				f += ", "
+			}
+		}
+		f += ">"
+		return f + " / " + t.RHS.String()
+	}
+}
 
 func NewAlias(name string, RHS Type) *Alias {
 	return &Alias{
-		Name: name,
-		RHS:  RHS,
+		symbol: symbol{
+			name: name,
+			typ:  nil,
+		},
+		RHS: RHS,
+	}
+}
+
+func (s *Alias) AddTypeParameter(t *TypeParam) {
+	s.TypeParameters = append(s.TypeParameters, t)
+}
+
+func (a *Alias) SetType(t Type) {
+	a.RHS = ResolveLiteral(t)
+}
+
+func (t *Alias) Type() Type {
+	return t
+}
+
+func ResolveAliases(t Type) Type {
+	switch t := t.(type) {
+	case *Alias:
+		return ResolveAliases(t.RHS)
+	default:
+		return t
 	}
 }

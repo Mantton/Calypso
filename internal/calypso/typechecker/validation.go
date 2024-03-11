@@ -14,6 +14,14 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 		return expected, nil
 	}
 
+	expected = types.ResolveAliases(expected)
+	provided = types.ResolveAliases(provided)
+
+	// Instance?
+	if expected == types.LookUp(types.Placeholder) {
+		return provided, nil
+	}
+
 	// Non Defined Types
 	switch expected := expected.(type) {
 	case *types.Pointer:
@@ -210,20 +218,20 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 		return nil
 	}
 
-	provided, ok := x.(*types.DefinedType)
-	if !ok {
+	provided := types.AsDefined(x)
+	if provided == nil {
 		panic(
 			fmt.Errorf("%s is not a conforming type, %T", x, x),
 		)
 	}
 
 	if provided == types.LookUp(types.IntegerLiteral) {
-		provided = types.LookUp(types.Int).(*types.DefinedType)
+		provided = types.AsDefined(types.LookUp(types.Int))
 	}
 
 	action := func(s *types.Standard) error {
 
-		for _, expectedMethod := range s.Dna {
+		for _, expectedMethod := range s.Signature {
 			providedMethod, ok := provided.Methods[expectedMethod.Name()]
 
 			if !ok {

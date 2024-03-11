@@ -51,7 +51,7 @@ type StandardDeclaration struct {
 	Block      *BlockStatement
 }
 
-type TypeDeclaration struct {
+type TypeStatement struct {
 	KeyWPos       token.TokenPosition
 	Identifier    *IdentifierExpression
 	EqPos         token.TokenPosition
@@ -73,6 +73,7 @@ type ConformanceDeclaration struct {
 	Target     *IdentifierExpression
 	LBracePos  token.TokenPosition
 	Signatures []*FunctionStatement
+	Types      []*TypeStatement
 	RBracePos  token.TokenPosition
 }
 

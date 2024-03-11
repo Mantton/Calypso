@@ -3,8 +3,9 @@ package types
 var GlobalScope *Scope
 
 var globalTypes = map[BasicType]*Basic{
-	Unresolved: {Unresolved, "unresolved type"},
-	Bool:       {Bool, "bool"},
+	Unresolved:  {Unresolved, "unresolved type"},
+	Placeholder: {Placeholder, "unspecialized placeholder"},
+	Bool:        {Bool, "bool"},
 
 	// aliased integer types
 	Int:  {Int, "int"},

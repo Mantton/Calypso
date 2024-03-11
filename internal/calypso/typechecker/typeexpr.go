@@ -54,9 +54,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		}
 	}
 
-	if x, ok := typ.(*types.DefinedType); ok {
-		tParams = append(tParams, x.TypeParameters...)
-	}
+	tParams = types.GetTypeParams(typ)
 
 	if len(eArgs) != len(tParams) {
 		msg := fmt.Sprintf("expected %d type parameter(s), provided %d", len(tParams), len(eArgs))
@@ -115,6 +113,10 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 		t := c.evaluateTypeExpression(p.AnnotatedType, nil)
 		v := types.NewVar(p.Value, t)
 		sg.AddParameter(v)
+	}
+
+	if (e.GenericParams) != nil {
+		panic("TODO")
 	}
 
 	// Annotated Return Type

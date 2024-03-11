@@ -138,9 +138,9 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 	case *types.FunctionSignature:
 
 		if c.lhsType != nil {
-			lhsTyp, ok := c.lhsType.(*types.DefinedType)
+			lhsTyp := types.AsDefined(c.lhsType)
 
-			if !ok {
+			if lhsTyp == nil {
 				c.addError(fmt.Sprintf("expected defined type, got %s, %s", c.lhsType, fn), expr.Range())
 				return unresolved
 			}
@@ -352,9 +352,9 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 		}
 	}
 
-	base, ok := sym.(*types.DefinedType)
+	base := types.AsDefined(sym.Type())
 
-	if !ok {
+	if base == nil {
 		c.addError(
 			fmt.Sprintf("`%s` is not a type", n.Identifier.Value),
 			n.Identifier.Range(),
@@ -443,6 +443,10 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	}
 
 	for _, param := range base.TypeParameters {
+		if param.Bound != nil {
+			continue
+		}
+
 		_, ok := specializations[param.Name()]
 
 		if !ok {
@@ -477,7 +481,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map
 			}
 
 			specializations[gT.Name()] = vT
-			fmt.Println("Specialized Type Param", gT, ":", vT)
+			fmt.Println("\tSpecialized Type Param", gT, ":", vT)
 
 			return nil
 		}

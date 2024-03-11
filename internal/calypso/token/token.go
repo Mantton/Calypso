@@ -156,7 +156,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE, STANDARD, TYPE, EXTENSION, CONFORM, EXTERN:
+	case FUNC, CONST, MODULE, STANDARD, EXTENSION, CONFORM, EXTERN:
 		return true
 	}
 	return false
@@ -164,7 +164,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH, BREAK, WHILE:
+	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH, BREAK, WHILE, TYPE:
 		return true
 	}
 

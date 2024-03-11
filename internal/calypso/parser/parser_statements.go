@@ -33,6 +33,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseSwitchStatement()
 	case token.BREAK:
 		return p.parseBreakStatement()
+	case token.TYPE:
+		return p.parseTypeStatement()
 
 	}
 
@@ -464,5 +466,38 @@ func (p *Parser) parseBreakStatement() *ast.BreakStatement {
 	p.expect(token.SEMICOLON)
 	return &ast.BreakStatement{
 		KeyWPos: kwPos,
+	}
+}
+
+func (p *Parser) parseTypeStatement() *ast.TypeStatement {
+	// Consume Keyword
+	kwPos := p.expect(token.TYPE).Pos
+
+	// Consume TypeExpression
+
+	ident := p.parseIdentifierWithoutAnnotation()
+
+	// Has Generic Parameters
+	var params *ast.GenericParametersClause
+	if p.currentMatches(token.LSS) {
+		params = p.parseGenericParameterClause()
+	}
+
+	// Assign
+	var eqPos token.TokenPosition
+	var value ast.TypeExpression
+	if p.currentMatches(token.ASSIGN) {
+		eqPos = p.expect(token.ASSIGN).Pos
+		value = p.parseTypeExpression()
+	}
+
+	p.expect(token.SEMICOLON)
+
+	return &ast.TypeStatement{
+		KeyWPos:       kwPos,
+		EqPos:         eqPos,
+		GenericParams: params,
+		Value:         value,
+		Identifier:    ident,
 	}
 }

@@ -294,6 +294,7 @@ func (s *StructStatement) statementNode()     {}
 func (s *EnumStatement) statementNode()       {}
 func (s *SwitchStatement) statementNode()     {}
 func (s *BreakStatement) statementNode()      {}
+func (d *TypeStatement) statementNode()       {}
 
 // * Declarations
 func (e *ConstantDeclaration) Range() token.SyntaxRange {
@@ -314,11 +315,20 @@ func (e *StandardDeclaration) Range() token.SyntaxRange {
 		End:   e.Block.RBrackPos,
 	}
 }
-func (e *TypeDeclaration) Range() token.SyntaxRange {
-	return token.SyntaxRange{
-		Start: e.KeyWPos,
-		End:   e.Value.Range().End,
+func (e *TypeStatement) Range() token.SyntaxRange {
+
+	if e.Value != nil {
+		return token.SyntaxRange{
+			Start: e.KeyWPos,
+			End:   e.Value.Range().End,
+		}
+	} else {
+		return token.SyntaxRange{
+			Start: e.KeyWPos,
+			End:   e.Identifier.Range().End,
+		}
 	}
+
 }
 
 func (e *ExtensionDeclaration) Range() token.SyntaxRange {
@@ -346,7 +356,6 @@ func (d *ConstantDeclaration) declarationNode()    {}
 func (d *StatementDeclaration) declarationNode()   {}
 func (d *FunctionDeclaration) declarationNode()    {}
 func (d *StandardDeclaration) declarationNode()    {}
-func (d *TypeDeclaration) declarationNode()        {}
 func (d *ExtensionDeclaration) declarationNode()   {}
 func (d *ConformanceDeclaration) declarationNode() {}
 func (d *ExternDeclaration) declarationNode()      {}

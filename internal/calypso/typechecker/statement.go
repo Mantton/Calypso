@@ -26,8 +26,6 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		c.checkIfStatement(stmt)
 	case *ast.StructStatement:
 		c.checkStructStatement(stmt)
-	case *ast.AliasStatement:
-		c.checkAliasStatement(stmt)
 	case *ast.EnumStatement:
 		c.checkEnumStatement(stmt)
 	case *ast.SwitchStatement:
@@ -36,6 +34,8 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 		return // nothing to TC on break
 	case *ast.WhileStatement:
 		c.checkWhileStatement(stmt)
+	case *ast.TypeStatement:
+		c.checkTypeStatement(stmt, nil)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -155,7 +155,13 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 				continue
 			}
 
-			def.AddTypeParameter(t.(*types.TypeParam))
+			def.AddTypeParameter(types.AsTypeParam(t))
+			ok := def.Scope.Define(types.AsTypeParam(t))
+			if !ok {
+				c.addError(fmt.Sprintf("%s is already defined.", t), p.Identifier.Range())
+				return
+			}
+
 		}
 
 	}
@@ -172,50 +178,6 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 
 	typ := types.NewStruct(fields)
 	def.SetType(typ)
-}
-
-func (c *Checker) checkAliasStatement(n *ast.AliasStatement) {
-	name := n.Identifier.Value
-
-	// 1 - Define
-	def := types.NewDefinedType(name, unresolved, nil, c.scope)
-	ok := c.define(def)
-
-	if !ok {
-		c.addError(
-			fmt.Sprintf("`%s` is already defined", name),
-			n.Identifier.Range(),
-		)
-		return
-	}
-
-	// Get Type Params
-	hasError := false
-	if n.GenericParams != nil {
-		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p)
-			if t == unresolved {
-				hasError = true
-				continue
-			}
-
-			def.AddTypeParameter(t.(*types.TypeParam))
-		}
-	}
-	if hasError {
-		return
-	}
-
-	// Target
-	RHS := c.evaluateTypeExpression(n.Target, def.TypeParameters)
-
-	if RHS == unresolved {
-		// already reported
-		return
-	}
-
-	a := types.NewAlias(name, RHS)
-	def.SetType(a)
 }
 
 func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
@@ -247,6 +209,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 
 			if !ok {
 				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())
+				return
 			}
 		}
 
@@ -389,4 +352,57 @@ func (c *Checker) checkWhileStatement(n *ast.WhileStatement) {
 	c.table.AddScope(n, c.scope)
 	defer c.leaveScope()
 	c.checkBlockStatement(n.Action)
+}
+
+func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Standard) {
+	name := n.Identifier.Value
+
+	// 1 - Define
+	alias := types.NewAlias(name, types.LookUp(types.Placeholder))
+	ok := c.define(alias)
+	if !ok {
+		c.addError(
+			fmt.Sprintf("`%s` is already defined in context", name),
+			n.Identifier.Range(),
+		)
+		return
+	}
+
+	// 2 - Add to Standard
+	if standard != nil {
+		standard.AddType(alias)
+	}
+
+	// 3 - Type Parameters
+
+	hasError := false
+	if n.GenericParams != nil {
+		for _, p := range n.GenericParams.Parameters {
+			t := c.evaluateGenericParameterExpression(p)
+			if t == unresolved {
+				continue
+			}
+
+			tP := t.(*types.TypeParam)
+			alias.AddTypeParameter(tP)
+
+			if !ok {
+				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())
+				hasError = true
+			}
+		}
+	}
+
+	if hasError {
+		return
+	}
+
+	// 4 - RHS Type
+	var RHS types.Type
+
+	if n.Value != nil {
+		fmt.Println("[DEBUG] Resolving RHS for Alias", n.Identifier.Value)
+		RHS = c.evaluateTypeExpression(n.Value, alias.TypeParameters)
+		alias.SetType(RHS)
+	}
 }

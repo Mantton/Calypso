@@ -110,7 +110,10 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 
 		switch parent := t.Parent().(type) {
 		case *types.Basic:
-			panic("cannot instantiate basic type")
+			// if parent.Literal == types.Unresolved {
+			// 	return unresolved
+			// }
+			panic(fmt.Sprintf("cannot instantiate basic type, \"%s\"", parent))
 		case *types.Struct:
 			fields := []*types.Var{}
 			for _, field := range parent.Fields {
@@ -181,6 +184,44 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 			}
 		}
 		return apply(ctx, t)
+	case *types.Alias:
+		// Instantiate Gens?
+		if len(t.TypeParameters) != len(args) {
+			panic(fmt.Errorf("expecting %d arguments, got %d", len(t.TypeParameters), len(args)))
+		}
+
+		if len(t.TypeParameters) == 0 {
+			return t
+		}
+
+		// Params
+		params := types.TypeParams{}
+		for i, p := range t.TypeParameters {
+
+			// check constraints
+			arg := args[i]
+			fmt.Println("\tMapping", arg, "to", p)
+
+			ctx[p.Name()] = arg
+
+			switch aT := arg.(type) {
+			case *types.TypeParam:
+				if aT.Bound != nil {
+					params = append(params, types.NewTypeParam(aT.Name(), nil, arg))
+				} else {
+					params = append(params, types.NewTypeParam(aT.Name(), aT.Constraints, nil))
+				}
+			default:
+				params = append(params, types.NewTypeParam(p.Name(), nil, arg))
+			}
+		}
+
+		alias := types.NewAlias(t.Name(), nil)
+
+		rhs := apply(ctx, t.RHS)
+		alias.SetType(rhs)
+		alias.TypeParameters = params
+		return alias
 	default:
 		fmt.Println(t)
 		panic("cannot instantiate type")
@@ -189,7 +230,7 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 
 func apply(ctx mappings, typ types.Type) types.Type {
 
-	fmt.Printf("Substituting %s with %s\n", typ, ctx)
+	fmt.Printf("\tSubstituting %s with %s\n", typ, ctx)
 	if !types.IsGeneric(typ) {
 		fmt.Println("\tSkipping Non Generic", typ)
 		return typ
@@ -302,8 +343,34 @@ func apply(ctx mappings, typ types.Type) types.Type {
 		sg.Result.SetType(apply(ctx, res))
 
 		return sg
+	case *types.Alias:
+		params := types.TypeParams{}
+		for _, p := range t.TypeParameters {
+
+			arg, ok := ctx[p.Name()]
+
+			if !ok {
+				return unresolved
+			}
+
+			switch aT := arg.(type) {
+			case *types.TypeParam:
+				if aT.Bound != nil {
+					params = append(params, types.NewTypeParam(aT.Name(), nil, arg))
+				} else {
+					params = append(params, types.NewTypeParam(aT.Name(), aT.Constraints, nil))
+				}
+			default:
+				params = append(params, types.NewTypeParam(p.Name(), nil, arg))
+			}
+		}
+		alias := types.NewAlias(t.Name(), nil)
+
+		rhs := apply(ctx, t.RHS)
+		alias.SetType(rhs)
+		alias.TypeParameters = params
+		return alias
 	default:
-		fmt.Println(t)
 		panic("cannot instantiate type")
 	}
 }

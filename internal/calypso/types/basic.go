@@ -31,6 +31,7 @@ const (
 	// misc
 	Void
 	Any
+	Placeholder
 
 	// helper literals
 	IntegerLiteral
