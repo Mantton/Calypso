@@ -113,16 +113,15 @@ func IsGroupLiteral(t Type) bool {
 
 func ResolveLiteral(t Type) Type {
 	switch t := t.(type) {
-	case *Basic:
-		switch t.Literal {
-		case IntegerLiteral:
+	case *DefinedType:
+
+		if t == LookUp(IntegerLiteral) {
 			return LookUp(Int)
-		case FloatLiteral:
+		} else if t == LookUp(FloatLiteral) {
 			return LookUp(Double)
 		}
-	case *DefinedType:
-		return t
 	}
+
 	return t
 }
 

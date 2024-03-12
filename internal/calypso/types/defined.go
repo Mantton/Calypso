@@ -49,7 +49,7 @@ func (t *DefinedType) String() string {
 	}
 }
 func (e *DefinedType) SetType(t Type) {
-	e.wrapped = ResolveLiteral(t)
+	e.wrapped = t
 }
 
 func (s *DefinedType) AddMethod(n string, f *Function) bool {

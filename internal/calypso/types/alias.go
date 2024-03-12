@@ -44,7 +44,7 @@ func (s *Alias) AddTypeParameter(t *TypeParam) {
 }
 
 func (a *Alias) SetType(t Type) {
-	a.RHS = ResolveLiteral(t)
+	a.RHS = (t)
 }
 
 func (t *Alias) Type() Type {

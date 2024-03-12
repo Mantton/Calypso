@@ -13,6 +13,6 @@ type symbol struct {
 
 func (e *symbol) Name() string { return e.name }
 func (e *symbol) SetType(t Type) {
-	e.typ = ResolveLiteral(t)
+	e.typ = t
 }
 func (e *symbol) Type() Type { return e.typ }

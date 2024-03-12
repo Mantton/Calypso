@@ -39,6 +39,7 @@ func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expressio
 
 		f = updated
 	}
+
 	c.table.SetNodeType(n, f)
 	fmt.Printf("\t[NODE ASSIGNMENT] %p -> %s\n", n, f)
 	return nil

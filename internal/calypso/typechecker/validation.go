@@ -139,6 +139,13 @@ func (c *Checker) validateBasicTypes(expected *types.Basic, p types.Type) (types
 		case provided.Literal == types.FloatLiteral && types.IsFloatingPoint(expected):
 			return expected, nil
 		}
+	} else if types.IsGroupLiteral(expected) {
+		switch {
+		case expected.Literal == types.IntegerLiteral && types.IsNumeric(provided):
+			return provided, nil
+		case expected.Literal == types.FloatLiteral && types.IsFloatingPoint(provided):
+			return provided, nil
+		}
 	}
 
 	match := expected == provided
