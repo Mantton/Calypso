@@ -457,99 +457,86 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	return apply(specializations, base)
 }
 
-func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations map[string]types.Type) error {
+func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Specializations) error {
 	vT := c.evaluateExpression(v)
 
+	fmt.Println("\n", "\t[Resolver] Variable Name", f.Name(), "\n", "\t[Resolver] Variable Type", f.Type(), "\n", "\t[Resolver] Provided Type", vT)
 	if vT == unresolved {
 		return fmt.Errorf("unresolved type assigned for `%s`", f.Name())
 	}
 
 	// check constraints & specialize
 	// can either be a type param or generic struct or a generic function
-
-	switch gT := f.Type().(type) {
+	fT := types.ResolveAliases(f.Type())
+	switch fT := fT.(type) {
 	case *types.TypeParam:
-		alt, ok := specializations[gT.Name()]
-
-		// has not already been specialized
-		if !ok {
-
-			// Ensure Conformance
-			err := c.validateConformance(gT.Constraints, vT)
-			if err != nil {
-				return err
-			}
-
-			specializations[gT.Name()] = vT
-			fmt.Println("\tSpecialized Type Param", gT, ":", vT)
-
-			return nil
-		}
-
-		// has been specialized, ensure strict match
-		temp := types.NewVar("", alt)
-		err := c.validateAssignment(temp, vT, v)
-
-		if err != nil {
-			return err
-		}
-
-		// no errors, type match
+		return specializations.specialize(fT, vT, c, v)
 	case *types.FunctionSignature:
-		panic("not implemented")
-	case *types.DefinedType:
-		if !types.IsGeneric(gT) {
+		if !types.IsGeneric(fT) {
 			break
 		}
+		panic("not implemented")
+	case *types.DefinedType:
 
+		// Not Generic , nothing to do, use typical validation
+		if !types.IsGeneric(fT) {
+			break
+		}
+		// Convert to Defined type
 		prev := vT
 		vT := types.AsDefined(vT)
-
 		if vT == nil {
 			panic(fmt.Errorf("type is not a defined type : %T (%s)", prev, prev))
 		}
 
-		// TODO -> These two have to match
-		for i, x := range gT.TypeParameters {
-			specializations[x.Name()] = vT.TypeParameters[i]
+		// validate vT can be passed to fT
+		_, err := c.validate(fT, vT)
+
+		if err != nil {
+			fmt.Println("[DEBUG]", err)
+			return err
 		}
 
-		fmt.Println("Specialized", gT, "as", vT, "with", specializations)
+		// Now sides are of the same type & should be of the same parameter length
+		// guard in situation where not
+		if len(fT.TypeParameters) != len(vT.TypeParameters) {
+			return fmt.Errorf("expected %d type parameter(s), got %d instead", len(fT.TypeParameters), len((vT.TypeParameters)))
+		}
+
+		// There for, Foo<T> == Foo<V>, we can infer T == V
+		for i, fTParam := range fT.TypeParameters {
+			vTParam := vT.TypeParameters[i]
+			return specializations.specialize(fTParam, vTParam, c, v)
+		}
 		return nil
+	case *types.Alias:
+		panic("fT should be resolved, bad path")
 
 	case *types.Pointer:
-		base := gT.PointerTo
+
+		// non generic pointer type
+		if !types.IsGeneric(fT) {
+			break
+		}
+		base := types.AsTypeParam(fT.PointerTo)
+
+		if base == nil {
+			panic("expected type parameter")
+		}
 
 		// vT must be an instantiated struct of type fT
 		iT, ok := vT.(*types.Pointer)
 
 		if !ok {
-			return fmt.Errorf("expected pointer to type %s, received %s", gT, vT)
-		}
-		alt, ok := specializations[base.String()]
-
-		// has not already been specialized
-		if !ok {
-			fmt.Println("[DEBUG]specializing ptr type", base, ":", iT.PointerTo)
-			specializations[base.String()] = iT.PointerTo
-			return nil
+			return fmt.Errorf("expected pointer to type %s, received %s", fT, vT)
 		}
 
-		// has been specialized, ensure strict match
-		temp := types.NewVar("", alt)
-		err := c.validateAssignment(temp, iT.PointerTo, v)
-
-		if err != nil {
-			return err
-		}
-
+		return specializations.specialize(base, iT, c, v)
 	}
 
+	// resolve non generic types
 	err := c.validateAssignment(f, vT, v)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types.Type {

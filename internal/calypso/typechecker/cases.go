@@ -222,9 +222,14 @@ func instantiate(t types.Type, args []types.Type, ctx mappings) types.Type {
 		alias.SetType(rhs)
 		alias.TypeParameters = params
 		return alias
+	case *types.Pointer:
+		cT := t.PointerTo
+		uT := apply(ctx, cT)
+
+		ptr := types.NewPointer(uT)
+		return ptr
 	default:
-		fmt.Println(t)
-		panic("cannot instantiate type")
+		panic(fmt.Sprintf("cannot instantiate type %s", t))
 	}
 }
 
@@ -370,7 +375,13 @@ func apply(ctx mappings, typ types.Type) types.Type {
 		alias.SetType(rhs)
 		alias.TypeParameters = params
 		return alias
+	case *types.Pointer:
+		cT := t.PointerTo
+		uT := apply(ctx, cT)
+
+		ptr := types.NewPointer(uT)
+		return ptr
 	default:
-		panic("cannot instantiate type")
+		panic(fmt.Sprintf("cannot instantiate type %s", t))
 	}
 }
