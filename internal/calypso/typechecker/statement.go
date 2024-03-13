@@ -136,7 +136,8 @@ func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
 func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 
 	// 1 - Define
-	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, c.scope)
+
+	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, types.NewScope(c.scope))
 	ok := c.define(def)
 
 	if !ok {
@@ -155,8 +156,7 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 				continue
 			}
 
-			def.AddTypeParameter(types.AsTypeParam(t))
-			ok := def.Scope.Define(types.AsTypeParam(t))
+			ok := def.AddTypeParameter(types.AsTypeParam(t))
 			if !ok {
 				c.addError(fmt.Sprintf("%s is already defined.", t), p.Identifier.Range())
 				return
@@ -184,7 +184,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 	name := n.Identifier.Value
 
 	// 1 - Define
-	def := types.NewDefinedType(name, unresolved, nil, c.scope)
+	def := types.NewDefinedType(name, unresolved, nil, types.NewScope(c.scope))
 	ok := c.define(def)
 
 	if !ok {
@@ -204,8 +204,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 			}
 
 			tP := t.(*types.TypeParam)
-			def.AddTypeParameter(tP)
-			ok := def.Scope.Define(tP)
+			ok := def.AddTypeParameter(tP)
 
 			if !ok {
 				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())

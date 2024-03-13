@@ -45,3 +45,16 @@ func (s *Standard) AddType(t *Alias) error {
 	s.Types[t.name] = t
 	return nil
 }
+
+func AsStandard(t Type) *Standard {
+
+	if t == nil {
+		return nil
+	}
+
+	if a, ok := t.(*Standard); ok {
+		return a
+	}
+	return nil
+
+}

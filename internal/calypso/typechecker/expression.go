@@ -102,10 +102,12 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluatePropertyExpression(expr)
 	case *ast.GenericSpecializationExpression:
 		return c.evaluateGenericSpecializationExpression(expr)
-
-	// case *ast.ArrayLiteral:
-	// case *ast.MapLiteral:
-
+	case *ast.ArrayLiteral:
+		return c.evaluateArrayLiteral(expr)
+	case *ast.MapLiteral:
+		return c.evaluateMapLiteral(expr)
+	case *ast.IndexExpression:
+		return c.evaluateIndexExpression(expr)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
@@ -151,7 +153,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 				specializations[p.Name()] = p
 			}
 
-			sg := apply(specializations, fn).(*types.FunctionSignature)
+			sg := types.Apply(specializations, fn).(*types.FunctionSignature)
 
 			fmt.Println("Instantiated: ", sg)
 
@@ -223,7 +225,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types
 			}
 		}
 
-		t := apply(specializations, fn)
+		t := types.Apply(specializations, fn)
 		fmt.Println("\nInstantiated Function:", t)
 		fmt.Println("Original:", fn)
 		fmt.Println()
@@ -454,7 +456,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 		}
 	}
 
-	return apply(specializations, base)
+	return types.Apply(specializations, base)
 }
 
 func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Specializations) error {
@@ -559,47 +561,10 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types
 
 	switch a := a.(type) {
 	case *types.DefinedType:
-
-		// Access Field
-		switch parent := a.Parent().(type) {
-		case *types.Struct:
-			for _, f := range parent.Fields {
-				if field == f.Name() {
-					return f.Type()
-				}
-			}
-
-		case *types.Enum:
-			for _, v := range parent.Variants {
-				if v.Name == field {
-					// Not tuple type, return parent type
-					if len(v.Fields) == 0 {
-						return a
-					}
-
-					// Tuple Type, Return Function Returning Parent Type
-					sg := types.NewFunctionSignature()
-					for _, p := range v.Fields {
-						sg.AddParameter(p)
-					}
-
-					sg.Result.SetType(a)
-					return sg
-				}
-			}
-		default:
-			fmt.Println(a)
-			panic("TODO")
+		f := a.ResolveField(field)
+		if f != nil {
+			return f
 		}
-
-		// Access Method
-		method, ok := a.Methods[field]
-		if ok {
-			return method.Sg()
-		}
-
-	default:
-		panic("TODO")
 	}
 
 	c.addError(fmt.Sprintf("unknown method or field: \"%s\" on type \"%s\"", field, a), n.Range())
@@ -665,7 +630,7 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	}
 
 	// 7 - Return instance of type
-	instance := instantiate(sym.Type(), args, nil)
+	instance := types.Instantiate(sym.Type(), args, nil)
 	return instance
 }
 
@@ -690,7 +655,7 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	// inject `self`
 	if self != nil {
 		s := types.NewVar("self", self)
-		c.scope.Parent = self.Scope
+		c.scope.Parent = self.GetScope()
 		c.scope.Define(s)
 	}
 
@@ -736,4 +701,184 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	// Ensure All Params are used
 
 	return sg
+}
+
+func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral) types.Type {
+
+	var element types.Type
+
+	if len(n.Elements) == 0 {
+		c.addError("empty literal", n.Range())
+		return unresolved
+	}
+
+	hasError := false
+	for _, node := range n.Elements {
+		provided := c.evaluateExpression(node)
+
+		if element == nil && provided != unresolved {
+			element = provided
+			continue
+		}
+
+		_, err := c.validate(element, provided)
+
+		if err != nil {
+			c.addError(err.Error(), node.Range())
+			hasError = true
+		}
+	}
+
+	if hasError {
+		return unresolved
+	}
+
+	sym, ok := c.find("Array")
+
+	if !ok {
+		c.addError("unable to find map type", n.Range())
+		return unresolved
+	}
+	typ := types.AsDefined(sym.Type())
+	instantiated := types.Instantiate(typ, []types.Type{element}, nil)
+	return instantiated
+}
+func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral) types.Type {
+
+	var key types.Type
+	var value types.Type
+
+	if len(n.Pairs) == 0 {
+		c.addError("empty literal", n.Range())
+		return unresolved
+	}
+
+	hasError := false
+	for _, node := range n.Pairs {
+		providedKey := c.evaluateExpression(node.Key)
+		providedValue := c.evaluateExpression(node.Value)
+
+		if key == nil && providedKey != unresolved {
+			key = providedKey
+		}
+
+		if value == nil && providedValue != unresolved {
+			value = providedValue
+		}
+
+		_, err := c.validate(key, providedKey)
+
+		if err != nil {
+			c.addError(err.Error(), node.Range())
+			hasError = true
+		}
+
+		_, err = c.validate(value, providedValue)
+
+		if err != nil {
+			c.addError(err.Error(), node.Range())
+			hasError = true
+		}
+	}
+
+	if hasError {
+		return unresolved
+	}
+
+	sym, ok := c.find("Map")
+
+	if !ok {
+		c.addError("unable to find map type", n.Range())
+		return unresolved
+	}
+	typ := types.AsDefined(sym.Type())
+	instantiated := types.Instantiate(typ, []types.Type{key, value}, nil)
+	return instantiated
+}
+
+func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression) types.Type {
+
+	// 1 - Eval Target
+	target := c.evaluateExpression(n.Target)
+
+	// 2 - Eval Subscript Standard
+	symbol, ok := c.find("SubscriptStandard")
+
+	if !ok {
+		c.addError("unable to find subscript standard", n.Range())
+		return unresolved
+	}
+
+	standardDefinition := types.AsDefined(symbol.Type())
+
+	if standardDefinition == nil {
+		c.addError("subscript is not a defined type", n.Range())
+		return unresolved
+	}
+
+	standard := types.AsStandard(standardDefinition.Parent())
+	if standard == nil {
+		c.addError("subscript is not a standard", n.Range())
+		return unresolved
+	}
+
+	// 3 - Get Target Definition
+
+	definition := types.AsDefined(target)
+
+	if definition == nil {
+		c.addError(fmt.Sprintf("\"%s\" is not a defined type", target), n.Range())
+		return unresolved
+	}
+
+	// 4 - Validate Conformance to Subscript Standard
+	err := c.validateConformance([]*types.Standard{standard}, target)
+
+	if err != nil {
+		c.addError(err.Error(), n.Target.Range())
+		return unresolved
+	}
+
+	// 5 - Get Index Type
+
+	indexSymbol := definition.ResolveType("Index")
+
+	if indexSymbol == nil {
+		c.addError("Unable to resolve type: \"Index\"", n.Target.Range())
+		return unresolved
+	}
+
+	indexType := types.AsDefined(indexSymbol)
+
+	if indexType == nil {
+		c.addError(fmt.Sprintf("%s is not a defined type", indexSymbol), n.Target.Range())
+		return unresolved
+	}
+
+	// 6 - Resolve & Validate Index Type
+	index := c.evaluateExpression(n.Index)
+
+	_, err = c.validate(indexType, index)
+
+	if err != nil {
+		c.addError(err.Error(), n.Index.Range())
+		return unresolved
+	}
+
+	// - Validated At this point, return Element Type
+	elementSymbol := definition.ResolveType("Element")
+
+	if elementSymbol == nil {
+		c.addError("Unable to locate Element Type", n.Target.Range())
+		return unresolved
+	}
+
+	elementType := types.AsDefined(elementSymbol)
+
+	if elementType == nil {
+		c.addError(fmt.Sprintf("%s is not a defined type", elementSymbol), n.Target.Range())
+		return unresolved
+	}
+
+	return elementType
 }

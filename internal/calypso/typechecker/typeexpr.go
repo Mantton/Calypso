@@ -13,6 +13,10 @@ func (c *Checker) evaluateTypeExpression(e ast.TypeExpression, tPs []*types.Type
 		return c.evaluateIdentifierTypeExpression(expr, tPs)
 	case *ast.PointerTypeExpression:
 		return c.evaluatePointerTypeExpression(expr, tPs)
+	case *ast.ArrayTypeExpression:
+		return c.evaluateArrayTypeExpression(expr, tPs)
+	case *ast.MapTypeExpression:
+		return c.evaluateMapTypeExpression(expr, tPs)
 	default:
 		msg := fmt.Sprintf("type expression check not implemented, %T", e)
 		panic(msg)
@@ -86,7 +90,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return unresolved
 	}
 
-	o := instantiate(typ, eArgs, nil)
+	o := types.Instantiate(typ, eArgs, nil)
 	fmt.Println("Instantiated:", o, "from", typ)
 	fmt.Println()
 	return o
@@ -161,4 +165,34 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 
 	}
 	return d
+}
+
+func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs []*types.TypeParam) types.Type {
+	element := c.evaluateTypeExpression(expr.Element, tPs)
+	sym, ok := c.find("Array")
+
+	if !ok {
+		c.addError("unable to find array type", expr.Range())
+		return unresolved
+	}
+	typ := types.AsDefined(sym.Type())
+	inst := types.Instantiate(typ, []types.Type{element}, nil)
+	return inst
+}
+
+func (c *Checker) evaluateMapTypeExpression(expr *ast.MapTypeExpression, tPs []*types.TypeParam) types.Type {
+
+	key := c.evaluateTypeExpression(expr.Key, tPs)
+	value := c.evaluateTypeExpression(expr.Value, tPs)
+
+	sym, ok := c.find("Map")
+
+	if !ok {
+		c.addError("unable to find map type", expr.Range())
+		return unresolved
+	}
+	typ := types.AsDefined(sym.Type())
+	inst := types.Instantiate(typ, []types.Type{key, value}, nil)
+
+	return inst
 }

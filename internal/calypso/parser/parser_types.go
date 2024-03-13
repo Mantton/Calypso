@@ -7,48 +7,53 @@ import (
 
 func (p *Parser) parseTypeExpression() ast.TypeExpression {
 
+	var typ ast.TypeExpression
 	switch p.current() {
 	case token.MUL:
-		return p.parsePointerTypeExpression()
+		typ = p.parsePointerTypeExpression()
 	case token.IDENTIFIER:
-		return p.parseIdentifierTypeExpression()
-	case token.LBRACKET:
-		return p.parseArrayTypeExpression()
+		typ = p.parseIdentifierTypeExpression()
+	case token.LBRACE:
+		typ = p.parseMapTypeExpression()
+	default:
+		panic(p.error("expected type expression"))
 	}
-	panic("expected type expression")
+
+	if p.match(token.LBRACKET) {
+		lBrackPos := p.previousScannedToken().Pos
+		rBrackPos := p.expect(token.RBRACKET).Pos
+
+		return &ast.ArrayTypeExpression{
+			LBracketPos: lBrackPos,
+			RBracketPos: rBrackPos,
+			Element:     typ,
+		}
+	}
+
+	return typ
 }
 
-func (p *Parser) parseArrayTypeExpression() ast.TypeExpression {
-	start := p.expect(token.LBRACKET)
+func (p *Parser) parseMapTypeExpression() ast.TypeExpression {
+	start := p.expect(token.LBRACE)
 	expr := p.parseTypeExpression()
-	var end token.TokenPosition
-	switch p.current() {
-	case token.COLON:
-		p.expect(token.COLON)
-		value := p.parseTypeExpression()
-		end := p.expect(token.RBRACKET)
+	p.expect(token.COLON)
+	value := p.parseTypeExpression()
+	end := p.expect(token.RBRACE)
 
-		return &ast.MapTypeExpression{
-			Key:         expr,
-			Value:       value,
-			LBracketPos: start.Pos,
-			RBracketPos: end.Pos,
-		}
-
-	default:
-		end = p.expect(token.RBRACKET).Pos
-	}
-
-	return &ast.ArrayTypeExpression{
-		Element:     expr,
+	return &ast.MapTypeExpression{
+		Key:         expr,
+		Value:       value,
 		LBracketPos: start.Pos,
-		RBracketPos: end,
+		RBracketPos: end.Pos,
 	}
 }
 
 func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
+	// 1 - Identifier
 	ident := p.parseIdentifierWithoutAnnotation()
+
+	// 2 - Type Parameters
 	var args *ast.GenericArgumentsClause
 	if p.currentMatches(token.LSS) {
 		args = p.parseGenericArgumentsClause()

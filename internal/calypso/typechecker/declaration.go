@@ -51,7 +51,7 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	// declare type & it's definition
 	typ := types.NewStandard(d.Identifier.Value)
-	s := types.NewDefinedType(d.Identifier.Value, typ, nil, c.scope)
+	s := types.NewDefinedType(d.Identifier.Value, typ, nil, types.NewScope(c.scope))
 
 	// define in scope
 	ok := c.define(s)
@@ -61,9 +61,12 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 		c.addError(msg, d.Identifier.Range())
 	}
 
-	c.enterScope()
-	c.table.AddScope(d, c.scope)
-	defer c.leaveScope()
+	// inject types
+	prevSc := c.scope
+	c.scope = s.GetScope()
+	defer func() {
+		c.scope = prevSc
+	}()
 
 	// Loop through statements in standard definition
 	for _, expr := range d.Block.Statements {
@@ -130,7 +133,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 
 	// inject types
 	prevSc := c.scope
-	c.scope = typ.Scope
+	c.scope = typ.GetScope()
 	defer func() {
 		c.scope = prevSc
 	}()
@@ -149,10 +152,11 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 			return
 		}
 
-		_, ok := sym.(*types.Alias)
-
-		if !ok {
-			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing `%s`", d.Target.Value, s.Name, t.Name()), d.Target.Range())
+		switch sym.(type) {
+		case types.Type:
+			continue
+		default:
+			c.addError(fmt.Sprintf("\"%s\" does not conform to \"%s\", \"%s\" is defined but not a type", d.Target.Value, s.Name, t.Name()), d.Target.Range())
 			return
 		}
 
@@ -165,15 +169,15 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	for _, eFn := range s.Signature {
 
 		// Get Implemented Method
-		pFn, ok := typ.Methods[eFn.Name()]
+		pFn := typ.ResolveMethod(eFn.Name())
 
-		if !ok {
+		if pFn == nil {
 			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing `%s`", d.Target.Value, s.Name, eFn.Name()), d.Target.Range())
 			return
 		}
 
 		// Ensure Function Is of same signature
-		_, err := c.validate(eFn.Sg(), pFn.Type())
+		_, err := c.validate(eFn.Sg(), pFn)
 
 		if err != nil {
 			c.addError(err.Error(), d.Target.Range())
@@ -198,7 +202,15 @@ func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
 
 	if typ == nil {
 		c.addError(fmt.Sprintf("%s is not a type", name), d.Identifier.Range())
+		return
 	}
+
+	// inject types
+	prevSc := c.scope
+	c.scope = typ.GetScope()
+	defer func() {
+		c.scope = prevSc
+	}()
 
 	c.injectFunctionsInType(typ, d.Content)
 }
@@ -210,7 +222,7 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 		// eval function
 		sg := types.NewFunctionSignature()
 		fn := types.NewFunction(stmt.Func.Identifier.Value, sg)
-		ok := typ.Scope.Define(fn)
+		ok := typ.AddMethod(fn.Name(), fn)
 
 		// Define in type scope
 		if !ok {
@@ -223,13 +235,6 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 		// error already reported
 		if t == unresolved {
 			continue
-		}
-
-		// add to methods
-		ok = typ.AddMethod(fn.Name(), fn)
-
-		if !ok {
-			panic("unreachable")
 		}
 	}
 }

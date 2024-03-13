@@ -239,13 +239,13 @@ func (c *Checker) validateConformance(constraints []*types.Standard, x types.Typ
 	action := func(s *types.Standard) error {
 
 		for _, expectedMethod := range s.Signature {
-			providedMethod, ok := provided.Methods[expectedMethod.Name()]
+			providedMethod := provided.ResolveMethod(expectedMethod.Name())
 
-			if !ok {
+			if providedMethod == nil {
 				return fmt.Errorf("%s does does not conform to standard: `%s`", x, s)
 			}
 
-			_, err := c.validate(expectedMethod.Type(), providedMethod.Type())
+			_, err := c.validate(expectedMethod.Type(), providedMethod)
 
 			if err != nil {
 				return err

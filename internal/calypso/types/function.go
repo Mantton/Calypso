@@ -84,3 +84,16 @@ func (sg *FunctionSignature) AddParameter(t *Var) {
 func (n *Function) Sg() *FunctionSignature {
 	return n.typ.(*FunctionSignature)
 }
+
+func AsFunction(t Symbol) *Function {
+	if t == nil {
+		return nil
+	}
+
+	if a, ok := t.(*Function); ok {
+		return a
+	}
+
+	return nil
+
+}

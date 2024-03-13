@@ -3,26 +3,27 @@ package types
 type DefinedType struct {
 	symbol
 	wrapped        Type
-	InstanceOf     Type
+	InstanceOf     *DefinedType
 	TypeParameters TypeParams
-	Methods        map[string]*Function
-	Scope          *Scope
+	scope          *Scope
+	mappings       map[string]Type
 }
 
-func NewDefinedType(n string, t Type, p TypeParams, parentScope *Scope) *DefinedType {
-	return &DefinedType{
+func NewDefinedType(n string, t Type, p TypeParams, scope *Scope) *DefinedType {
+	typ := &DefinedType{
 		symbol: symbol{
 			name: n,
 		},
 		TypeParameters: p,
 		wrapped:        t,
-		Methods:        make(map[string]*Function),
-		Scope:          NewScope(parentScope),
+		scope:          scope,
 	}
+	return typ
 }
 
-func (s *DefinedType) AddTypeParameter(t *TypeParam) {
+func (s *DefinedType) AddTypeParameter(t *TypeParam) bool {
 	s.TypeParameters = append(s.TypeParameters, t)
+	return s.scope.Define(t)
 }
 
 func (t *DefinedType) clyT()        {}
@@ -53,15 +54,7 @@ func (e *DefinedType) SetType(t Type) {
 }
 
 func (s *DefinedType) AddMethod(n string, f *Function) bool {
-	_, ok := s.Methods[n]
-
-	if ok {
-		return false
-	}
-
-	s.Methods[n] = f
-	return true
-
+	return s.scope.Define(f)
 }
 
 func AsDefined(t Type) *DefinedType {
@@ -97,4 +90,152 @@ func ResolveTypeParameters(t Type) TypeParams {
 		return t.TypeParameters
 	}
 	return nil
+}
+
+func (n *DefinedType) ResolveMethod(s string) *FunctionSignature {
+
+	if n.scope == nil {
+		return n.instantiateMethod(s)
+	}
+
+	symbol := n.scope.ResolveInCurrent(s)
+
+	// Not found in current, find & specialize from instance
+	if symbol == nil {
+		return n.instantiateMethod(s)
+	}
+
+	typ := AsFunction(symbol)
+
+	if typ == nil {
+		return nil
+	}
+
+	return typ.Sg()
+
+}
+
+func (n *DefinedType) ResolveType(s string) Type {
+
+	if n.scope == nil {
+		return n.instantiateType(s)
+	}
+
+	symbol := n.scope.ResolveInCurrent(s)
+
+	// Not found in current, find & specialize from instance
+	if symbol == nil {
+		return n.instantiateType(s)
+	}
+
+	typ, ok := symbol.(Type)
+
+	if !ok {
+		return nil
+	}
+
+	return typ
+
+}
+
+func (n *DefinedType) ResolveField(s string) Type {
+
+	// Is Method
+	if method := n.ResolveMethod(s); method != nil {
+		return method
+	}
+
+	// Is Field
+
+	// Access Field
+	switch parent := n.Parent().(type) {
+	case *Struct:
+		for _, f := range parent.Fields {
+			if s == f.Name() {
+				return f.Type()
+			}
+		}
+
+	case *Enum:
+		for _, v := range parent.Variants {
+			if v.Name == s {
+				// Not tuple type, return parent type
+				if len(v.Fields) == 0 {
+					return n
+				}
+
+				// Tuple Type, Return Function Returning Parent Type
+				sg := NewFunctionSignature()
+				for _, p := range v.Fields {
+					sg.AddParameter(p)
+				}
+
+				sg.Result.SetType(n)
+				return sg
+			}
+		}
+	default:
+		return nil
+	}
+
+	return nil
+
+}
+
+func (n *DefinedType) initializeMappings() {
+	if n.mappings == nil {
+		n.mappings = make(map[string]Type)
+	}
+
+	for _, t := range n.TypeParameters {
+		n.mappings[t.name] = t.Unwrapped()
+	}
+}
+
+func (n *DefinedType) GetScope() *Scope {
+	return n.scope
+}
+
+func (n *DefinedType) instantiateType(sym string) Type {
+	// no instance of, is parent with none found
+	if n.InstanceOf == nil {
+		return nil
+	}
+
+	symbol := n.InstanceOf.ResolveType(sym)
+
+	// checked parent, not found
+	if symbol == nil {
+		return nil
+	}
+
+	if IsGeneric(symbol) {
+		n.initializeMappings()
+
+		return Apply(n.mappings, symbol)
+	}
+
+	return symbol
+}
+
+func (n *DefinedType) instantiateMethod(sym string) *FunctionSignature {
+	// no instance of, is parent with none found
+	if n.InstanceOf == nil {
+		return nil
+	}
+
+	symbol := n.InstanceOf.ResolveMethod(sym)
+
+	// checked parent, not found
+	if symbol == nil {
+		return nil
+	}
+
+	if IsGeneric(symbol) {
+		n.initializeMappings()
+
+		return Apply(n.mappings, symbol).(*FunctionSignature)
+	}
+
+	return symbol
 }

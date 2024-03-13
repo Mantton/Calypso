@@ -59,3 +59,16 @@ func ResolveAliases(t Type) Type {
 		return t
 	}
 }
+
+func AsAlias(t Type) *Alias {
+
+	if t == nil {
+		return nil
+	}
+
+	if a, ok := t.(*Alias); ok {
+		return a
+	}
+
+	return nil
+}
