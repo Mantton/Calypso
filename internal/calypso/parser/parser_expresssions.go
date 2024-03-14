@@ -109,7 +109,7 @@ func (p *Parser) parseFactorExpression() ast.Expression {
 
 func (p *Parser) parseUnaryExpression() ast.Expression {
 
-	if p.match(token.NOT, token.SUB, token.MUL) {
+	if p.match(token.NOT, token.SUB, token.MUL, token.AMP) {
 		op := p.previousScannedToken()
 		right := p.parseUnaryExpression()
 

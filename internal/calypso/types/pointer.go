@@ -19,7 +19,3 @@ func (t *Pointer) String() string {
 
 	return fmt.Sprintf(f, t.PointerTo)
 }
-
-func IsPointer(t Type) bool {
-	return t.(*Pointer) != nil
-}

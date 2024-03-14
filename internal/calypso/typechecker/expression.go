@@ -264,12 +264,28 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type 
 
 	case token.SUB:
 
-		// if RHS is numeric, return RHS type as numberic types can be negated
+		// if RHS is numeric, return RHS type as numeric types can be negated
 		if types.IsNumeric(rhs) {
 			return rhs
 		}
 
 		err = fmt.Errorf("unsupported negation operand on type `%s`", rhs)
+	case token.AMP:
+		if types.IsGroupLiteral(rhs) {
+			err = fmt.Errorf("cannot get reference of type \"%s\"", rhs)
+			break
+		}
+		return types.NewPointer(rhs)
+
+	case token.MUL:
+		ptr, ok := rhs.(*types.Pointer)
+
+		if !ok {
+			err = fmt.Errorf("cannot dereference non-pointer type \"%s\"", rhs)
+			break
+		}
+
+		return ptr.PointerTo
 	default:
 		err = fmt.Errorf("unsupported unary operand `%s`", token.LookUp(op))
 	}

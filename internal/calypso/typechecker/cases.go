@@ -7,39 +7,40 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) validateAssignment(v *types.Var, t types.Type, n ast.Expression) error {
+func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, node ast.Expression) error {
 	// fmt.Println("[ASSIGNMENT]", v.Name(), "of Type", v.Type(), "to", t)
 	// if LHS has not been assigned a value
-	f := v.Type()
-	if f == unresolved {
+	expected := variable.Type()
 
-		if t == types.LookUp(types.NilLiteral) {
+	if expected == unresolved {
+		switch {
+		case provided == types.LookUp(types.NilLiteral):
 			return fmt.Errorf("use of unspecialized nil in assignment")
-		} else if types.IsGeneric(t) {
-
-			if param := types.AsTypeParam(t); param != nil && param.Bound != nil {
-				v.SetType(param.Bound)
+		case types.IsGeneric(provided):
+			if param := types.AsTypeParam(provided); param != nil && param.Bound != nil {
+				expected = param.Bound
 			} else {
-				err := fmt.Errorf("unable to infer specialization of generic type `%s`", t)
+				err := fmt.Errorf("unable to infer specialization of generic type `%s`", provided)
 				return err
 			}
-
-		} else {
-			f = t
-			v.SetType(t)
+		default:
+			expected = provided
 		}
-
-		f = v.Type()
 	} else {
-		updated, err := c.validate(v.Type(), t)
+		updated, err := c.validate(expected, provided)
 		if err != nil {
 			return err
 		}
-
-		f = updated
+		expected = updated
 	}
 
-	c.table.SetNodeType(n, f)
-	fmt.Printf("\t[NODE ASSIGNMENT] %p -> %s\n", n, f)
+	expected = types.ResolveLiteral(expected)
+	variable.SetType(expected)
+
+	if expected != unresolved {
+		c.table.SetNodeType(node, expected)
+		fmt.Printf("\t[NODE ASSIGNMENT] %p -> %s\n", node, expected)
+	}
+
 	return nil
 }

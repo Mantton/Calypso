@@ -1,7 +1,5 @@
 package types
 
-import "fmt"
-
 type TypeParam struct {
 	name        string      // the name of the type parameter, e.g T, V
 	Constraints []*Standard // standards, this param is constrained to
@@ -21,7 +19,7 @@ type TypeParams []*TypeParam
 func (t *TypeParam) clyT() {}
 func (t *TypeParam) String() string {
 	if t.Bound != nil {
-		return fmt.Sprintf("%s[%s]", t.name, t.Bound)
+		return t.Bound.String()
 	} else {
 		return t.name
 	}
