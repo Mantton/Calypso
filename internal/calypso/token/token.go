@@ -54,10 +54,10 @@ const (
 	REM  // %
 	AMP  // &
 
-	LSS // <
-	GTR // >
-	EQL // ==
-	NEQ // !=
+	L_CHEVRON // <
+	R_CHEVRON // >
+	EQL       // ==
+	NEQ       // !=
 
 	LEQ // <=
 	GEQ // >=
@@ -73,8 +73,15 @@ const (
 	LBRACKET  // [
 	RBRACKET  // ]
 
-	R_ARROW // ->
-	op_e    // Operators End
+	AND             // &&
+	OR              // ||
+	BAR             // |
+	CARET           // ^
+	BIT_SHIFT_RIGHT // >>
+	BIT_SHIFT_LEFT  // <<
+	PIPE            // |>
+	R_ARROW         // ->
+	op_e            // Operators End
 
 	//* KEYWORDS
 	kw_b // Keywords Begin
@@ -182,11 +189,11 @@ var tokens = map[Token]string{
 	REM: "%",
 	AMP: "&",
 
-	EQL:    "==",
-	LSS:    "<",
-	GTR:    ">",
-	ASSIGN: "=",
-	NOT:    "!",
+	EQL:       "==",
+	L_CHEVRON: "<",
+	R_CHEVRON: ">",
+	ASSIGN:    "=",
+	NOT:       "!",
 
 	NEQ: "!=",
 	LEQ: "<=",

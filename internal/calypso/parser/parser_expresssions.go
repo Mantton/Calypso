@@ -56,7 +56,7 @@ func (p *Parser) parseEqualityExpression() ast.Expression {
 func (p *Parser) parseComparisonExpression() ast.Expression {
 	expr := p.parseTermExpression()
 
-	for p.match(token.GTR, token.GEQ, token.LEQ, token.LSS) {
+	for p.match(token.R_CHEVRON, token.GEQ, token.LEQ, token.L_CHEVRON) {
 		op := p.previousScannedToken()
 		right := p.parseTermExpression()
 
@@ -180,7 +180,7 @@ func (p *Parser) parseIndexExpression() ast.Expression {
 func (p *Parser) parseSpecializationExpression() ast.Expression {
 	expr := p.parsePrimaryExpression()
 
-	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.LSS) {
+	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.L_CHEVRON) {
 		c := p.parseGenericArgumentsClause()
 
 		// check if is composite initializer
@@ -290,11 +290,7 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 			}
 
 		} else {
-			expr = &ast.IdentifierExpression{
-				Value: p.currentScannedToken().Lit,
-				Pos:   p.currentScannedToken().Pos,
-			}
-			p.next()
+			return p.parseIdentifierWithoutAnnotation()
 		}
 
 	case token.LPAREN:
@@ -359,7 +355,7 @@ func (p *Parser) parseFunctionExpression(requiresBody bool) *ast.FunctionExpress
 
 	var genParams *ast.GenericParametersClause
 
-	if p.currentMatches(token.LSS) {
+	if p.currentMatches(token.L_CHEVRON) {
 		genParams = p.parseGenericParameterClause()
 	}
 

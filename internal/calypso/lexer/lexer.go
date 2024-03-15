@@ -132,15 +132,19 @@ func (l *Lexer) parseToken() token.ScannedToken {
 	case '<':
 		if l.match('=') {
 			tok = l.build(token.LEQ)
+		} else if l.match('<') {
+			tok = l.build(token.BIT_SHIFT_LEFT)
 		} else {
-			tok = l.build(token.LSS)
+			tok = l.build(token.L_CHEVRON)
 		}
 
 	case '>':
 		if l.match('=') {
 			tok = l.build(token.GEQ)
+		} else if l.match('>') {
+			tok = l.build(token.BIT_SHIFT_RIGHT)
 		} else {
-			tok = l.build(token.GTR)
+			tok = l.build(token.R_CHEVRON)
 		}
 
 	case '/':
@@ -160,9 +164,21 @@ func (l *Lexer) parseToken() token.ScannedToken {
 	case '\'':
 		tok = l.char()
 	case '&':
-		// TODO: &&
-		tok = l.build(token.AMP)
-
+		if l.match('&') {
+			tok = l.build(token.AND)
+		} else {
+			tok = l.build(token.AMP)
+		}
+	case '|':
+		if l.match('|') {
+			tok = l.build(token.OR)
+		} else if l.match('>') {
+			tok = l.build(token.PIPE)
+		} else {
+			tok = l.build(token.BAR)
+		}
+	case '^':
+		tok = l.build(token.CARET)
 	default:
 		if isDigit(c) {
 			tok = l.number()

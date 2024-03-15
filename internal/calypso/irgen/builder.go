@@ -148,9 +148,9 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 					return b.CreateSub(lhs, rhs, "")
 				// Compare
 
-				case token.LSS:
+				case token.L_CHEVRON:
 					return b.CreateICmp(llvm.IntSLT, lhs, rhs, "")
-				case token.GTR:
+				case token.R_CHEVRON:
 					return b.CreateICmp(llvm.IntSGT, lhs, rhs, "")
 				case token.GEQ:
 					return b.CreateICmp(llvm.IntSGE, lhs, rhs, "")

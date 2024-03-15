@@ -66,6 +66,11 @@ func (c *Checker) checkCallExpression(expr *ast.FunctionCallExpression) {
 
 // ----------- Eval ------------------
 func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
+	fmt.Printf(
+		"Evaluating Expression: %T @ Line %d\n",
+		expr,
+		expr.Range().Start.Line,
+	)
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.IntegerLiteral:
@@ -317,7 +322,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 		if types.IsNumeric(typ) {
 			return typ
 		}
-	case token.LSS, token.GTR, token.LEQ, token.GEQ:
+	case token.L_CHEVRON, token.R_CHEVRON, token.LEQ, token.GEQ:
 		if types.IsNumeric(typ) {
 			return types.LookUp(types.Bool)
 		}
@@ -389,7 +394,10 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 		return unresolved
 	}
 
-	// 3 - Get Struct Signature of Defined Type
+	// 3 - check for annotated specialization
+	// TODO: ^^
+
+	// 4 - Get Struct Signature of Defined Type
 
 	sg := base.Parent().(*types.Struct)
 
@@ -590,7 +598,6 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types
 func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression) types.Type {
 	// 1- Find Target
 	sym, ok := c.find(e.Identifier.Value)
-
 	if !ok {
 		msg := fmt.Sprintf("could not find `%s` in scope", e.Identifier.Value)
 		c.addError(msg, e.Range())

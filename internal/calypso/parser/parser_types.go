@@ -55,7 +55,7 @@ func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
 
 	// 2 - Type Parameters
 	var args *ast.GenericArgumentsClause
-	if p.currentMatches(token.LSS) {
+	if p.currentMatches(token.L_CHEVRON) {
 		args = p.parseGenericArgumentsClause()
 	}
 
@@ -76,9 +76,9 @@ This parses a generic argument clause
 func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
 
 	args := []ast.TypeExpression{}
-	start := p.expect(token.LSS)
+	start := p.expect(token.L_CHEVRON)
 
-	if p.match(token.GTR) {
+	if p.match(token.R_CHEVRON) {
 		panic(p.error("expected at least 1 generic argument"))
 	}
 
@@ -89,7 +89,7 @@ func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
 	// Check For Others
 	for p.match(token.COMMA) {
 
-		if p.match(token.GTR) {
+		if p.match(token.R_CHEVRON) {
 			panic("expected type expression")
 		}
 
@@ -98,7 +98,7 @@ func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
 		args = append(args, expr)
 	}
 
-	end := p.expect(token.GTR)
+	end := p.expect(token.R_CHEVRON)
 
 	if len(args) == 0 {
 		panic("expected arguments")
@@ -120,9 +120,9 @@ This parses a generic parameter clause
 */
 func (p *Parser) parseGenericParameterClause() *ast.GenericParametersClause {
 	params := []*ast.GenericParameterExpression{}
-	start := p.expect(token.LSS)
+	start := p.expect(token.L_CHEVRON)
 
-	if p.match(token.GTR) {
+	if p.match(token.R_CHEVRON) {
 		panic(p.error("expected at least 1 generic parameter"))
 	}
 
@@ -133,7 +133,7 @@ func (p *Parser) parseGenericParameterClause() *ast.GenericParametersClause {
 	// Check For Others
 	for p.match(token.COMMA) {
 
-		if p.match(token.GTR) {
+		if p.match(token.R_CHEVRON) {
 			panic(p.error("expected generic parameter"))
 		}
 
@@ -142,7 +142,7 @@ func (p *Parser) parseGenericParameterClause() *ast.GenericParametersClause {
 		params = append(params, param)
 	}
 
-	end := p.expect(token.GTR)
+	end := p.expect(token.R_CHEVRON)
 
 	if len(params) == 0 {
 		panic(p.error("expected at least 1 generic parameter"))

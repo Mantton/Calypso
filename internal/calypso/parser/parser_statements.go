@@ -199,7 +199,7 @@ func (p *Parser) parseAliasStatement() *ast.AliasStatement {
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause
-	if p.currentMatches(token.LSS) {
+	if p.currentMatches(token.L_CHEVRON) {
 		params = p.parseGenericParameterClause()
 	}
 
@@ -227,7 +227,7 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 
 	var genericParams *ast.GenericParametersClause
 
-	if p.currentMatches(token.LSS) {
+	if p.currentMatches(token.L_CHEVRON) {
 		genericParams = p.parseGenericParameterClause()
 	}
 
@@ -259,7 +259,7 @@ func (p *Parser) parseEnumStatement() *ast.EnumStatement {
 
 	var genericParams *ast.GenericParametersClause
 
-	if p.currentMatches(token.LSS) {
+	if p.currentMatches(token.L_CHEVRON) {
 		genericParams = p.parseGenericParameterClause()
 	}
 
@@ -479,7 +479,7 @@ func (p *Parser) parseTypeStatement() *ast.TypeStatement {
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause
-	if p.currentMatches(token.LSS) {
+	if p.currentMatches(token.L_CHEVRON) {
 		params = p.parseGenericParameterClause()
 	}
 
