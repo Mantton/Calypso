@@ -308,6 +308,11 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type 
 func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 	lhs := c.evaluateExpression(e.Left)
 	rhs := c.evaluateExpression(e.Right)
+
+	if lhs == unresolved || rhs == unresolved {
+		return unresolved
+	}
+
 	op := e.Op
 
 	typ, err := c.validate(lhs, rhs)

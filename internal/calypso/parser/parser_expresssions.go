@@ -158,7 +158,7 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 }
 
 func (p *Parser) parseIndexExpression() ast.Expression {
-	expr := p.parseSpecializationExpression()
+	expr := p.parsePrimaryExpression()
 
 	for p.match(token.LBRACKET) {
 		lbrackPos := p.previousScannedToken().Pos
