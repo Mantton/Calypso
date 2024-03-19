@@ -109,12 +109,19 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		if l.match('>') {
 			tok = l.build(token.R_ARROW)
 		} else {
-			tok = l.build(token.SUB)
+			tok = l.build(token.MINUS)
 		}
 	case '+':
-		tok = l.build(token.ADD)
+		if l.match('=') {
+		} else {
+			tok = l.build(token.PLUS)
+
+		}
+
 	case '*':
-		tok = l.build(token.MUL)
+		tok = l.build(token.STAR)
+	case '%':
+		tok = l.build(token.PCT)
 
 	case '!':
 		if l.match('=') {
@@ -167,13 +174,13 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		tok = l.char()
 	case '&':
 		if l.match('&') {
-			tok = l.build(token.AND)
+			tok = l.build(token.DOUBLE_AMP)
 		} else {
 			tok = l.build(token.AMP)
 		}
 	case '|':
 		if l.match('|') {
-			tok = l.build(token.OR)
+			tok = l.build(token.DOUBLE_BAR)
 		} else if l.match('>') {
 			tok = l.build(token.PIPE)
 		} else {

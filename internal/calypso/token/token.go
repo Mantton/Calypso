@@ -46,13 +46,13 @@ const (
 	NOT    // !
 
 	//* OPERATORS
-	op_b // Operators Begin
-	ADD  // +
-	SUB  // -
-	MUL  // *
-	QUO  // /
-	REM  // %
-	AMP  // &
+	op_b  // Operators Begin
+	PLUS  // +
+	MINUS // -
+	STAR  // *
+	QUO   // /
+	PCT   // %
+	AMP   // &
 
 	L_CHEVRON // <
 	R_CHEVRON // >
@@ -61,6 +61,19 @@ const (
 
 	LEQ // <=
 	GEQ // >=
+
+	// TODO:
+	PLUS_EQ  // +=
+	MINUS_EQ // -=
+	STAR_EQ  // *=
+	QUO_EQ   // /=
+	PCT_EQ   // %=
+
+	AMP_EQ    // &=
+	BAR_EQ    // |=
+	CARET_EQ  // ^=
+	LSHIFT_EQ // <<=
+	RSHIFT_EQ // >>=
 
 	COMMA     // ,
 	PERIOD    // .
@@ -73,8 +86,8 @@ const (
 	LBRACKET  // [
 	RBRACKET  // ]
 
-	AND             // &&
-	OR              // ||
+	DOUBLE_AMP      // &&
+	DOUBLE_BAR      // ||
 	BAR             // |
 	CARET           // ^
 	BIT_SHIFT_RIGHT // >>
@@ -180,12 +193,20 @@ var tokens = map[Token]string{
 	ILLEGAL: "ILLEGAL",
 	EOF:     "EOF",
 
-	ADD: "+",
-	SUB: "-",
-	MUL: "*",
-	QUO: "/",
-	REM: "%",
-	AMP: "&",
+	PLUS:  "+",
+	MINUS: "-",
+	STAR:  "*",
+	QUO:   "/",
+	PCT:   "%",
+	AMP:   "&",
+
+	BIT_SHIFT_LEFT:  "<<",
+	BIT_SHIFT_RIGHT: ">>",
+	CARET:           "^",
+	BAR:             "|",
+
+	DOUBLE_BAR: "||",
+	DOUBLE_AMP: "&&",
 
 	EQL:       "==",
 	L_CHEVRON: "<",

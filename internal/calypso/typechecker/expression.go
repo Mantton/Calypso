@@ -267,7 +267,7 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type 
 		// TODO: ^^^
 		panic("operand standards have not been implemented")
 
-	case token.SUB:
+	case token.MINUS:
 
 		// if RHS is numeric, return RHS type as numeric types can be negated
 		if types.IsNumeric(rhs) {
@@ -282,7 +282,7 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type 
 		}
 		return types.NewPointer(rhs)
 
-	case token.MUL:
+	case token.STAR:
 		ptr, ok := rhs.(*types.Pointer)
 
 		if !ok {
@@ -323,7 +323,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 	}
 
 	switch op {
-	case token.ADD, token.SUB, token.QUO, token.MUL:
+	case token.PLUS, token.MINUS, token.QUO, token.STAR:
 		if types.IsNumeric(typ) {
 			return typ
 		}

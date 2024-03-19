@@ -16,8 +16,10 @@ func (p *Parser) parseBinaryExpression() (ast.Expression, error) {
 	return p.parseAssignmentExpression()
 }
 
+// =. +=, -=, *=, /=, %=
+// &=, |=,  ^=,  <<=,  >>=
 func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
-	expr, err := p.parseEqualityExpression()
+	expr, err := p.parseDoubleBarExpression()
 
 	if err != nil {
 		return nil, err
@@ -41,6 +43,63 @@ func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// || Boolean OR
+func (p *Parser) parseDoubleBarExpression() (ast.Expression, error) {
+	expr, err := p.parseDoubleAmpExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.DOUBLE_BAR) {
+		op := p.previousScannedToken()
+		right, err := p.parseDoubleAmpExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ast.BinaryExpression{
+			Left:  expr,
+			Op:    op.Tok,
+			OpPos: op.Pos,
+			Right: right,
+		}
+	}
+
+	return expr, nil
+
+}
+
+// &&
+func (p *Parser) parseDoubleAmpExpression() (ast.Expression, error) {
+	expr, err := p.parseEqualityExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.DOUBLE_AMP) {
+		op := p.previousScannedToken()
+		right, err := p.parseEqualityExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ast.BinaryExpression{
+			Left:  expr,
+			Op:    op.Tok,
+			OpPos: op.Pos,
+			Right: right,
+		}
+	}
+
+	return expr, nil
+
+}
+
+// ==, !=
 func (p *Parser) parseEqualityExpression() (ast.Expression, error) {
 	expr, err := p.parseComparisonExpression()
 
@@ -67,14 +126,122 @@ func (p *Parser) parseEqualityExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// <, >, <=, >=
 func (p *Parser) parseComparisonExpression() (ast.Expression, error) {
-	expr, err := p.parseTermExpression()
+	expr, err := p.parseBitwiseORExpression()
 
 	if err != nil {
 		return nil, err
 	}
 
 	for p.match(token.R_CHEVRON, token.GEQ, token.LEQ, token.L_CHEVRON) {
+		op := p.previousScannedToken()
+		right, err := p.parseBitwiseORExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ast.BinaryExpression{
+			Left:  expr,
+			Op:    op.Tok,
+			OpPos: op.Pos,
+			Right: right,
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) parseBitwiseORExpression() (ast.Expression, error) {
+	expr, err := p.parseBitwiseXORExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.BAR) {
+		op := p.previousScannedToken()
+		right, err := p.parseBitwiseXORExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ast.BinaryExpression{
+			Left:  expr,
+			Op:    op.Tok,
+			OpPos: op.Pos,
+			Right: right,
+		}
+	}
+
+	return expr, nil
+
+}
+
+func (p *Parser) parseBitwiseXORExpression() (ast.Expression, error) {
+	expr, err := p.parseBitwiseANDExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.CARET) {
+		op := p.previousScannedToken()
+		right, err := p.parseBitwiseANDExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ast.BinaryExpression{
+			Left:  expr,
+			Op:    op.Tok,
+			OpPos: op.Pos,
+			Right: right,
+		}
+	}
+
+	return expr, nil
+
+}
+
+func (p *Parser) parseBitwiseANDExpression() (ast.Expression, error) {
+	expr, err := p.parseBitwiseShiftExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.AMP) {
+		op := p.previousScannedToken()
+		right, err := p.parseBitwiseShiftExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ast.BinaryExpression{
+			Left:  expr,
+			Op:    op.Tok,
+			OpPos: op.Pos,
+			Right: right,
+		}
+	}
+
+	return expr, nil
+
+}
+
+func (p *Parser) parseBitwiseShiftExpression() (ast.Expression, error) {
+	expr, err := p.parseTermExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.BIT_SHIFT_LEFT, token.BIT_SHIFT_RIGHT) {
 		op := p.previousScannedToken()
 		right, err := p.parseTermExpression()
 
@@ -93,6 +260,7 @@ func (p *Parser) parseComparisonExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// +, -
 func (p *Parser) parseTermExpression() (ast.Expression, error) {
 	expr, err := p.parseFactorExpression()
 
@@ -100,7 +268,7 @@ func (p *Parser) parseTermExpression() (ast.Expression, error) {
 		return nil, err
 	}
 
-	for p.match(token.SUB, token.ADD) {
+	for p.match(token.MINUS, token.PLUS) {
 		op := p.previousScannedToken()
 		right, err := p.parseFactorExpression()
 
@@ -115,10 +283,10 @@ func (p *Parser) parseTermExpression() (ast.Expression, error) {
 			Right: right,
 		}
 	}
-
 	return expr, nil
 }
 
+// *, /, %
 func (p *Parser) parseFactorExpression() (ast.Expression, error) {
 	expr, err := p.parseUnaryExpression()
 
@@ -126,7 +294,8 @@ func (p *Parser) parseFactorExpression() (ast.Expression, error) {
 		return nil, err
 	}
 
-	for p.match(token.QUO, token.MUL) {
+	for p.match(token.QUO, token.STAR, token.PCT) {
+
 		op := p.previousScannedToken()
 		right, err := p.parseUnaryExpression()
 
@@ -145,9 +314,10 @@ func (p *Parser) parseFactorExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// Unary -, *, !, &
 func (p *Parser) parseUnaryExpression() (ast.Expression, error) {
 
-	if p.match(token.NOT, token.SUB, token.MUL, token.AMP) {
+	if p.match(token.NOT, token.MINUS, token.STAR, token.AMP) {
 		op := p.previousScannedToken()
 		right, err := p.parseUnaryExpression()
 

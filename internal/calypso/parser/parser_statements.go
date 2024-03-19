@@ -120,7 +120,7 @@ func (p *Parser) parseBlockStatement() (*ast.BlockStatement, error) {
 
 func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	/**
-	  if (true) {
+	  if true {
 		return false;
 	  } else {
 		return true;
@@ -132,29 +132,17 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Condition
-	_, err = p.expect(token.LPAREN)
-
-	if err != nil {
-		return nil, err
-	}
-
 	stmt := &ast.IfStatement{
 		KeyWPos: start.Pos,
 	}
+	// Condition
+
 	condition, err := p.parseExpression()
 	if err != nil {
 		return nil, err
 	}
 
 	stmt.Condition = condition
-
-	_, err = p.expect(token.RPAREN)
-
-	if err != nil {
-		return nil, err
-	}
 
 	// Action Block
 	block, err := p.parseBlockStatement()

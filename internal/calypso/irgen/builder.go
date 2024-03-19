@@ -142,9 +142,9 @@ func (b *builder) createValue(v ssa.Value) llvm.Value {
 
 			case types.Int, types.IntegerLiteral, types.Int64, types.Int32, types.Int16, types.Int8:
 				switch op {
-				case token.ADD:
+				case token.PLUS:
 					return b.CreateAdd(lhs, rhs, "")
-				case token.SUB:
+				case token.MINUS:
 					return b.CreateSub(lhs, rhs, "")
 				// Compare
 

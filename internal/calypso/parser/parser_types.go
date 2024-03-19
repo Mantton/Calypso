@@ -10,7 +10,7 @@ func (p *Parser) parseTypeExpression() (ast.TypeExpression, error) {
 	var typ ast.TypeExpression
 	var err error
 	switch p.current() {
-	case token.MUL:
+	case token.STAR:
 		typ, err = p.parsePointerTypeExpression()
 		if err != nil {
 			return nil, err
@@ -259,7 +259,7 @@ func (p *Parser) parseGenericParameterExpression() (*ast.GenericParameterExpress
 }
 
 func (p *Parser) parsePointerTypeExpression() (*ast.PointerTypeExpression, error) {
-	pos, err := p.expect(token.MUL)
+	pos, err := p.expect(token.STAR)
 	if err != nil {
 		return nil, err
 	}
