@@ -252,14 +252,16 @@ func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
 	if err != nil {
 		return nil, err
 	}
+	pos := p.cursor
 
 	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.L_CHEVRON) {
 		c, err := p.parseGenericArgumentsClause()
 
 		if err != nil {
-			fmt.Println("???", p.currentScannedToken().Lit)
 			// Not a Foo<Bar> specialization but perhaps a Foo < Bar Comparison
-			return nil, err
+			// Reset to anchor position
+			p.cursor = pos
+			return expr, nil
 		}
 
 		// check if is composite initializer
@@ -362,24 +364,29 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 		p.next()
 
 	case token.IDENTIFIER:
+		ident, err := p.parseIdentifierWithoutAnnotation()
 
-		// is identifier, but token is `{` or `<`
-		if tok, ok := p.peakAheadScannedToken(); ok && (tok.Tok == token.LBRACE) {
-			ident, err := p.parseIdentifierWithoutAnnotation()
-			if err != nil {
-				return nil, err
-			}
+		if err != nil {
+			return nil, err
+		}
+
+		// is identifier, but next token is `{`, could possibly be a composite literal
+		anchor := p.cursor
+		if p.currentMatches(token.LBRACE) {
+
 			body, err := p.parseCompositeLiteralBody()
 			if err != nil {
-				return nil, err
+				p.cursor = anchor
+				return ident, nil
 			}
+
 			expr = &ast.CompositeLiteral{
 				Identifier: ident,
 				Body:       body,
 			}
 
 		} else {
-			return p.parseIdentifierWithoutAnnotation()
+			return ident, nil
 		}
 
 	case token.LPAREN:
