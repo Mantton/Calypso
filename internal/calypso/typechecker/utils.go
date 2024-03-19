@@ -10,9 +10,10 @@ import (
 )
 
 func (c *Checker) addError(msg string, pos token.SyntaxRange) {
-	c.Errors.Add(lexer.Error{
+	c.Errors.Add(&lexer.CompilerError{
 		Message: msg,
 		Range:   pos,
+		File:    c.file.LexerFile,
 	})
 }
 

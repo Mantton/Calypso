@@ -16,6 +16,7 @@ const (
 )
 
 type Lexer struct {
+	file         *File
 	source       []rune // an array of each rune in the file
 	sourceLength int
 
@@ -26,16 +27,17 @@ type Lexer struct {
 	lineOffset int
 }
 
-func New(input string) *Lexer {
-	l := &Lexer{source: []rune(input)}
-	l.sourceLength = len(l.source)
+func New(file *File) *Lexer {
+	l := &Lexer{source: file.Chars}
+	l.file = file
+	l.sourceLength = file.Length
 	l.line = 1
 	l.lineOffset = 1
 
 	return l
 }
 
-func (l *Lexer) AllTokens() []token.ScannedToken {
+func (l *Lexer) ScanAll() {
 	tokens := []token.ScannedToken{}
 
 	for !l.isAtEnd() {
@@ -55,7 +57,7 @@ func (l *Lexer) AllTokens() []token.ScannedToken {
 
 	// Add EOF token
 	tokens = append(tokens, token.ScannedToken{Pos: l.genPosition(), Tok: token.EOF, Lit: "EOF"})
-	return tokens
+	l.file.Tokens = tokens
 }
 
 func (l *Lexer) isAtEnd() bool {

@@ -8,39 +8,53 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-func (p *Parser) parseExpression() ast.Expression {
-
+func (p *Parser) parseExpression() (ast.Expression, error) {
 	return p.parseBinaryExpression()
-
 }
 
-func (p *Parser) parseBinaryExpression() ast.Expression {
+func (p *Parser) parseBinaryExpression() (ast.Expression, error) {
 	return p.parseAssignmentExpression()
 }
 
-func (p *Parser) parseAssignmentExpression() ast.Expression {
-	expr := p.parseEqualityExpression()
+func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
+	expr, err := p.parseEqualityExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	if p.match(token.ASSIGN) {
 		pos := p.previousScannedToken().Pos
-		value := p.parseAssignmentExpression()
+		value, err := p.parseAssignmentExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		return &ast.AssignmentExpression{
 			Target: expr,
 			Value:  value,
 			OpPos:  pos,
-		}
+		}, nil
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseEqualityExpression() ast.Expression {
-	expr := p.parseComparisonExpression()
+func (p *Parser) parseEqualityExpression() (ast.Expression, error) {
+	expr, err := p.parseComparisonExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for p.match(token.NEQ, token.EQL) {
 		op := p.previousScannedToken()
-		right := p.parseComparisonExpression()
+		right, err := p.parseComparisonExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
@@ -50,15 +64,23 @@ func (p *Parser) parseEqualityExpression() ast.Expression {
 		}
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseComparisonExpression() ast.Expression {
-	expr := p.parseTermExpression()
+func (p *Parser) parseComparisonExpression() (ast.Expression, error) {
+	expr, err := p.parseTermExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for p.match(token.R_CHEVRON, token.GEQ, token.LEQ, token.L_CHEVRON) {
 		op := p.previousScannedToken()
-		right := p.parseTermExpression()
+		right, err := p.parseTermExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
@@ -68,15 +90,23 @@ func (p *Parser) parseComparisonExpression() ast.Expression {
 		}
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseTermExpression() ast.Expression {
-	expr := p.parseFactorExpression()
+func (p *Parser) parseTermExpression() (ast.Expression, error) {
+	expr, err := p.parseFactorExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for p.match(token.SUB, token.ADD) {
 		op := p.previousScannedToken()
-		right := p.parseFactorExpression()
+		right, err := p.parseFactorExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
@@ -86,15 +116,23 @@ func (p *Parser) parseTermExpression() ast.Expression {
 		}
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseFactorExpression() ast.Expression {
-	expr := p.parseUnaryExpression()
+func (p *Parser) parseFactorExpression() (ast.Expression, error) {
+	expr, err := p.parseUnaryExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for p.match(token.QUO, token.MUL) {
 		op := p.previousScannedToken()
-		right := p.parseUnaryExpression()
+		right, err := p.parseUnaryExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		expr = &ast.BinaryExpression{
 			Left:  expr,
@@ -104,49 +142,69 @@ func (p *Parser) parseFactorExpression() ast.Expression {
 		}
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseUnaryExpression() ast.Expression {
+func (p *Parser) parseUnaryExpression() (ast.Expression, error) {
 
 	if p.match(token.NOT, token.SUB, token.MUL, token.AMP) {
 		op := p.previousScannedToken()
-		right := p.parseUnaryExpression()
+		right, err := p.parseUnaryExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		return &ast.UnaryExpression{
 			Op:         op.Tok,
 			OpPosition: op.Pos,
 			Expr:       right,
-		}
+		}, nil
 	}
 	return p.parseFunctionCallExpression()
 }
 
-func (p *Parser) parseFunctionCallExpression() ast.Expression {
-	expr := p.parsePropertyExpression()
+func (p *Parser) parseFunctionCallExpression() (ast.Expression, error) {
+	expr, err := p.parsePropertyExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	if p.currentMatches(token.LPAREN) {
 
-		list, start, end := p.parseExpressionList(token.LPAREN, token.RPAREN)
+		list, err := p.parseExpressionList(token.LPAREN, token.RPAREN)
+		if err != nil {
+			return nil, err
+		}
 
 		return &ast.FunctionCallExpression{
 			Target:    expr,
-			Arguments: list,
-			LParenPos: start,
-			RParenPos: end,
-		}
+			Arguments: list.Expressions,
+			LParenPos: list.LPos,
+			RParenPos: list.RPos,
+		}, nil
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parsePropertyExpression() ast.Expression {
-	expr := p.parseIndexExpression()
+func (p *Parser) parsePropertyExpression() (ast.Expression, error) {
+	expr, err := p.parseIndexExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for p.match(token.PERIOD) {
 		dotPos := p.previousScannedToken().Pos
 
-		property := p.parseIndexExpression()
+		property, err := p.parseIndexExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
 		expr = &ast.FieldAccessExpression{
 			Target: expr,
 			Field:  property,
@@ -154,38 +212,62 @@ func (p *Parser) parsePropertyExpression() ast.Expression {
 		}
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseIndexExpression() ast.Expression {
-	expr := p.parsePrimaryExpression()
+func (p *Parser) parseIndexExpression() (ast.Expression, error) {
+	expr, err := p.parseSpecializationExpression()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for p.match(token.LBRACKET) {
 		lbrackPos := p.previousScannedToken().Pos
-		idx := p.parseExpression()
+		idx, err := p.parseExpression()
 
-		rbrackPos := p.expect(token.RBRACKET).Pos
+		if err != nil {
+			return nil, err
+		}
+
+		rbrack, err := p.expect(token.RBRACKET)
+
+		if err != nil {
+			return nil, err
+		}
 
 		expr = &ast.IndexExpression{
 			Target:      expr,
 			Index:       idx,
 			LBracketPos: lbrackPos,
-			RBracketPos: rbrackPos,
+			RBracketPos: rbrack.Pos,
 		}
 	}
 
-	return expr
+	return expr, nil
 }
 
-func (p *Parser) parseSpecializationExpression() ast.Expression {
-	expr := p.parsePrimaryExpression()
+func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
+	expr, err := p.parsePrimaryExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.L_CHEVRON) {
-		c := p.parseGenericArgumentsClause()
+		c, err := p.parseGenericArgumentsClause()
+
+		if err != nil {
+			fmt.Println("???", p.currentScannedToken().Lit)
+			// Not a Foo<Bar> specialization but perhaps a Foo < Bar Comparison
+			return nil, err
+		}
 
 		// check if is composite initializer
 		if p.currentMatches(token.LBRACE) {
-			body := p.parseCompositeLiteralBody()
+			body, err := p.parseCompositeLiteralBody()
+			if err != nil {
+				return nil, err
+			}
 			expr = &ast.CompositeLiteral{
 				Identifier:    ident,
 				TypeArguments: c,
@@ -200,10 +282,11 @@ func (p *Parser) parseSpecializationExpression() ast.Expression {
 		}
 
 	}
-	return expr
+
+	return expr, nil
 }
 
-func (p *Parser) parsePrimaryExpression() ast.Expression {
+func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 	var expr ast.Expression
 	switch p.current() {
 	case token.FALSE:
@@ -235,7 +318,7 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		v, err := strconv.ParseInt(p.currentScannedToken().Lit, 0, 64)
 
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		expr = &ast.IntegerLiteral{
 			Value: v,
@@ -247,7 +330,7 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		v, err := strconv.ParseFloat(p.currentScannedToken().Lit, 64)
 
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		expr = &ast.FloatLiteral{
@@ -268,7 +351,7 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		code, _, _, err := strconv.UnquoteChar(l[1:n-1], '\'')
 
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		expr = &ast.CharLiteral{
@@ -282,8 +365,14 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 
 		// is identifier, but token is `{` or `<`
 		if tok, ok := p.peakAheadScannedToken(); ok && (tok.Tok == token.LBRACE) {
-			ident := p.parseIdentifierWithoutAnnotation()
-			body := p.parseCompositeLiteralBody()
+			ident, err := p.parseIdentifierWithoutAnnotation()
+			if err != nil {
+				return nil, err
+			}
+			body, err := p.parseCompositeLiteralBody()
+			if err != nil {
+				return nil, err
+			}
 			expr = &ast.CompositeLiteral{
 				Identifier: ident,
 				Body:       body,
@@ -294,15 +383,28 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 		}
 
 	case token.LPAREN:
-		start := p.expect(token.LPAREN).Pos
-		expr := p.parseExpression()
+		start, err := p.expect(token.LPAREN)
 
-		end := p.expect(token.RPAREN).Pos
-		return &ast.GroupedExpression{
-			LParenPos: start,
-			Expr:      expr,
-			RParenPos: end,
+		if err != nil {
+			return nil, err
 		}
+		expr, err := p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		end, err := p.expect(token.RPAREN)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &ast.GroupedExpression{
+			LParenPos: start.Pos,
+			Expr:      expr,
+			RParenPos: end.Pos,
+		}, nil
 
 	case token.LBRACKET:
 		return p.parseArrayLit()
@@ -311,73 +413,122 @@ func (p *Parser) parsePrimaryExpression() ast.Expression {
 	}
 
 	if expr != nil {
-		return expr
+		return expr, nil
 	}
 
 	msg := fmt.Sprintf("expected expression, got `%s`", p.currentScannedToken().Lit)
-	panic(p.error(msg))
+	return nil, p.error(msg)
 }
 
-func (p *Parser) parseExpressionList(start, end token.Token) ([]ast.Expression, token.TokenPosition, token.TokenPosition) {
+func (p *Parser) parseExpressionList(start, end token.Token) (*ast.ExpressionList, error) {
 	list := []ast.Expression{}
 
 	// expect start token
-	s := p.expect(start)
+	s, err := p.expect(start)
 
+	if err != nil {
+		return nil, err
+	}
+	// []ast.Expression, token.TokenPosition, token.TokenPosition
 	// if immediately followed by end token, return
 	if p.currentMatches(end) {
-		e := p.expect(end)
-		return list, s.Pos, e.Pos
+		e, err := p.expect(end)
+		if err != nil {
+			return nil, err
+		}
+		return &ast.ExpressionList{
+			Expressions: list,
+			LPos:        s.Pos,
+			RPos:        e.Pos,
+		}, nil
 	}
 
-	expr := p.parseExpression()
+	expr, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	list = append(list, expr)
 
 	for p.match(token.COMMA) {
-		expr := p.parseExpression()
-
-		// TODO: Report Individual Errors
-
+		expr, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
 		list = append(list, expr)
 	}
 
-	e := p.expect(end)
+	e, err := p.expect(end)
+	if err != nil {
+		return nil, err
+	}
 
-	return list, s.Pos, e.Pos
+	return &ast.ExpressionList{
+		Expressions: list,
+		LPos:        s.Pos,
+		RPos:        e.Pos,
+	}, nil
 }
 
-func (p *Parser) parseFunctionExpression(requiresBody bool) *ast.FunctionExpression {
-	start := p.expect(token.FUNC) // Expect current to be `func`, consume
+func (p *Parser) parseFunctionExpression(requiresBody bool) (*ast.FunctionExpression, error) {
+	start, err := p.expect(token.FUNC) // Expect current to be `func`, consume
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Name
-	ident := p.parseIdentifierWithoutAnnotation()
+	ident, err := p.parseIdentifierWithoutAnnotation()
+
+	if err != nil {
+		return nil, err
+	}
 
 	var genParams *ast.GenericParametersClause
 
 	if p.currentMatches(token.L_CHEVRON) {
-		genParams = p.parseGenericParameterClause()
+		genParams, err = p.parseGenericParameterClause()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Parameters
-	params := p.parseFunctionParameters()
+	params, err := p.parseFunctionParameters()
+
+	if err != nil {
+		return nil, err
+	}
 
 	if len(params) > 99 {
-		panic(p.error("too many parameters, maximum of 99"))
+		return nil, p.error("too many parameters, maximum of 99")
 	}
 	// Return Type
-	retType := p.parseFunctionReturnType()
+	retType, err := p.parseFunctionReturnType()
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Body
 
 	var body *ast.BlockStatement
 
 	if p.currentMatches(token.LBRACE) {
-		body = p.parseFunctionBody()
+		body, err = p.parseFunctionBody()
+
+		if err != nil {
+			return nil, err
+		}
+
 	} else if requiresBody {
-		panic(p.error("expected function body"))
+		return nil, p.error("expected function body")
 	} else {
-		p.expect(token.SEMICOLON)
+		_, err := p.expect(token.SEMICOLON)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ast.FunctionExpression{
@@ -387,127 +538,201 @@ func (p *Parser) parseFunctionExpression(requiresBody bool) *ast.FunctionExpress
 		Params:        params,
 		ReturnType:    retType,
 		GenericParams: genParams,
-	}
+	}, nil
 }
 
-func (p *Parser) parseFunctionBody() *ast.BlockStatement {
+func (p *Parser) parseFunctionBody() (*ast.BlockStatement, error) {
 	// Opening
-	p.expect(token.LBRACE)
-	statements := p.parseStatementList()
+	_, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
+	statements, err := p.parseStatementList()
+
+	if err != nil {
+		return nil, err
+	}
+
 	// Closing
-	p.expect(token.RBRACE)
+	_, err = p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.BlockStatement{
 		Statements: statements,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseFunctionReturnType() ast.TypeExpression {
+func (p *Parser) parseFunctionReturnType() (ast.TypeExpression, error) {
 	if p.match(token.R_ARROW) {
-		annotatedType := p.parseTypeExpression()
-		return annotatedType
+		annotatedType, err := p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
+		return annotatedType, nil
 	} else {
-		return nil
+		return nil, nil
 	}
 }
 
-func (p *Parser) parseFunctionParameters() []*ast.IdentifierExpression {
+func (p *Parser) parseFunctionParameters() ([]*ast.IdentifierExpression, error) {
 	identifiers := []*ast.IdentifierExpression{}
 
 	p.expect(token.LPAREN)
 
 	// if immediately followed by end token, return
 	if p.match(token.RPAREN) {
-		return identifiers
+		return identifiers, nil
 	}
 
-	expr := p.parseIdentifierWithRequiredAnnotation()
+	expr, err := p.parseIdentifierWithRequiredAnnotation()
+
+	if err != nil {
+		return nil, err
+	}
 
 	identifiers = append(identifiers, expr)
 
 	for p.match(token.COMMA) {
-		expr := p.parseIdentifierWithRequiredAnnotation()
+		expr, err := p.parseIdentifierWithRequiredAnnotation()
+
+		if err != nil {
+			return nil, err
+		}
+
 		identifiers = append(identifiers, expr)
 	}
 
-	p.expect(token.RPAREN)
+	_, err = p.expect(token.RPAREN)
 
-	return identifiers
+	if err != nil {
+		return nil, err
+	}
+
+	return identifiers, nil
 }
 
-func (p *Parser) parseIdentifierWithOptionalAnnotation() *ast.IdentifierExpression {
-	tok := p.expect(token.IDENTIFIER)
+func (p *Parser) parseIdentifierWithOptionalAnnotation() (*ast.IdentifierExpression, error) {
+	tok, err := p.expect(token.IDENTIFIER)
+
+	if err != nil {
+		return nil, err
+	}
+
 	var annotation ast.TypeExpression
 
 	if p.match(token.COLON) {
-		annotation = p.parseTypeExpression()
+		annotation, err = p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ast.IdentifierExpression{
 		Value:         tok.Lit,
 		Pos:           tok.Pos,
 		AnnotatedType: annotation,
-	}
+	}, nil
 
 }
-func (p *Parser) parseIdentifierWithRequiredAnnotation() *ast.IdentifierExpression {
-	tok := p.expect(token.IDENTIFIER)
+func (p *Parser) parseIdentifierWithRequiredAnnotation() (*ast.IdentifierExpression, error) {
+	tok, err := p.expect(token.IDENTIFIER)
+
+	if err != nil {
+		return nil, err
+	}
+
 	var annotation ast.TypeExpression
 
-	p.expect(token.COLON)
+	_, err = p.expect(token.COLON)
 
-	annotation = p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	annotation, err = p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.IdentifierExpression{
 		Value:         tok.Lit,
 		Pos:           tok.Pos,
 		AnnotatedType: annotation,
-	}
+	}, nil
 
 }
-func (p *Parser) parseIdentifierWithoutAnnotation() *ast.IdentifierExpression {
-	tok := p.expect(token.IDENTIFIER)
+func (p *Parser) parseIdentifierWithoutAnnotation() (*ast.IdentifierExpression, error) {
+	tok, err := p.expect(token.IDENTIFIER)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.IdentifierExpression{
 		Value: tok.Lit,
 		Pos:   tok.Pos,
-	}
+	}, nil
 }
 
-func (p *Parser) parseArrayLit() *ast.ArrayLiteral {
+func (p *Parser) parseArrayLit() (*ast.ArrayLiteral, error) {
 
-	elements, start, end := p.parseExpressionList(token.LBRACKET, token.RBRACKET)
+	list, err := p.parseExpressionList(token.LBRACKET, token.RBRACKET)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.ArrayLiteral{
-		Elements:    elements,
-		LBracketPos: start,
-		RBracketPos: end,
-	}
+		Elements:    list.Expressions,
+		LBracketPos: list.LPos,
+		RBracketPos: list.RPos,
+	}, nil
 }
 
-func (p *Parser) parseMapLiteral() *ast.MapLiteral {
+func (p *Parser) parseMapLiteral() (*ast.MapLiteral, error) {
 	lit := &ast.MapLiteral{}
-	start := p.expect(token.LBRACE)
+	start, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
+
 	lit.LBracePos = start.Pos
 	// closes immediately
 	if p.currentMatches(token.RBRACE) {
-		end := p.expect(token.RBRACE)
+		end, err := p.expect(token.RBRACE)
+
+		if err != nil {
+			return nil, err
+		}
 		lit.RBracePos = end.Pos
-		return lit
+		return lit, nil
 	}
 	// Loop until match with RBRACE
 	for !p.match(token.RBRACE) {
 
 		// Parse Key
-		key := p.parseExpression()
+		key, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
 
 		// Parse Colon Divider
-		colon := p.expect(token.COLON)
+		colon, err := p.expect(token.COLON)
+		if err != nil {
+			return nil, err
+		}
 
 		// Parse Value
 
-		value := p.parseExpression()
+		value, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
 
 		expr := &ast.KeyValueExpression{
 			Key:      key,
@@ -520,34 +745,59 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 		if p.currentMatches(token.RBRACE) {
 			break
 		} else {
-			p.expect(token.COMMA)
+			_, err := p.expect(token.COMMA)
+
+			if err != nil {
+				return nil, err
+			}
 		}
 
 	}
 
 	// expect closing brace
-	end := p.expect(token.RBRACE)
+	end, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
+
 	lit.RBracePos = end.Pos
-	return lit
+	return lit, nil
 }
 
-func (p *Parser) parseCompositeLiteralBody() *ast.CompositeLiteralBody {
+func (p *Parser) parseCompositeLiteralBody() (*ast.CompositeLiteralBody, error) {
 
-	lBrace := p.expect(token.LBRACE)
+	lBrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	pairs := []*ast.CompositeLiteralField{}
 	// Loop until match with RBRACE
 	for !p.match(token.RBRACE) {
 
 		// Parse Key
-		key := p.parseIdentifierWithoutAnnotation()
+		key, err := p.parseIdentifierWithoutAnnotation()
+
+		if err != nil {
+			return nil, err
+		}
 
 		// Parse Colon Divider
-		colon := p.expect(token.COLON)
+		colon, err := p.expect(token.COLON)
+
+		if err != nil {
+			return nil, err
+		}
 
 		// Parse Value
 
-		value := p.parseExpression()
+		value, err := p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
 
 		expr := &ast.CompositeLiteralField{
 			Key:      key,
@@ -560,17 +810,25 @@ func (p *Parser) parseCompositeLiteralBody() *ast.CompositeLiteralBody {
 		if p.currentMatches(token.RBRACE) {
 			break
 		} else {
-			p.expect(token.COMMA)
+			_, err = p.expect(token.COMMA)
+
+			if err != nil {
+				return nil, err
+			}
 		}
 
 	}
 
 	// parse kv expression
-	rBrace := p.expect(token.RBRACE)
+	rBrace, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.CompositeLiteralBody{
 		LBracePos: lBrace.Pos,
 		Fields:    pairs,
 		RBracePos: rBrace.Pos,
-	}
+	}, nil
 }

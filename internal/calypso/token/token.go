@@ -97,7 +97,6 @@ const (
 	ELSE
 	RETURN
 	WHILE
-	ALIAS
 	STANDARD
 	TYPE
 	STRUCT
@@ -138,7 +137,6 @@ var keywords = map[string]Token{
 	"else":      ELSE,
 	"return":    RETURN,
 	"while":     WHILE,
-	"alias":     ALIAS,
 	"standard":  STANDARD,
 	"type":      TYPE,
 	"struct":    STRUCT,
@@ -171,7 +169,7 @@ func IsDeclaration(t Token) bool {
 
 func IsStatement(t Token) bool {
 	switch t {
-	case FUNC, LET, CONST, IF, RETURN, ALIAS, STRUCT, FOR, ENUM, SWITCH, BREAK, WHILE, TYPE:
+	case FUNC, LET, CONST, IF, RETURN, STRUCT, FOR, ENUM, SWITCH, BREAK, WHILE, TYPE:
 		return true
 	}
 
@@ -217,7 +215,6 @@ var tokens = map[Token]string{
 	ELSE:      "else",
 	RETURN:    "return",
 	WHILE:     "while",
-	ALIAS:     "alias",
 	STANDARD:  "standard",
 	TYPE:      "type",
 	STRUCT:    "struct",

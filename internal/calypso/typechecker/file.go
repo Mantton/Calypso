@@ -3,16 +3,15 @@ package typechecker
 import (
 	"fmt"
 
-	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) CheckFile(file *ast.File) *SymbolTable {
+func (c *Checker) Check() *SymbolTable {
 	c.enterScope() // global enter
 	main := c.scope
 	main.Parent = types.GlobalScope
-	if len(file.Declarations) != 0 {
-		for _, decl := range file.Declarations {
+	if len(c.file.Declarations) != 0 {
+		for _, decl := range c.file.Declarations {
 			c.checkDeclaration(decl)
 		}
 	}

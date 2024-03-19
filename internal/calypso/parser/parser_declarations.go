@@ -4,18 +4,24 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-func (p *Parser) parseDeclaration() ast.Declaration {
+func (p *Parser) parseDeclaration() (ast.Declaration, error) {
 	switch p.current() {
 	case token.CONST:
-		stmt := p.parseVariableStatement()
+		stmt, err := p.parseVariableStatement()
+
+		if err != nil {
+			fmt.Println("err", err)
+
+			return nil, err
+		}
+
 		stmt.IsGlobal = true
 		return &ast.ConstantDeclaration{
 			Stmt: stmt,
-		}
+		}, nil
 
 	case token.FUNC:
 		return p.parseFunctionDeclaration()
@@ -32,101 +38,128 @@ func (p *Parser) parseDeclaration() ast.Declaration {
 	}
 }
 
-func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
+func (p *Parser) parseFunctionDeclaration() (*ast.FunctionDeclaration, error) {
 
-	fn := p.parseFunctionExpression(true)
+	fn, err := p.parseFunctionExpression(true)
+	if err != nil {
+		return nil, err
+	}
 
 	if fn.Body == nil {
-		panic(p.error("expected body in function declaration"))
+		return nil, p.error("expected body in function declaration")
 	}
 
 	return &ast.FunctionDeclaration{
 		Func: fn,
-	}
+	}, nil
 }
 
-func (p *Parser) parseStatementDeclaration() *ast.StatementDeclaration {
+func (p *Parser) parseStatementDeclaration() (*ast.StatementDeclaration, error) {
 
 	switch p.current() {
-	case token.ALIAS, token.STRUCT, token.ENUM, token.TYPE:
-		stmt := p.parseStatement()
+	case token.STRUCT, token.ENUM, token.TYPE:
+		stmt, err := p.parseStatement()
+
+		if err != nil {
+			return nil, err
+		}
+
 		return &ast.StatementDeclaration{
 			Stmt: stmt,
-		}
+		}, nil
 
 	default:
 		msg := fmt.Sprintf("expected declaration, `%s` does not start a declaration", p.currentScannedToken().Lit)
-		panic(p.error(msg))
+		return nil, p.error(msg)
 	}
 }
 
-func (p *Parser) parseStatementList() []ast.Statement {
+func (p *Parser) parseStatementList() ([]ast.Statement, error) {
 
 	var list = []ast.Statement{}
-	cancel := false
-	for p.current() != token.RBRACE && p.current() != token.EOF && !cancel {
+	hasError := false
+	for p.current() != token.RBRACE && p.current() != token.EOF {
+		statement, err := p.parseStatement()
 
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					if err, y := r.(lexer.Error); y {
-						p.errors.Add(err)
-					} else {
-						panic(r)
-					}
-					hasMoved := p.advance(token.IsStatement)
-
-					// avoid infinite loop
-					if !hasMoved {
-						p.next()
-					}
-				}
-			}()
-
-			statement := p.parseStatement()
-
-			list = append(list, statement)
-		}()
-
+		if err != nil {
+			// return nil, err
+			p.handleError(err, STMT)
+			hasError = true
+		}
+		list = append(list, statement)
 	}
 
-	return list
+	if hasError {
+		return nil, fmt.Errorf("error in statement list")
+	}
 
+	return list, nil
 }
 
-func (p *Parser) parseStandardDeclaration() *ast.StandardDeclaration {
-	keyw := p.expect(token.STANDARD)
-	ident := p.parseIdentifierWithoutAnnotation()
-	block := p.parseBlockStatement()
+func (p *Parser) parseStandardDeclaration() (*ast.StandardDeclaration, error) {
+	keyw, err := p.expect(token.STANDARD)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := p.parseBlockStatement()
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.StandardDeclaration{
 		KeyWPos:    keyw.Pos,
 		Identifier: ident,
 		Block:      block,
-	}
+	}, nil
 }
 
-func (p *Parser) parseExtensionDeclaration() *ast.ExtensionDeclaration {
+func (p *Parser) parseExtensionDeclaration() (*ast.ExtensionDeclaration, error) {
 
-	kw := p.expect(token.EXTENSION)
+	kw, err := p.expect(token.EXTENSION)
 
-	ident := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
-	lBrace := p.expect(token.LBRACE)
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
+
+	lBrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse Functions in Extension
 
 	content := []*ast.FunctionStatement{}
 
 	for p.current() != token.RBRACE {
-
+		fn, err := p.parseFunctionExpression(true)
+		if err != nil {
+			return nil, err
+		}
 		f := &ast.FunctionStatement{
-			Func: p.parseFunctionExpression(true),
+			Func: fn,
 		}
 		content = append(content, f)
 	}
 
-	rBrace := p.expect(token.RBRACE)
+	rBrace, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.ExtensionDeclaration{
 		KeyWPos:    kw.Pos,
@@ -134,21 +167,38 @@ func (p *Parser) parseExtensionDeclaration() *ast.ExtensionDeclaration {
 		LBracePos:  lBrace.Pos,
 		Content:    content,
 		RBracePos:  rBrace.Pos,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
+func (p *Parser) parseConformanceDeclaration() (*ast.ConformanceDeclaration, error) {
 
-	kw := p.expect(token.CONFORM)
+	kw, err := p.expect(token.CONFORM)
 
-	target := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
-	p.expect(token.TO)
+	target, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
-	standard := p.parseIdentifierWithoutAnnotation()
+	_, err = p.expect(token.TO)
+	if err != nil {
+		return nil, err
+	}
 
-	lBrace := p.expect(token.LBRACE)
+	standard, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
+
+	lBrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse Functions in Extension
 
@@ -158,18 +208,31 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 	for p.current() != token.RBRACE {
 
 		if p.currentMatches(token.TYPE) {
-			t := p.parseTypeStatement()
+			t, err := p.parseTypeStatement()
+
+			if err != nil {
+				return nil, err
+			}
+
 			types = append(types, t)
 		} else {
+			fn, err := p.parseFunctionExpression(true)
+			if err != nil {
+				return nil, err
+			}
 			f := &ast.FunctionStatement{
-				Func: p.parseFunctionExpression(true),
+				Func: fn,
 			}
 			content = append(content, f)
 		}
 
 	}
 
-	rBrace := p.expect(token.RBRACE)
+	rBrace, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.ConformanceDeclaration{
 		KeyWPos:    kw.Pos,
@@ -179,35 +242,54 @@ func (p *Parser) parseConformanceDeclaration() *ast.ConformanceDeclaration {
 		Signatures: content,
 		Types:      types,
 		RBracePos:  rBrace.Pos,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseExternDeclaration() *ast.ExternDeclaration {
+func (p *Parser) parseExternDeclaration() (*ast.ExternDeclaration, error) {
 
-	kw := p.expect(token.EXTERN)
+	kw, err := p.expect(token.EXTERN)
 
-	lit, ok := p.parseExpression().(*ast.StringLiteral)
-
-	if !ok {
-		panic(p.error("expected string literal in extern path"))
+	if err != nil {
+		return nil, err
 	}
 
-	lBrace := p.expect(token.LBRACE)
+	ex, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	lit, ok := ex.(*ast.StringLiteral)
+
+	if !ok {
+		return nil, p.error("expected string literal in extern path")
+	}
+
+	lBrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse Functions in Extension
 
 	content := []*ast.FunctionStatement{}
 
 	for p.current() != token.RBRACE {
-
+		fn, err := p.parseFunctionExpression(false)
+		if err != nil {
+			return nil, err
+		}
 		f := &ast.FunctionStatement{
-			Func: p.parseFunctionExpression(false),
+			Func: fn,
 		}
 		content = append(content, f)
 	}
 
-	rBrace := p.expect(token.RBRACE)
+	rBrace, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.ExternDeclaration{
 		KeyWPos:    kw.Pos,
@@ -215,6 +297,6 @@ func (p *Parser) parseExternDeclaration() *ast.ExternDeclaration {
 		RBracePos:  rBrace.Pos,
 		Signatures: content,
 		Target:     lit,
-	}
+	}, nil
 
 }

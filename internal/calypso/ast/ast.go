@@ -28,6 +28,7 @@ type File struct {
 	ModuleName   string
 	Declarations []Declaration
 	Errors       lexer.ErrorList
+	LexerFile    *lexer.File
 }
 
 // * Declarations
@@ -244,6 +245,12 @@ type KeyValueExpression struct {
 type GenericSpecializationExpression struct {
 	Identifier *IdentifierExpression
 	Clause     *GenericArgumentsClause
+}
+
+type ExpressionList struct {
+	LPos        token.TokenPosition
+	Expressions []Expression
+	RPos        token.TokenPosition
 }
 
 // * Literal Expressions

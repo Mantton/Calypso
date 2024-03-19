@@ -6,64 +6,92 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
+type NodeType byte
+
+const (
+	DECL NodeType = iota
+	STMT
+	EXPR
+)
+
 type Parser struct {
-	tokens []token.ScannedToken
+	file   *lexer.File
 	errors lexer.ErrorList
 
 	inSwitch bool
 	cursor   int
 }
 
-func New(tokens []token.ScannedToken) *Parser {
-	return &Parser{tokens: tokens}
+func New(file *lexer.File) *Parser {
+	return &Parser{file: file}
 }
 
 func (p *Parser) Parse() *ast.File {
+	moduleName := ""
+	var declarations []ast.Declaration
 
-	moduleName := "unknown"
+	file := &ast.File{
+		ModuleName:   moduleName,
+		Declarations: declarations,
+		LexerFile:    p.file,
+	}
+	defer func() {
+		file.Errors = p.errors
+	}()
 	// - Parse Module Declaration
-	// module main
-	p.expect(token.MODULE)            // Consume module token
-	tok := p.expect(token.IDENTIFIER) // Identifier
-	moduleName = tok.Lit
-	p.expect(token.SEMICOLON) // Consume semicolon
+
+	// Module Header
+	_, err := p.expect(token.MODULE) // Consume module token
+	if err != nil {
+		p.handleError(err, DECL)
+		return file
+	}
+
+	tok, err := p.expect(token.IDENTIFIER) // Identifier
+	if err != nil {
+		p.handleError(err, DECL)
+		return file
+	}
+	file.ModuleName = tok.Lit
+	_, err = p.expect(token.SEMICOLON) // Consume semicolon
+	if err != nil {
+		p.handleError(err, DECL)
+		return file
+	}
 
 	// Imports
 
 	// Declarations
-	var declarations []ast.Declaration
 
 	for p.current() != token.EOF {
-
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-
-					if err, y := r.(lexer.Error); y {
-						p.errors.Add(err)
-					} else {
-						panic(r)
-					}
-					hasMoved := p.advance(token.IsDeclaration)
-
-					// avoid infinite loop
-					if !hasMoved {
-						p.next()
-					}
-				}
-			}()
-
-			decl := p.parseDeclaration()
-
-			declarations = append(declarations, decl)
-		}()
-
+		decl, err := p.parseDeclaration()
+		if err != nil {
+			p.handleError(err, DECL)
+			return file
+		}
+		declarations = append(declarations, decl)
 	}
 
-	return &ast.File{
-		ModuleName:   moduleName,
-		Errors:       p.errors,
-		Declarations: declarations,
+	file.Declarations = declarations
+	return file
+}
+
+// 0 -> Decl
+
+func (p *Parser) handleError(err error, node NodeType) {
+	var hasMoved bool
+
+	switch node {
+	case DECL:
+		hasMoved = p.advance(token.IsDeclaration)
+	case STMT:
+		hasMoved = p.advance(token.IsStatement)
 	}
 
+	// avoid infinite loop
+	if !hasMoved {
+		p.next()
+	}
+
+	p.errors.Add(err)
 }

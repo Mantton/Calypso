@@ -7,7 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-func (p *Parser) parseStatement() ast.Statement {
+func (p *Parser) parseStatement() (ast.Statement, error) {
 	switch p.current() {
 	case token.CONST, token.LET:
 		return p.parseVariableStatement()
@@ -19,12 +19,14 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseWhileStatement()
 	case token.IDENTIFIER:
 		return p.parseExpressionStatement()
-	case token.ALIAS:
-		return p.parseAliasStatement()
 	case token.FUNC:
-		return &ast.FunctionStatement{
-			Func: p.parseFunctionExpression(false),
+		fn, err := p.parseFunctionExpression(false)
+		if err != nil {
+			return nil, err
 		}
+		return &ast.FunctionStatement{
+			Func: fn,
+		}, nil
 	case token.STRUCT:
 		return p.parseStructStatement()
 	case token.ENUM:
@@ -38,10 +40,10 @@ func (p *Parser) parseStatement() ast.Statement {
 
 	}
 
-	panic(p.error(fmt.Sprintf("expected statement, got %s", p.currentScannedToken().Lit)))
+	return nil, p.error(fmt.Sprintf("expected statement, got %s", p.currentScannedToken().Lit))
 }
 
-func (p *Parser) parseVariableStatement() *ast.VariableStatement {
+func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	/**
 	let x = `expr`;
 	const y = `expr`;
@@ -50,26 +52,39 @@ func (p *Parser) parseVariableStatement() *ast.VariableStatement {
 	isConst := p.current() == token.CONST
 	start := p.currentScannedToken().Pos
 	p.next() // Move to next token
-	ident := p.parseIdentifierWithOptionalAnnotation()
+	ident, err := p.parseIdentifierWithOptionalAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse Type Expression If Found
 
-	p.expect(token.ASSIGN)
+	_, err = p.expect(token.ASSIGN)
 
-	expr := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	expr, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 
-	p.expect(token.SEMICOLON)
+	_, err = p.expect(token.SEMICOLON)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.VariableStatement{
 		KeyWPos:    start,
 		Identifier: ident,
 		Value:      expr,
 		IsConstant: isConst,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+func (p *Parser) parseBlockStatement() (*ast.BlockStatement, error) {
 	/**
 	   {
 	  	let x = 10;
@@ -78,20 +93,32 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	*/
 
 	// Opening
-	start := p.expect(token.LBRACE)
-	statements := p.parseStatementList()
+	start, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
+	statements, err := p.parseStatementList()
+
+	if err != nil {
+		return nil, err
+	}
 	// Closing
-	end := p.expect(token.RBRACE)
+	end, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.BlockStatement{
 		LBrackPos:  start.Pos,
 		Statements: statements,
 		RBrackPos:  end.Pos,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseIfStatement() ast.Statement {
+func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	/**
 	  if (true) {
 		return false;
@@ -100,38 +127,67 @@ func (p *Parser) parseIfStatement() ast.Statement {
 	  }
 	*/
 
-	start := p.expect(token.IF)
+	start, err := p.expect(token.IF)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Condition
-	p.expect(token.LPAREN)
+	_, err = p.expect(token.LPAREN)
+
+	if err != nil {
+		return nil, err
+	}
 
 	stmt := &ast.IfStatement{
 		KeyWPos: start.Pos,
 	}
-	condition := p.parseExpression()
+	condition, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	stmt.Condition = condition
 
-	p.expect(token.RPAREN)
+	_, err = p.expect(token.RPAREN)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Action Block
-	block := p.parseBlockStatement()
+	block, err := p.parseBlockStatement()
+
+	if err != nil {
+		return nil, err
+	}
+
 	stmt.Action = block
 
 	// Conditional Block
 
 	if p.currentMatches(token.ELSE) {
 		p.next()
-		alt := p.parseBlockStatement()
+		alt, err := p.parseBlockStatement()
+
+		if err != nil {
+			return nil, err
+		}
+
 		stmt.Alternative = alt
 	}
 
-	return stmt
+	return stmt, nil
 
 }
 
-func (p *Parser) parseReturnStatement() ast.Statement {
-	start := p.expect(token.RETURN)
+func (p *Parser) parseReturnStatement() (ast.Statement, error) {
+	start, err := p.expect(token.RETURN)
+
+	if err != nil {
+		return nil, err
+	}
 
 	var expr ast.Expression
 	if p.currentMatches(token.SEMICOLON) {
@@ -139,108 +195,137 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 			Pos: p.currentScannedToken().Pos,
 		}
 	} else {
-		expr = p.parseExpression()
+		expr, err = p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	p.expect(token.SEMICOLON)
+	_, err = p.expect(token.SEMICOLON)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.ReturnStatement{
 		Value:   expr,
 		KeyWPos: start.Pos,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseWhileStatement() ast.Statement {
-	start := p.expect(token.WHILE)
+func (p *Parser) parseWhileStatement() (ast.Statement, error) {
+	start, err := p.expect(token.WHILE)
+
+	if err != nil {
+		return nil, err
+	}
 	// Condition
-	p.expect(token.LPAREN)
+	_, err = p.expect(token.LPAREN)
+
+	if err != nil {
+		return nil, err
+	}
 
 	stmt := &ast.WhileStatement{
 		KeyWPos: start.Pos,
 	}
-	condition := p.parseExpression()
+	condition, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	stmt.Condition = condition
 
-	p.expect(token.RPAREN)
+	_, err = p.expect(token.RPAREN)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Action Block
-	block := p.parseBlockStatement()
+	block, err := p.parseBlockStatement()
+
+	if err != nil {
+		return nil, err
+	}
+
 	stmt.Action = block
 
-	return stmt
+	return stmt, nil
 }
 
-func (p *Parser) parseExpressionStatement() ast.Statement {
+func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
 
-	expr := p.parseExpression()
+	expr, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	switch expr := expr.(type) {
 	case *ast.AssignmentExpression, *ast.FunctionCallExpression:
-		p.expect(token.SEMICOLON)
+		_, err := p.expect(token.SEMICOLON)
+
+		if err != nil {
+			return nil, err
+		}
+
 		return &ast.ExpressionStatement{
 			Expr: expr,
-		}
+		}, nil
 	default:
-		panic(p.error("expected statement, not expression"))
+		return nil, p.error("expected statement, not expression")
 	}
 
 }
 
-func (p *Parser) parseAliasStatement() *ast.AliasStatement {
+func (p *Parser) parseStructStatement() (*ast.StructStatement, error) {
 
-	// Consume Keyword
-	kwPos := p.expect(token.ALIAS).Pos
+	keyw, err := p.expect(token.STRUCT)
 
-	// Consume TypeExpression
-
-	ident := p.parseIdentifierWithOptionalAnnotation()
-
-	// Has Generic Parameters
-	var params *ast.GenericParametersClause
-	if p.currentMatches(token.L_CHEVRON) {
-		params = p.parseGenericParameterClause()
+	if err != nil {
+		return nil, err
 	}
 
-	// Assign
-	eqPos := p.expect(token.ASSIGN).Pos
-
-	target := p.parseTypeExpression()
-	p.expect(token.SEMICOLON)
-
-	return &ast.AliasStatement{
-		KeyWPos:       kwPos,
-		EqPos:         eqPos,
-		Identifier:    ident,
-		Target:        target,
-		GenericParams: params,
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
 	}
-
-}
-
-func (p *Parser) parseStructStatement() *ast.StructStatement {
-
-	keyw := p.expect(token.STRUCT)
-
-	ident := p.parseIdentifierWithoutAnnotation()
 
 	var genericParams *ast.GenericParametersClause
 
 	if p.currentMatches(token.L_CHEVRON) {
-		genericParams = p.parseGenericParameterClause()
+		genericParams, err = p.parseGenericParameterClause()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	lBrace := p.expect(token.LBRACE)
+	lBrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	properties := []*ast.IdentifierExpression{}
 
 	for p.current() != token.RBRACE {
-		properties = append(properties, p.parseIdentifierWithRequiredAnnotation())
-		p.expect(token.SEMICOLON)
+		v, err := p.parseIdentifierWithRequiredAnnotation()
+		if err != nil {
+			return nil, err
+		}
+		properties = append(properties, v)
+		_, err = p.expect(token.SEMICOLON)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	rBrace := p.expect(token.RBRACE)
+	rBrace, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.StructStatement{
 		KeyWPos:       keyw.Pos,
@@ -249,49 +334,78 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 		LBracePos:     lBrace.Pos,
 		RBracePos:     rBrace.Pos,
 		Fields:        properties,
-	}
+	}, nil
 }
 
-func (p *Parser) parseEnumStatement() *ast.EnumStatement {
-	kwPos := p.expect(token.ENUM).Pos
+func (p *Parser) parseEnumStatement() (*ast.EnumStatement, error) {
+	kw, err := p.expect(token.ENUM)
 
-	ident := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
+
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
 	var genericParams *ast.GenericParametersClause
 
 	if p.currentMatches(token.L_CHEVRON) {
-		genericParams = p.parseGenericParameterClause()
+		genericParams, err = p.parseGenericParameterClause()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	lbracePos := p.expect(token.LBRACE).Pos
+	lbrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	stmt := &ast.EnumStatement{
-		KeyWPos:       kwPos,
+		KeyWPos:       kw.Pos,
 		Identifier:    ident,
 		GenericParams: genericParams,
-		LBracePos:     lbracePos,
+		LBracePos:     lbrace.Pos,
 	}
 
 	for p.current() != token.RBRACE {
 
-		ident := p.parseIdentifierWithoutAnnotation()
+		ident, err := p.parseIdentifierWithoutAnnotation()
+		if err != nil {
+			return nil, err
+		}
 		var discriminator *ast.EnumDiscriminantExpression
 		var fields *ast.FieldListExpression
 
 		if p.match(token.ASSIGN) {
 			// Discriminator
-
+			v, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
 			discriminator = &ast.EnumDiscriminantExpression{
-				Value: p.parseExpression(),
+				Value: v,
 			}
 		} else if p.currentMatches(token.LPAREN) {
 			// Tuple
-			f := p.parseFieldList()
+			f, err := p.parseFieldList()
+
+			if err != nil {
+				return nil, err
+			}
+
 			fields = &ast.FieldListExpression{
 				Fields: f,
 			}
 		}
-		p.expect(token.COMMA)
+		_, err = p.expect(token.COMMA)
+
+		if err != nil {
+			return nil, err
+		}
 
 		variant := &ast.EnumVariantExpression{
 			Identifier:   ident,
@@ -302,33 +416,53 @@ func (p *Parser) parseEnumStatement() *ast.EnumStatement {
 		stmt.Variants = append(stmt.Variants, variant)
 	}
 
-	rBrace := p.expect(token.RBRACE)
+	rBrace, err := p.expect(token.RBRACE)
 
-	stmt.RBracePos = rBrace.Pos
-	return stmt
-}
-
-func (p *Parser) parseFieldList() []ast.TypeExpression {
-	params := []ast.TypeExpression{}
-
-	p.expect(token.LPAREN)
-	if p.match(token.RPAREN) {
-		return params
+	if err != nil {
+		return nil, err
 	}
 
-	a := p.parseTypeExpression()
+	stmt.RBracePos = rBrace.Pos
+	return stmt, nil
+}
+
+func (p *Parser) parseFieldList() ([]ast.TypeExpression, error) {
+	params := []ast.TypeExpression{}
+
+	_, err := p.expect(token.LPAREN)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(token.RPAREN) {
+		return params, nil
+	}
+
+	a, err := p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
 	params = append(params, a)
+
 	for p.match(token.COMMA) {
-		expr := p.parseTypeExpression()
+		expr, err := p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 		params = append(params, expr)
 	}
 
-	p.expect(token.RPAREN)
+	_, err = p.expect(token.RPAREN)
 
-	return params
+	if err != nil {
+		return nil, err
+	}
+
+	return params, nil
 }
 
-func (p *Parser) parseSwitchStatement() *ast.SwitchStatement {
+func (p *Parser) parseSwitchStatement() (*ast.SwitchStatement, error) {
 	prevState := p.inSwitch
 	defer func() {
 		p.inSwitch = prevState
@@ -340,65 +474,111 @@ func (p *Parser) parseSwitchStatement() *ast.SwitchStatement {
 	}()
 
 	// 1 - Keyword
-	kwPos := p.expect(token.SWITCH).Pos
+	kw, err := p.expect(token.SWITCH)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// 2 - Condition
-	cond := p.parseExpression()
+	cond, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	// 3 - L Brace
 
-	lBracePos := p.expect(token.LBRACE).Pos
+	lbrace, err := p.expect(token.LBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	//  4 - Cases
-	cases := p.parseSwitchCases()
+	cases, err := p.parseSwitchCases()
+
+	if err != nil {
+		return nil, err
+	}
 
 	// 5 - R Brace
-	rBracePos := p.expect(token.RBRACE).Pos
+	rbrace, err := p.expect(token.RBRACE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.SwitchStatement{
-		KeyWPos:   kwPos,
-		LBracePos: lBracePos,
-		RBracePos: rBracePos,
+		KeyWPos:   kw.Pos,
+		LBracePos: lbrace.Pos,
+		RBracePos: rbrace.Pos,
 		Condition: cond,
 		Cases:     cases,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseSwitchCases() []*ast.SwitchCaseExpression {
+func (p *Parser) parseSwitchCases() ([]*ast.SwitchCaseExpression, error) {
 
 	cases := []*ast.SwitchCaseExpression{}
 
 	for p.currentMatches(token.CASE) || p.currentMatches(token.DEFAULT) {
-		cases = append(cases, p.parseSwitchCase())
+		c, err := p.parseSwitchCase()
+
+		if err != nil {
+			return nil, err
+		}
+		cases = append(cases, c)
 	}
 
-	return cases
+	return cases, nil
 }
 
-func (p *Parser) parseSwitchCase() *ast.SwitchCaseExpression {
+func (p *Parser) parseSwitchCase() (*ast.SwitchCaseExpression, error) {
 
 	if p.currentMatches(token.CASE) {
 
 		// 1 - Case Keyword
-		kwPos := p.expect(token.CASE).Pos
+		kw, err := p.expect(token.CASE)
+
+		if err != nil {
+			return nil, err
+		}
 
 		// 2 - Condition
-		cond := p.parseExpression()
+		cond, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
 
 		// 3 - Body
 		var body *ast.BlockStatement
 		var colonPos token.TokenPosition
 		if p.currentMatches(token.LBRACE) {
-			body = p.parseBlockStatement()
+			body, err = p.parseBlockStatement()
+
+			if err != nil {
+				return nil, err
+			}
 			colonPos = body.LBrackPos
 		} else {
-			colonPos = p.expect(token.COLON).Pos
+			col, err := p.expect(token.COLON)
+
+			if err != nil {
+				return nil, err
+			}
+
+			colonPos = col.Pos
 			stmts := []ast.Statement{}
 			for !p.currentMatches(token.CASE) &&
 				!p.currentMatches(token.RBRACE) &&
 				!p.currentMatches(token.DEFAULT) {
-				s := p.parseStatement()
+				s, err := p.parseStatement()
+
+				if err != nil {
+					return nil, err
+				}
+
 				stmts = append(stmts, s)
 			}
 
@@ -410,32 +590,50 @@ func (p *Parser) parseSwitchCase() *ast.SwitchCaseExpression {
 		}
 
 		return &ast.SwitchCaseExpression{
-			KeyWPos:   kwPos,
+			KeyWPos:   kw.Pos,
 			Condition: cond,
 			ColonPos:  colonPos,
 			Action:    body,
-		}
+		}, nil
 
 	}
 
 	// Default Case
 
 	// 1 - Keyword
-	kwPos := p.expect(token.DEFAULT).Pos
+	kw, err := p.expect(token.DEFAULT)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// 2 - Body
 	var body *ast.BlockStatement
 	var colonPos token.TokenPosition
 	if p.currentMatches(token.LBRACE) {
-		body = p.parseBlockStatement()
+		body, err = p.parseBlockStatement()
+
+		if err != nil {
+			return nil, err
+		}
 		colonPos = body.LBrackPos
 	} else {
-		colonPos = p.expect(token.COLON).Pos
+		col, err := p.expect(token.COLON)
+
+		if err != nil {
+			return nil, err
+		}
+
+		colonPos = col.Pos
 		stmts := []ast.Statement{}
 		for !p.currentMatches(token.CASE) &&
 			!p.currentMatches(token.RBRACE) &&
 			!p.currentMatches(token.DEFAULT) {
-			s := p.parseStatement()
+			s, err := p.parseStatement()
+
+			if err != nil {
+				return nil, err
+			}
 			stmts = append(stmts, s)
 		}
 
@@ -447,57 +645,89 @@ func (p *Parser) parseSwitchCase() *ast.SwitchCaseExpression {
 	}
 
 	return &ast.SwitchCaseExpression{
-		KeyWPos:   kwPos,
+		KeyWPos:   kw.Pos,
 		ColonPos:  colonPos,
 		Action:    body,
 		IsDefault: true,
 		Condition: nil,
-	}
+	}, nil
 
 }
 
-func (p *Parser) parseBreakStatement() *ast.BreakStatement {
+func (p *Parser) parseBreakStatement() (*ast.BreakStatement, error) {
 
 	if !p.inSwitch {
-		panic(p.error("cannot break outside switch statement"))
+		return nil, p.error("cannot break outside switch statement")
 	}
 
-	kwPos := p.expect(token.BREAK).Pos
-	p.expect(token.SEMICOLON)
-	return &ast.BreakStatement{
-		KeyWPos: kwPos,
+	kw, err := p.expect(token.BREAK)
+
+	if err != nil {
+		return nil, err
 	}
+
+	_, err = p.expect(token.SEMICOLON)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ast.BreakStatement{
+		KeyWPos: kw.Pos,
+	}, nil
 }
 
-func (p *Parser) parseTypeStatement() *ast.TypeStatement {
+func (p *Parser) parseTypeStatement() (*ast.TypeStatement, error) {
 	// Consume Keyword
-	kwPos := p.expect(token.TYPE).Pos
+	kw, err := p.expect(token.TYPE)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Consume TypeExpression
 
-	ident := p.parseIdentifierWithoutAnnotation()
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
 	// Has Generic Parameters
 	var params *ast.GenericParametersClause
 	if p.currentMatches(token.L_CHEVRON) {
-		params = p.parseGenericParameterClause()
+		params, err = p.parseGenericParameterClause()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Assign
 	var eqPos token.TokenPosition
 	var value ast.TypeExpression
 	if p.currentMatches(token.ASSIGN) {
-		eqPos = p.expect(token.ASSIGN).Pos
-		value = p.parseTypeExpression()
+		eq, err := p.expect(token.ASSIGN)
+
+		if err != nil {
+			return nil, err
+		}
+
+		eqPos = eq.Pos
+		value, err = p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	p.expect(token.SEMICOLON)
+	_, err = p.expect(token.SEMICOLON)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.TypeStatement{
-		KeyWPos:       kwPos,
+		KeyWPos:       kw.Pos,
 		EqPos:         eqPos,
 		GenericParams: params,
 		Value:         value,
 		Identifier:    ident,
-	}
+	}, nil
 }

@@ -2,37 +2,40 @@ package builder
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	t "github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
-func Build(filepath, input string) *ast.File {
+func Build(filepath string) bool {
 
 	// Lexer / Scanner
 
 	fmt.Println("\n[Parser] Starting")
 	start := time.Now()
 
-	lexer := lexer.New(input)
-	tokens := lexer.AllTokens()
+	lFile, err := lexer.NewFile(filepath)
+	if err != nil {
+		fmt.Printf("Error Reading File. %s; %s\n", filepath, err)
+		return false
+	}
 
-	lines := strings.Split(input, "\n")
+	lexer := lexer.New(lFile)
+	lexer.ScanAll()
 
 	// Parser
-	parser := parser.New(tokens)
-	file := parser.Parse()
+	parser := parser.New(lFile)
+	aFile := parser.Parse()
 
-	if len(file.Errors) != 0 {
-		for _, err := range file.Errors {
-			fmt.Println(ErrorMessage(filepath, err, lines))
+	if len(aFile.Errors) != 0 {
+		for _, err := range aFile.Errors {
+			fmt.Println(err)
 		}
-		return nil
+		return false
 	}
+
 	duration := time.Since(start)
 
 	fmt.Println("[Parser] Completed.", "Took", duration)
@@ -41,14 +44,14 @@ func Build(filepath, input string) *ast.File {
 	fmt.Println("\n[TypeChecker] Starting")
 	start = time.Now()
 
-	checker := t.New(t.STD)
-	_ = checker.CheckFile(file)
+	checker := t.New(t.STD, aFile)
+	_ = checker.Check()
 
 	if len(checker.Errors) != 0 {
 		for _, err := range checker.Errors {
-			fmt.Println(ErrorMessage(filepath, err, lines))
+			fmt.Println(err)
 		}
-		return nil
+		return false
 	}
 	duration = time.Since(start)
 	fmt.Println("[TypeChecker] Completed.", "Took", duration)
@@ -66,10 +69,10 @@ func Build(filepath, input string) *ast.File {
 	// irgen.Compile(exec)
 	// duration = time.Since(start)
 	// fmt.Println("[IRGen] Completed.", "Took", duration)
-	return file
+	return true
 }
 
-func ErrorMessage(filepath string, err *lexer.Error, lines []string) string {
+func ErrorMessage(filepath string, err *lexer.CompilerError, lines []string) string {
 	msg := fmt.Sprintf("\n%s:%d:%d -> %s", filepath, err.Range.Start.Line, err.Range.Start.Offset, err.Message)
 	msg += fmt.Sprintf("\n\t%s", lines[max(0, err.Range.Start.Line-1)])
 	// TODO: Arrow

@@ -8,26 +8,26 @@ import (
 )
 
 func (p *Parser) current() token.Token {
-	return p.tokens[p.cursor].Tok
+	return p.file.Tokens[p.cursor].Tok
 }
 
 func (p *Parser) isAtEnd() bool {
-	return p.cursor == len(p.tokens)-1
+	return p.cursor == len(p.file.Tokens)-1
 }
 
 func (p *Parser) currentScannedToken() token.ScannedToken {
-	return p.tokens[p.cursor]
+	return p.file.Tokens[p.cursor]
 }
 
 func (p *Parser) peakAheadScannedToken() (token.ScannedToken, bool) {
 	if p.isAtEnd() {
 		return token.ScannedToken{}, false
 	}
-	return p.tokens[p.cursor+1], true
+	return p.file.Tokens[p.cursor+1], true
 }
 
 func (p *Parser) previousScannedToken() token.ScannedToken {
-	return p.tokens[p.cursor-1]
+	return p.file.Tokens[p.cursor-1]
 }
 
 // bool indicating the current token is of the specified type
@@ -47,18 +47,17 @@ func (p *Parser) match(tokens ...token.Token) bool {
 	return false
 }
 
-func (p *Parser) expect(t token.Token) token.ScannedToken {
+func (p *Parser) expect(t token.Token) (token.ScannedToken, error) {
 	if p.current() != t {
-		panic(p.error(fmt.Sprintf("expected `%s`", token.LookUp(t)))) // never executed
+		return token.ScannedToken{}, p.error(fmt.Sprintf("expected `%s`", token.LookUp(t)))
 	} else {
 		defer p.next()
-		return p.currentScannedToken()
+		return p.currentScannedToken(), nil
 	}
 }
 
 func (p *Parser) next() {
 	if p.isAtEnd() {
-		fmt.Println("parser is at end")
 		return
 	}
 	p.cursor++
@@ -78,13 +77,14 @@ func (p *Parser) advance(check token.NodeChecker) bool {
 	return moves != 0
 }
 
-func (p *Parser) error(message string) lexer.Error {
+func (p *Parser) error(message string) *lexer.CompilerError {
 	end, ok := p.peakAheadScannedToken()
 
 	if !ok {
 		end = p.currentScannedToken()
 	}
-	return lexer.Error{
+	return &lexer.CompilerError{
+		File: p.file,
 		Range: token.SyntaxRange{
 			Start: p.currentScannedToken().Pos,
 			End:   end.Pos,

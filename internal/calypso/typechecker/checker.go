@@ -1,6 +1,7 @@
 package typechecker
 
 import (
+	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -23,13 +24,15 @@ type Checker struct {
 	fn      *types.FunctionSignature
 	table   *SymbolTable
 	lhsType types.Type
+	file    *ast.File
 }
 
-func New(mode CheckerMode) *Checker {
+func New(mode CheckerMode, file *ast.File) *Checker {
 	return &Checker{
 		depth: 0,
 		mode:  mode,
 		table: NewSymbolTable(),
+		file:  file,
 	}
 }
 

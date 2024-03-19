@@ -5,64 +5,102 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
-func (p *Parser) parseTypeExpression() ast.TypeExpression {
+func (p *Parser) parseTypeExpression() (ast.TypeExpression, error) {
 
 	var typ ast.TypeExpression
+	var err error
 	switch p.current() {
 	case token.MUL:
-		typ = p.parsePointerTypeExpression()
+		typ, err = p.parsePointerTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 	case token.IDENTIFIER:
-		typ = p.parseIdentifierTypeExpression()
+		typ, err = p.parseIdentifierTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 	case token.LBRACE:
-		typ = p.parseMapTypeExpression()
+		typ, err = p.parseMapTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 	default:
-		panic(p.error("expected type expression"))
+		return nil, p.error("expected type expression")
 	}
 
 	if p.match(token.LBRACKET) {
 		lBrackPos := p.previousScannedToken().Pos
-		rBrackPos := p.expect(token.RBRACKET).Pos
+		rBrack, err := p.expect(token.RBRACKET)
+		if err != nil {
+			return nil, err
+		}
 
 		return &ast.ArrayTypeExpression{
 			LBracketPos: lBrackPos,
-			RBracketPos: rBrackPos,
+			RBracketPos: rBrack.Pos,
 			Element:     typ,
-		}
+		}, nil
 	}
 
-	return typ
+	return typ, nil
 }
 
-func (p *Parser) parseMapTypeExpression() ast.TypeExpression {
-	start := p.expect(token.LBRACE)
-	expr := p.parseTypeExpression()
-	p.expect(token.COLON)
-	value := p.parseTypeExpression()
-	end := p.expect(token.RBRACE)
+func (p *Parser) parseMapTypeExpression() (ast.TypeExpression, error) {
+	start, err := p.expect(token.LBRACE)
+	if err != nil {
+		return nil, err
+	}
+
+	expr, err := p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.expect(token.COLON)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	end, err := p.expect(token.RBRACE)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.MapTypeExpression{
 		Key:         expr,
 		Value:       value,
 		LBracketPos: start.Pos,
 		RBracketPos: end.Pos,
-	}
+	}, nil
 }
 
-func (p *Parser) parseIdentifierTypeExpression() ast.TypeExpression {
+func (p *Parser) parseIdentifierTypeExpression() (ast.TypeExpression, error) {
 
 	// 1 - Identifier
-	ident := p.parseIdentifierWithoutAnnotation()
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 
 	// 2 - Type Parameters
 	var args *ast.GenericArgumentsClause
 	if p.currentMatches(token.L_CHEVRON) {
-		args = p.parseGenericArgumentsClause()
+		args, err = p.parseGenericArgumentsClause()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ast.IdentifierTypeExpression{
 		Identifier: ident,
 		Arguments:  args,
-	}
+	}, nil
 
 }
 
@@ -73,42 +111,55 @@ This parses a generic argument clause
 
 `const foo: GenericType<int, string>`
 */
-func (p *Parser) parseGenericArgumentsClause() *ast.GenericArgumentsClause {
+func (p *Parser) parseGenericArgumentsClause() (*ast.GenericArgumentsClause, error) {
 
 	args := []ast.TypeExpression{}
-	start := p.expect(token.L_CHEVRON)
+	start, err := p.expect(token.L_CHEVRON)
+	if err != nil {
+		return nil, err
+	}
 
 	if p.match(token.R_CHEVRON) {
-		panic(p.error("expected at least 1 generic argument"))
+		return nil, p.error("expected at least 1 generic argument")
 	}
 
 	// First Argument
-	expr := p.parseTypeExpression()
+	expr, err := p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
+
 	args = append(args, expr)
 
 	// Check For Others
 	for p.match(token.COMMA) {
 
 		if p.match(token.R_CHEVRON) {
-			panic("expected type expression")
+			return nil, p.error("expected type expression")
 		}
 
-		expr := p.parseTypeExpression()
+		expr, err := p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
 
 		args = append(args, expr)
 	}
 
-	end := p.expect(token.R_CHEVRON)
+	end, err := p.expect(token.R_CHEVRON)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(args) == 0 {
-		panic("expected arguments")
+		return nil, p.error("expected arguments")
 	}
 
 	return &ast.GenericArgumentsClause{
 		LChevronPos: start.Pos,
 		RChevronPos: end.Pos,
 		Arguments:   args,
-	}
+	}, nil
 }
 
 /*
@@ -118,41 +169,53 @@ This parses a generic parameter clause
 
 `alias set<T : Foo> = set<T>`
 */
-func (p *Parser) parseGenericParameterClause() *ast.GenericParametersClause {
+func (p *Parser) parseGenericParameterClause() (*ast.GenericParametersClause, error) {
 	params := []*ast.GenericParameterExpression{}
-	start := p.expect(token.L_CHEVRON)
+	start, err := p.expect(token.L_CHEVRON)
+	if err != nil {
+		return nil, err
+	}
 
 	if p.match(token.R_CHEVRON) {
-		panic(p.error("expected at least 1 generic parameter"))
+		return nil, p.error("expected at least 1 generic parameter")
 	}
 
 	// First Argument
-	param := p.parseGenericParameterExpression()
+	param, err := p.parseGenericParameterExpression()
+	if err != nil {
+		return nil, err
+	}
 	params = append(params, param)
 
 	// Check For Others
 	for p.match(token.COMMA) {
 
 		if p.match(token.R_CHEVRON) {
-			panic(p.error("expected generic parameter"))
+			return nil, p.error("expected generic parameter")
 		}
 
-		param := p.parseGenericParameterExpression()
+		param, err := p.parseGenericParameterExpression()
+		if err != nil {
+			return nil, err
+		}
 
 		params = append(params, param)
 	}
 
-	end := p.expect(token.R_CHEVRON)
+	end, err := p.expect(token.R_CHEVRON)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(params) == 0 {
-		panic(p.error("expected at least 1 generic parameter"))
+		return nil, p.error("expected at least 1 generic parameter")
 	}
 
 	return &ast.GenericParametersClause{
 		Parameters:  params,
 		LChevronPos: start.Pos,
 		RChevronPos: end.Pos,
-	}
+	}, nil
 }
 
 /*
@@ -164,35 +227,50 @@ Parses A Generic Parameter
 
 It will parse the `T : Foo & Bar & Baz` Parameter
 */
-func (p *Parser) parseGenericParameterExpression() *ast.GenericParameterExpression {
-	ident := p.parseIdentifierWithoutAnnotation()
+func (p *Parser) parseGenericParameterExpression() (*ast.GenericParameterExpression, error) {
+	ident, err := p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
 	standards := []*ast.IdentifierExpression{}
 
 	// parse standards
 	if p.match(token.COLON) {
 		// First standard
-		standard := p.parseIdentifierWithoutAnnotation()
+		standard, err := p.parseIdentifierWithoutAnnotation()
+		if err != nil {
+			return nil, err
+		}
 		standards = append(standards, standard)
 
 		// Others
 		for p.match(token.AMP) {
-			standard := p.parseIdentifierWithoutAnnotation()
+			standard, err := p.parseIdentifierWithoutAnnotation()
+			if err != nil {
+				return nil, err
+			}
 			standards = append(standards, standard)
 		}
 	}
 	return &ast.GenericParameterExpression{
 		Identifier: ident,
 		Standards:  standards,
-	}
+	}, nil
 }
 
-func (p *Parser) parsePointerTypeExpression() *ast.PointerTypeExpression {
-	pos := p.expect(token.MUL)
+func (p *Parser) parsePointerTypeExpression() (*ast.PointerTypeExpression, error) {
+	pos, err := p.expect(token.MUL)
+	if err != nil {
+		return nil, err
+	}
 
-	expr := p.parseTypeExpression()
+	expr, err := p.parseTypeExpression()
+	if err != nil {
+		return nil, err
+	}
 
 	return &ast.PointerTypeExpression{
 		StarPos:   pos.Pos,
 		PointerTo: expr,
-	}
+	}, nil
 }
