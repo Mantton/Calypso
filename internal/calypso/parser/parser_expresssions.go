@@ -27,7 +27,7 @@ func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
 
 	if p.match(token.ASSIGN) {
 		pos := p.previousScannedToken().Pos
-		value, err := p.parseAssignmentExpression()
+		value, err := p.parseDoubleBarExpression()
 
 		if err != nil {
 			return nil, err
@@ -37,6 +37,24 @@ func (p *Parser) parseAssignmentExpression() (ast.Expression, error) {
 			Target: expr,
 			Value:  value,
 			OpPos:  pos,
+		}, nil
+
+	} else if p.match(token.PLUS_EQ, token.MINUS_EQ, token.STAR_EQ, token.QUO_EQ, token.PCT_EQ,
+		token.AMP_EQ, token.BAR_EQ, token.CARET_EQ,
+		token.BIT_SHIFT_LEFT_EQ, token.BIT_SHIFT_RIGHT_EQ) {
+
+		op := p.previousScannedToken()
+		value, err := p.parseDoubleBarExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &ast.ShorthandAssignmentExpression{
+			Target: expr,
+			Right:  value,
+			Op:     op.Tok,
+			OpPos:  op.Pos,
 		}, nil
 	}
 

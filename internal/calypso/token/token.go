@@ -62,18 +62,17 @@ const (
 	LEQ // <=
 	GEQ // >=
 
-	// TODO:
 	PLUS_EQ  // +=
 	MINUS_EQ // -=
 	STAR_EQ  // *=
 	QUO_EQ   // /=
 	PCT_EQ   // %=
 
-	AMP_EQ    // &=
-	BAR_EQ    // |=
-	CARET_EQ  // ^=
-	LSHIFT_EQ // <<=
-	RSHIFT_EQ // >>=
+	AMP_EQ             // &=
+	BAR_EQ             // |=
+	CARET_EQ           // ^=
+	BIT_SHIFT_LEFT_EQ  // <<=
+	BIT_SHIFT_RIGHT_EQ // >>=
 
 	COMMA     // ,
 	PERIOD    // .
@@ -213,6 +212,18 @@ var tokens = map[Token]string{
 	R_CHEVRON: ">",
 	ASSIGN:    "=",
 	NOT:       "!",
+
+	PLUS_EQ:  "+=", // +=
+	MINUS_EQ: "-=", // -=
+	STAR_EQ:  "*=", // *=
+	QUO_EQ:   "/=", // /=
+	PCT_EQ:   "%=", // %=
+
+	AMP_EQ:             "&=",  // &=
+	BAR_EQ:             "|=",  // |=
+	CARET_EQ:           "^=",  // ^=
+	BIT_SHIFT_LEFT_EQ:  "<<=", // <<=
+	BIT_SHIFT_RIGHT_EQ: ">>=", // >>=
 
 	NEQ: "!=",
 	LEQ: "<=",

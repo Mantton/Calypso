@@ -108,27 +108,36 @@ func (l *Lexer) parseToken() token.ScannedToken {
 	case '-':
 		if l.match('>') {
 			tok = l.build(token.R_ARROW)
+		} else if l.match('=') {
+			tok = l.build(token.MINUS_EQ)
 		} else {
 			tok = l.build(token.MINUS)
 		}
 	case '+':
 		if l.match('=') {
+			tok = l.build(token.PLUS_EQ)
 		} else {
 			tok = l.build(token.PLUS)
-
 		}
 
 	case '*':
-		tok = l.build(token.STAR)
+		if l.match('=') {
+			tok = l.build(token.STAR_EQ)
+		} else {
+			tok = l.build(token.STAR)
+		}
 	case '%':
-		tok = l.build(token.PCT)
+		if l.match('=') {
+			tok = l.build(token.PCT_EQ)
+		} else {
+			tok = l.build(token.PCT)
+		}
 
 	case '!':
 		if l.match('=') {
 			tok = l.build(token.NEQ)
 		} else {
 			tok = l.build(token.NOT)
-
 		}
 
 	case '=':
@@ -142,7 +151,11 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		if l.match('=') {
 			tok = l.build(token.LEQ)
 		} else if l.match('<') {
-			tok = l.build(token.BIT_SHIFT_LEFT)
+			if l.match('=') {
+				tok = l.build(token.BIT_SHIFT_LEFT_EQ)
+			} else {
+				tok = l.build(token.BIT_SHIFT_LEFT)
+			}
 		} else {
 			tok = l.build(token.L_CHEVRON)
 		}
@@ -151,7 +164,11 @@ func (l *Lexer) parseToken() token.ScannedToken {
 		if l.match('=') {
 			tok = l.build(token.GEQ)
 		} else if l.match('>') {
-			tok = l.build(token.BIT_SHIFT_RIGHT)
+			if l.match('=') {
+				tok = l.build(token.BIT_SHIFT_RIGHT_EQ)
+			} else {
+				tok = l.build(token.BIT_SHIFT_RIGHT)
+			}
 		} else {
 			tok = l.build(token.R_CHEVRON)
 		}
@@ -164,6 +181,8 @@ func (l *Lexer) parseToken() token.ScannedToken {
 			}
 
 			tok = l.build(token.IGNORE)
+		} else if l.match('=') {
+			tok = l.build(token.QUO_EQ)
 		} else {
 			tok = l.build(token.QUO)
 		}
@@ -175,6 +194,8 @@ func (l *Lexer) parseToken() token.ScannedToken {
 	case '&':
 		if l.match('&') {
 			tok = l.build(token.DOUBLE_AMP)
+		} else if l.match('=') {
+			tok = l.build(token.AMP_EQ)
 		} else {
 			tok = l.build(token.AMP)
 		}
@@ -183,11 +204,17 @@ func (l *Lexer) parseToken() token.ScannedToken {
 			tok = l.build(token.DOUBLE_BAR)
 		} else if l.match('>') {
 			tok = l.build(token.PIPE)
+		} else if l.match('=') {
+			tok = l.build(token.BAR_EQ)
 		} else {
 			tok = l.build(token.BAR)
 		}
 	case '^':
-		tok = l.build(token.CARET)
+		if l.match('=') {
+			tok = l.build(token.CARET_EQ)
+		} else {
+			tok = l.build(token.CARET)
+		}
 	default:
 		if isDigit(c) {
 			tok = l.number()

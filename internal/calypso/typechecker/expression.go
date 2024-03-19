@@ -23,6 +23,8 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 		c.checkAssignmentExpression(expr)
 	case *ast.FunctionCallExpression:
 		c.checkCallExpression(expr)
+	case *ast.ShorthandAssignmentExpression:
+		c.CheckShorthandAssignment(expr)
 	default:
 		msg := fmt.Sprintf("expression check not implemented, %T", expr)
 		panic(msg)
@@ -52,6 +54,11 @@ func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
 	// TODO: mutability checks
 	c.evaluateAssignmentExpression(expr)
+}
+
+func (c *Checker) CheckShorthandAssignment(expr *ast.ShorthandAssignmentExpression) {
+	// TODO: Mutability checks
+	c.evaluateShorthandAssignmentExpression(expr)
 }
 
 func (c *Checker) checkCallExpression(expr *ast.FunctionCallExpression) {
@@ -351,6 +358,20 @@ func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) t
 
 	lhs := c.evaluateExpression(expr.Target)
 	rhs := c.evaluateExpression(expr.Value)
+
+	_, err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+	}
+
+	// assignment yield void
+	return types.LookUp(types.Void)
+}
+
+func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssignmentExpression) types.Type {
+	lhs := c.evaluateExpression(expr.Target)
+	rhs := c.evaluateExpression(expr.Right)
 
 	_, err := c.validate(lhs, rhs)
 

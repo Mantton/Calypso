@@ -216,6 +216,13 @@ type AssignmentExpression struct {
 	Value  Expression
 }
 
+type ShorthandAssignmentExpression struct {
+	Target Expression
+	Op     token.Token
+	OpPos  token.TokenPosition
+	Right  Expression
+}
+
 type FunctionCallExpression struct {
 	Target    Expression
 	Arguments []Expression

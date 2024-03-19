@@ -134,7 +134,14 @@ func (e *BinaryExpression) Range() token.SyntaxRange {
 func (e *AssignmentExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.Target.Range().Start,
-		End:   e.Target.Range().End,
+		End:   e.Value.Range().End,
+	}
+}
+
+func (e *ShorthandAssignmentExpression) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.Target.Range().Start,
+		End:   e.Right.Range().End,
 	}
 }
 
@@ -191,6 +198,7 @@ func (e *FunctionCallExpression) expressionNode()          {}
 func (e *UnaryExpression) expressionNode()                 {}
 func (e *BinaryExpression) expressionNode()                {}
 func (e *AssignmentExpression) expressionNode()            {}
+func (e *ShorthandAssignmentExpression) expressionNode()   {}
 func (e *IndexExpression) expressionNode()                 {}
 func (e *FieldAccessExpression) expressionNode()           {}
 func (e *KeyValueExpression) expressionNode()              {}
