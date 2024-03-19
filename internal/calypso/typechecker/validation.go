@@ -17,6 +17,9 @@ func (c *Checker) validate(expected types.Type, provided types.Type) (types.Type
 	expected = types.ResolveAliases(expected)
 	provided = types.ResolveAliases(provided)
 
+	expected = types.UnwrapBounded(expected)
+	provided = types.UnwrapBounded(provided)
+
 	// Instance?
 	if expected == types.LookUp(types.Placeholder) {
 		return provided, nil

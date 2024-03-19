@@ -386,27 +386,14 @@ func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssig
 func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 
 	// 1 - Find Defined Type
-	name := n.Identifier.Value
 
-	sym, ok := c.find(name)
-
-	if !ok {
-		if !ok {
-			c.addError(
-				fmt.Sprintf("`%s` is not defined", n.Identifier.Value),
-				n.Range(),
-			)
-
-			return unresolved
-		}
-	}
-
-	base := types.AsDefined(sym.Type())
+	target := c.evaluateExpression(n.Target)
+	base := types.AsDefined(target)
 
 	if base == nil {
 		c.addError(
-			fmt.Sprintf("`%s` is not a type", n.Identifier.Value),
-			n.Identifier.Range(),
+			fmt.Sprintf("`%s` is not a type", target),
+			n.Target.Range(),
 		)
 		return unresolved
 	}
@@ -414,14 +401,13 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	// 2 - Ensure Defined Type is Struct
 	if !types.IsStruct(base.Parent()) {
 		c.addError(
-			fmt.Sprintf("`%s` is not a struct", n.Identifier.Value),
-			n.Identifier.Range(),
+			fmt.Sprintf("`%s` is not a struct", target),
+			n.Target.Range(),
 		)
 		return unresolved
 	}
 
 	// 3 - check for annotated specialization
-	// TODO: ^^
 
 	// 4 - Get Struct Signature of Defined Type
 
@@ -446,7 +432,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 			continue
 		}
 
-		_, ok = seen[k]
+		_, ok := seen[k]
 
 		// 2 - field has already been evaluated
 		if ok {

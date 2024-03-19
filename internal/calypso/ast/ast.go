@@ -325,9 +325,8 @@ type MapLiteral struct {
 }
 
 type CompositeLiteral struct {
-	Identifier    *IdentifierExpression
-	TypeArguments *GenericArgumentsClause
-	Body          *CompositeLiteralBody
+	Target Expression
+	Body   *CompositeLiteralBody
 }
 
 type CompositeLiteralBody struct {

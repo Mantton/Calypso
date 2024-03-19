@@ -451,6 +451,10 @@ func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
 			p.cursor = pos
 			return expr, nil
 		}
+		expr = &ast.GenericSpecializationExpression{
+			Identifier: ident,
+			Clause:     c,
+		}
 
 		// check if is composite initializer
 		if p.currentMatches(token.LBRACE) {
@@ -459,16 +463,10 @@ func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
 				return nil, err
 			}
 			expr = &ast.CompositeLiteral{
-				Identifier:    ident,
-				TypeArguments: c,
-				Body:          body,
+				Target: expr,
+				Body:   body,
 			}
 
-		} else {
-			expr = &ast.GenericSpecializationExpression{
-				Identifier: ident,
-				Clause:     c,
-			}
 		}
 
 	}
@@ -569,8 +567,8 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 			}
 
 			expr = &ast.CompositeLiteral{
-				Identifier: ident,
-				Body:       body,
+				Target: ident,
+				Body:   body,
 			}
 
 		} else {

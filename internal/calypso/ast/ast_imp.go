@@ -53,7 +53,7 @@ func (e *VoidLiteral) Range() token.SyntaxRange {
 
 func (e *CompositeLiteral) Range() token.SyntaxRange {
 	return token.SyntaxRange{
-		Start: e.Identifier.Pos,
+		Start: e.Target.Range().Start,
 		End:   e.Body.RBracePos,
 	}
 }
