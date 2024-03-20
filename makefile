@@ -1,7 +1,5 @@
-.PHONY: run repl file
-
-# Define the 'run' target
+.PHONY: run
 run:
 	@clear
-	@go build  -tags=llvm16 -o  ./bin/calypso ./cmd/calypso.go 
-	@./bin/calypso ./dev.test.cly -panic
+	@go build -tags=llvm16 -o ./bin/calypso ./cmd/calypso.go 
+	@./bin/calypso ./bin/dev.test.cly 
