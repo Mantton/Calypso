@@ -137,7 +137,7 @@ func (t ScannedToken) String() string {
 }
 
 var keywords = map[string]Token{
-	"func":      FUNC,
+	"fn":        FUNC,
 	"let":       LET,
 	"const":     CONST,
 	"module":    MODULE,
@@ -241,7 +241,7 @@ var tokens = map[Token]string{
 	R_ARROW:   "->",
 
 	CONST:     "const",
-	FUNC:      "func",
+	FUNC:      "fn",
 	LET:       "let",
 	IF:        "if",
 	ELSE:      "else",
