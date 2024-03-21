@@ -21,7 +21,6 @@ func (p *Parser) parseDeclaration() (ast.Declaration, error) {
 	}
 
 	if !token.IsModifiable(p.current()) && len(p.modifiers) != 0 {
-		fmt.Println(p.modifiers)
 		p.modifiers = nil
 		return nil, p.error("declaration is not modifiable")
 	}
