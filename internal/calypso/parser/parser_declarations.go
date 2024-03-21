@@ -8,6 +8,24 @@ import (
 )
 
 func (p *Parser) parseDeclaration() (ast.Declaration, error) {
+
+	// Modifiers
+	for token.IsModifier(p.current()) {
+		err := p.handleModifier(p.current())
+
+		// Notify error, but do not skip parsing
+		if err != nil {
+			p.errors.Add(err)
+		}
+		p.next()
+	}
+
+	if !token.IsModifiable(p.current()) && len(p.modifiers) != 0 {
+		fmt.Println(p.modifiers)
+		p.modifiers = nil
+		return nil, p.error("declaration is not modifiable")
+	}
+
 	switch p.current() {
 	case token.CONST:
 		stmt, err := p.parseVariableStatement()
@@ -97,6 +115,11 @@ func (p *Parser) parseStatementList() ([]ast.Statement, error) {
 }
 
 func (p *Parser) parseStandardDeclaration() (*ast.StandardDeclaration, error) {
+	// Visibility Modifiers
+	vis, err := p.resolveNonFuncMods()
+	if err != nil {
+		p.errors.Add(err)
+	}
 	keyw, err := p.expect(token.STANDARD)
 
 	if err != nil {
@@ -118,6 +141,7 @@ func (p *Parser) parseStandardDeclaration() (*ast.StandardDeclaration, error) {
 		KeyWPos:    keyw.Pos,
 		Identifier: ident,
 		Block:      block,
+		Visibility: vis,
 	}, nil
 }
 
@@ -145,6 +169,17 @@ func (p *Parser) parseExtensionDeclaration() (*ast.ExtensionDeclaration, error) 
 	content := []*ast.FunctionStatement{}
 
 	for p.current() != token.RBRACE {
+		// Modifiers
+		for token.IsModifier(p.current()) {
+			err := p.handleModifier(p.current())
+
+			// Notify error, but do not skip parsing
+			if err != nil {
+				p.errors.Add(err)
+			}
+			p.next()
+		}
+
 		fn, err := p.parseFunctionExpression(true)
 		if err != nil {
 			return nil, err
@@ -216,6 +251,16 @@ func (p *Parser) parseConformanceDeclaration() (*ast.ConformanceDeclaration, err
 
 			types = append(types, t)
 		} else {
+			// Modifiers
+			for token.IsModifier(p.current()) {
+				err := p.handleModifier(p.current())
+
+				// Notify error, but do not skip parsing
+				if err != nil {
+					p.errors.Add(err)
+				}
+				p.next()
+			}
 			fn, err := p.parseFunctionExpression(true)
 			if err != nil {
 				return nil, err

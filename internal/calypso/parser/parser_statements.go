@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/token"
@@ -44,6 +45,11 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 }
 
 func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
+	// Visibility Modifiers
+	vis, err := p.resolveNonFuncMods()
+	if err != nil {
+		p.errors.Add(err)
+	}
 	/**
 	let x = `expr`;
 	const y = `expr`;
@@ -74,12 +80,12 @@ func (p *Parser) parseVariableStatement() (*ast.VariableStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &ast.VariableStatement{
 		KeyWPos:    start,
 		Identifier: ident,
 		Value:      expr,
 		IsConstant: isConst,
+		Visibility: vis,
 	}, nil
 
 }
@@ -268,6 +274,11 @@ func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
 }
 
 func (p *Parser) parseStructStatement() (*ast.StructStatement, error) {
+	// Visibility Modifiers
+	vis, err := p.resolveNonFuncMods()
+	if err != nil {
+		p.errors.Add(err)
+	}
 
 	keyw, err := p.expect(token.STRUCT)
 
@@ -295,14 +306,31 @@ func (p *Parser) parseStructStatement() (*ast.StructStatement, error) {
 		return nil, err
 	}
 
-	properties := []*ast.IdentifierExpression{}
+	properties := []*ast.StructField{}
 
 	for p.current() != token.RBRACE {
+		vis := ast.INTERNAL
+
+		if p.match(token.PUB) {
+			vis = ast.PUBLIC
+		}
+
 		v, err := p.parseIdentifierWithRequiredAnnotation()
 		if err != nil {
 			return nil, err
 		}
-		properties = append(properties, v)
+
+		// _foo is strictly private to the scope of the struct
+		if vis == ast.PUBLIC && strings.HasPrefix(v.Value, "_") {
+			return nil, p.errorAt("fields with prefix \"_\" are private to the struct scope and cannot be made public", v.Range())
+		}
+
+		sf := &ast.StructField{
+			Identifier: v,
+			Visibility: vis,
+		}
+		properties = append(properties, sf)
+
 		_, err = p.expect(token.SEMICOLON)
 		if err != nil {
 			return nil, err
@@ -322,10 +350,17 @@ func (p *Parser) parseStructStatement() (*ast.StructStatement, error) {
 		LBracePos:     lBrace.Pos,
 		RBracePos:     rBrace.Pos,
 		Fields:        properties,
+		Visibility:    vis,
 	}, nil
 }
 
 func (p *Parser) parseEnumStatement() (*ast.EnumStatement, error) {
+	// Visibility Modifiers
+	vis, err := p.resolveNonFuncMods()
+	if err != nil {
+		p.errors.Add(err)
+	}
+	// Keyword
 	kw, err := p.expect(token.ENUM)
 
 	if err != nil {
@@ -357,6 +392,7 @@ func (p *Parser) parseEnumStatement() (*ast.EnumStatement, error) {
 		Identifier:    ident,
 		GenericParams: genericParams,
 		LBracePos:     lbrace.Pos,
+		Visibility:    vis,
 	}
 
 	for p.current() != token.RBRACE {
@@ -666,6 +702,12 @@ func (p *Parser) parseBreakStatement() (*ast.BreakStatement, error) {
 }
 
 func (p *Parser) parseTypeStatement() (*ast.TypeStatement, error) {
+	// Visibility Modifiers
+	vis, err := p.resolveNonFuncMods()
+	if err != nil {
+		p.errors.Add(err)
+	}
+
 	// Consume Keyword
 	kw, err := p.expect(token.TYPE)
 
@@ -717,5 +759,6 @@ func (p *Parser) parseTypeStatement() (*ast.TypeStatement, error) {
 		GenericParams: params,
 		Value:         value,
 		Identifier:    ident,
+		Visibility:    vis,
 	}, nil
 }

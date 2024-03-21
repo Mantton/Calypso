@@ -170,8 +170,8 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 	var fields []*types.Var
 
 	for _, f := range n.Fields {
-		d := types.NewVar(f.Value, unresolved)
-		t := c.evaluateTypeExpression(f.AnnotatedType, def.TypeParameters)
+		d := types.NewVar(f.Identifier.Value, unresolved)
+		t := c.evaluateTypeExpression(f.Identifier.AnnotatedType, def.TypeParameters)
 		d.SetType(t)
 		fields = append(fields, d)
 	}

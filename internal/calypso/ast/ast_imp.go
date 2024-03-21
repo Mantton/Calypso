@@ -256,13 +256,6 @@ func (e *FunctionStatement) Range() token.SyntaxRange {
 	return e.Func.Range()
 }
 
-func (e *AliasStatement) Range() token.SyntaxRange {
-	return token.SyntaxRange{
-		Start: e.KeyWPos,
-		End:   e.Target.Range().End,
-	}
-}
-
 func (e *StructStatement) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.KeyWPos,
@@ -297,7 +290,6 @@ func (s *ReturnStatement) statementNode()     {}
 func (s *BlockStatement) statementNode()      {}
 func (s *VariableStatement) statementNode()   {}
 func (s *FunctionStatement) statementNode()   {}
-func (s *AliasStatement) statementNode()      {}
 func (s *StructStatement) statementNode()     {}
 func (s *EnumStatement) statementNode()       {}
 func (s *SwitchStatement) statementNode()     {}

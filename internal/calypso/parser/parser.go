@@ -20,6 +20,8 @@ type Parser struct {
 
 	inSwitch bool
 	cursor   int
+
+	modifiers []token.Token
 }
 
 func New(file *lexer.File) *Parser {

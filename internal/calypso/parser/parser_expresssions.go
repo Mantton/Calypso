@@ -664,6 +664,10 @@ func (p *Parser) parseExpressionList(start, end token.Token) (*ast.ExpressionLis
 }
 
 func (p *Parser) parseFunctionExpression(requiresBody bool) (*ast.FunctionExpression, error) {
+	var mods *modifiers
+	if len(p.modifiers) != 0 {
+		mods = p.consumeModifiers()
+	}
 	start, err := p.expect(token.FUNC) // Expect current to be `func`, consume
 
 	if err != nil {
@@ -724,14 +728,23 @@ func (p *Parser) parseFunctionExpression(requiresBody bool) (*ast.FunctionExpres
 		}
 	}
 
-	return &ast.FunctionExpression{
+	fn := &ast.FunctionExpression{
 		KeyWPos:       start.Pos,
 		Identifier:    ident,
 		Body:          body,
 		Params:        params,
 		ReturnType:    retType,
 		GenericParams: genParams,
-	}, nil
+	}
+
+	if mods != nil {
+		fn.IsAsync = mods.async
+		fn.Visibility = mods.vis
+		fn.IsStatic = mods.static
+		fn.IsMutating = mods.mutating
+	}
+
+	return fn, nil
 }
 
 func (p *Parser) parseFunctionBody() (*ast.BlockStatement, error) {

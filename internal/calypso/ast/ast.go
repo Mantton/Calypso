@@ -5,6 +5,13 @@ import (
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
+type Visibility byte
+
+const (
+	INTERNAL Visibility = iota
+	PUBLIC
+)
+
 type Node interface {
 	Range() token.SyntaxRange
 }
@@ -50,6 +57,7 @@ type StandardDeclaration struct {
 	KeyWPos    token.TokenPosition
 	Identifier *IdentifierExpression
 	Block      *BlockStatement
+	Visibility Visibility
 }
 
 type TypeStatement struct {
@@ -58,6 +66,7 @@ type TypeStatement struct {
 	EqPos         token.TokenPosition
 	GenericParams *GenericParametersClause
 	Value         TypeExpression
+	Visibility    Visibility
 }
 
 type ExtensionDeclaration struct {
@@ -99,6 +108,7 @@ type VariableStatement struct {
 	Value      Expression
 	IsConstant bool
 	IsGlobal   bool
+	Visibility Visibility
 }
 
 type FunctionStatement struct {
@@ -127,21 +137,19 @@ type ExpressionStatement struct {
 	Expr Expression
 }
 
-type AliasStatement struct {
-	KeyWPos       token.TokenPosition
-	EqPos         token.TokenPosition
-	Target        TypeExpression
-	Identifier    *IdentifierExpression
-	GenericParams *GenericParametersClause
-}
-
 type StructStatement struct {
 	KeyWPos       token.TokenPosition
 	Identifier    *IdentifierExpression
 	GenericParams *GenericParametersClause
 	LBracePos     token.TokenPosition
 	RBracePos     token.TokenPosition
-	Fields        []*IdentifierExpression
+	Fields        []*StructField
+	Visibility    Visibility
+}
+
+type StructField struct {
+	Identifier *IdentifierExpression
+	Visibility Visibility
 }
 
 type EnumStatement struct {
@@ -151,6 +159,7 @@ type EnumStatement struct {
 	LBracePos     token.TokenPosition
 	Variants      []*EnumVariantExpression
 	RBracePos     token.TokenPosition
+	Visibility    Visibility
 }
 
 type EnumVariantExpression struct {
@@ -276,6 +285,10 @@ type FunctionExpression struct {
 	GenericParams *GenericParametersClause
 	RParenPos     token.TokenPosition
 	ReturnType    TypeExpression
+	IsAsync       bool
+	IsStatic      bool
+	IsMutating    bool
+	Visibility    Visibility
 }
 
 // * Literals

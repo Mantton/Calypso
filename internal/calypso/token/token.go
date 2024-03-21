@@ -125,9 +125,8 @@ const (
 	/// Modifiers
 	ASYNC
 	STATIC
-	MUT
+	MUTATING
 	PUB
-	PRIVATE
 	kw_e // Keywords End
 )
 
@@ -162,6 +161,10 @@ var keywords = map[string]Token{
 	"case":      CASE,
 	"default":   DEFAULT,
 	"break":     BREAK,
+	"pub":       PUB,
+	"static":    STATIC,
+	"mutating":  MUTATING,
+	"async":     ASYNC,
 }
 
 func LookupIdent(ident string) Token {
@@ -185,6 +188,23 @@ func IsStatement(t Token) bool {
 		return true
 	}
 
+	return false
+}
+
+func IsModifier(t Token) bool {
+	switch t {
+	case ASYNC, STATIC, MUTATING, PUB:
+		return true
+	}
+
+	return false
+}
+
+func IsModifiable(t Token) bool {
+	switch t {
+	case STRUCT, FUNC, CONST, LET, TYPE, STANDARD, ENUM:
+		return true
+	}
 	return false
 }
 
@@ -258,7 +278,24 @@ var tokens = map[Token]string{
 	DEFAULT:   "default",
 	BREAK:     "break",
 
+	PUB:      "public",
+	STATIC:   "static",
+	MUTATING: "mutating",
+	ASYNC:    "async",
+
 	IDENTIFIER: "IDENTIFIER",
+}
+
+var ModifierPrecedent = map[Token]int{
+	// Generic Mods
+	ASYNC: 2,
+
+	// Nested Function Mods
+	STATIC:   3,
+	MUTATING: 3,
+
+	// Visibility Modifiers
+	PUB: 0,
 }
 
 func LookUp(t Token) string {
@@ -269,4 +306,8 @@ func LookUp(t Token) string {
 	}
 
 	return fmt.Sprintf("UNKNOWN %d", t)
+}
+
+func String(t Token) string {
+	return LookUp(t)
 }

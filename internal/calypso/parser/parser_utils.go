@@ -93,3 +93,13 @@ func (p *Parser) error(message string) *lexer.CompilerError {
 	}
 
 }
+
+func (p *Parser) errorAt(message string, r token.SyntaxRange) *lexer.CompilerError {
+
+	return &lexer.CompilerError{
+		File:    p.file,
+		Range:   r,
+		Message: message,
+	}
+
+}
