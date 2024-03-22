@@ -257,7 +257,7 @@ func (p *Parser) parseExpressionStatement() (ast.Statement, error) {
 	}
 
 	switch expr := expr.(type) {
-	case *ast.AssignmentExpression, *ast.FunctionCallExpression, *ast.ShorthandAssignmentExpression:
+	case *ast.AssignmentExpression, *ast.CallExpression, *ast.ShorthandAssignmentExpression:
 		_, err := p.expect(token.SEMICOLON)
 
 		if err != nil {

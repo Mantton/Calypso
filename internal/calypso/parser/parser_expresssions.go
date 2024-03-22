@@ -360,21 +360,99 @@ func (p *Parser) parseFunctionCallExpression() (ast.Expression, error) {
 	}
 
 	if p.currentMatches(token.LPAREN) {
+		expr, err = p.buildCallExpression(expr)
+		return expr, err
+	}
 
-		list, err := p.parseExpressionList(token.LPAREN, token.RPAREN)
+	return expr, nil
+}
+
+func (p *Parser) buildCallExpression(target ast.Expression) (*ast.CallExpression, error) {
+
+	// (
+	s, err := p.expect(token.LPAREN)
+
+	if err != nil {
+		return nil, err
+	}
+
+	expr := &ast.CallExpression{
+		Target:    target,
+		LParenPos: s.Pos,
+	}
+
+	if p.match(token.RPAREN) {
+		expr.RParenPos = p.previousScannedToken().Pos
+		return expr, nil
+	}
+
+	// Parse First Arg
+	arg, err := p.parseCallArgument()
+	if err != nil {
+		return nil, err
+	}
+	expr.Arguments = append(expr.Arguments, arg)
+
+	for p.match(token.COMMA) {
+		arg, err := p.parseCallArgument()
+		if err != nil {
+			return nil, err
+		}
+		expr.Arguments = append(expr.Arguments, arg)
+	}
+
+	e, err := p.expect(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+
+	expr.RParenPos = e.Pos
+	return expr, nil
+}
+
+func (p *Parser) parseCallArgument() (*ast.CallArgument, error) {
+
+	// foo(bar: 10) | foo(10)
+	var label *ast.IdentifierExpression
+	var value ast.Expression
+	var colon token.TokenPosition
+	var err error
+
+	// Ident
+	if p.currentMatches(token.IDENTIFIER) {
+		label, err = p.parseIdentifierWithoutAnnotation()
 		if err != nil {
 			return nil, err
 		}
 
-		return &ast.FunctionCallExpression{
-			Target:    expr,
-			Arguments: list.Expressions,
-			LParenPos: list.LPos,
-			RParenPos: list.RPos,
-		}, nil
+		// Next is colon, confirmed to be label
+		if p.match(token.COLON) {
+			colon = p.previousScannedToken().Pos
+
+			value, err = p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+
+		} else {
+			// next is not colon, ident was value
+			value = label
+			label = nil
+		}
+
+	} else {
+		value, err = p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return expr, nil
+	return &ast.CallArgument{
+		Label: label,
+		Colon: colon,
+		Value: value,
+	}, nil
 }
 
 func (p *Parser) parsePropertyExpression() (ast.Expression, error) {

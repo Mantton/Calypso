@@ -110,7 +110,7 @@ func (e *GroupedExpression) Range() token.SyntaxRange {
 	}
 }
 
-func (e *FunctionCallExpression) Range() token.SyntaxRange {
+func (e *CallExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.Target.Range().Start,
 		End:   e.RParenPos,
@@ -194,7 +194,7 @@ func (e *SwitchCaseExpression) Range() token.SyntaxRange {
 }
 
 func (e *GroupedExpression) expressionNode()               {}
-func (e *FunctionCallExpression) expressionNode()          {}
+func (e *CallExpression) expressionNode()                  {}
 func (e *UnaryExpression) expressionNode()                 {}
 func (e *BinaryExpression) expressionNode()                {}
 func (e *AssignmentExpression) expressionNode()            {}

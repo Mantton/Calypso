@@ -232,11 +232,17 @@ type ShorthandAssignmentExpression struct {
 	Right  Expression
 }
 
-type FunctionCallExpression struct {
+type CallExpression struct {
 	Target    Expression
-	Arguments []Expression
+	Arguments []*CallArgument
 	LParenPos token.TokenPosition
 	RParenPos token.TokenPosition
+}
+
+type CallArgument struct {
+	Label *IdentifierExpression
+	Colon token.TokenPosition
+	Value Expression
 }
 
 type IndexExpression struct {
