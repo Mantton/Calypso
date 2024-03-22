@@ -281,7 +281,7 @@ type FunctionExpression struct {
 	KeyWPos       token.TokenPosition
 	Identifier    *IdentifierExpression
 	Body          *BlockStatement
-	Params        []*IdentifierExpression
+	Parameters    []*FunctionParameter
 	GenericParams *GenericParametersClause
 	RParenPos     token.TokenPosition
 	ReturnType    TypeExpression
@@ -289,6 +289,19 @@ type FunctionExpression struct {
 	IsStatic      bool
 	IsMutating    bool
 	Visibility    Visibility
+}
+
+type FunctionParameter struct {
+	Label *IdentifierExpression
+	Name  *IdentifierExpression
+	Colon token.TokenPosition
+	Type  TypeExpression
+}
+
+type AnnotatedIdentifier struct {
+	Identifier *IdentifierExpression
+	Colon      token.TokenPosition
+	Type       TypeExpression
 }
 
 // * Literals

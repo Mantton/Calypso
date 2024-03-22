@@ -732,7 +732,7 @@ func (p *Parser) parseFunctionExpression(requiresBody bool) (*ast.FunctionExpres
 		KeyWPos:       start.Pos,
 		Identifier:    ident,
 		Body:          body,
-		Params:        params,
+		Parameters:    params,
 		ReturnType:    retType,
 		GenericParams: genParams,
 	}
@@ -785,32 +785,33 @@ func (p *Parser) parseFunctionReturnType() (ast.TypeExpression, error) {
 	}
 }
 
-func (p *Parser) parseFunctionParameters() ([]*ast.IdentifierExpression, error) {
-	identifiers := []*ast.IdentifierExpression{}
+func (p *Parser) parseFunctionParameters() ([]*ast.FunctionParameter, error) {
 
 	p.expect(token.LPAREN)
 
 	// if immediately followed by end token, return
 	if p.match(token.RPAREN) {
-		return identifiers, nil
+		return nil, nil
 	}
 
-	expr, err := p.parseIdentifierWithRequiredAnnotation()
+	params := []*ast.FunctionParameter{}
+
+	expr, err := p.parseFunctionParameter()
 
 	if err != nil {
 		return nil, err
 	}
 
-	identifiers = append(identifiers, expr)
+	params = append(params, expr)
 
 	for p.match(token.COMMA) {
-		expr, err := p.parseIdentifierWithRequiredAnnotation()
+		expr, err := p.parseFunctionParameter()
 
 		if err != nil {
 			return nil, err
 		}
 
-		identifiers = append(identifiers, expr)
+		params = append(params, expr)
 	}
 
 	_, err = p.expect(token.RPAREN)
@@ -819,7 +820,77 @@ func (p *Parser) parseFunctionParameters() ([]*ast.IdentifierExpression, error) 
 		return nil, err
 	}
 
-	return identifiers, nil
+	return params, nil
+}
+
+func (p *Parser) parseFunctionParameter() (*ast.FunctionParameter, error) {
+
+	// TODO: Attributes
+	// (name: string)
+	// (name n: string)
+	// (_ name: string)
+
+	var label *ast.IdentifierExpression
+	var name *ast.IdentifierExpression
+	var typ ast.TypeExpression
+	var colonPos token.TokenPosition
+	var err error
+
+	if p.match(token.UNDERSCORE) {
+		label = &ast.IdentifierExpression{
+			Value: "_",
+			Pos:   p.previousScannedToken().Pos,
+		}
+	}
+
+	if p.match(token.COLON) {
+		colonPos = p.previousScannedToken().Pos
+
+		// label is actually parameter name
+		name = label
+		label = nil
+
+		// Collect Type Expression
+		typ, err = p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
+
+	} else if p.currentMatches(token.IDENTIFIER) {
+		// Param name
+		name, err = p.parseIdentifierWithoutAnnotation()
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Param Colon
+		colon, err := p.expect(token.COLON)
+
+		if err != nil {
+			return nil, err
+		}
+
+		colonPos = colon.Pos
+
+		// Param Type
+		typ, err = p.parseTypeExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		_, err = p.expect(token.COLON)
+		return nil, err
+	}
+
+	return &ast.FunctionParameter{
+		Name:  name,
+		Label: label,
+		Type:  typ,
+		Colon: colonPos,
+	}, nil
 }
 
 func (p *Parser) parseIdentifierWithOptionalAnnotation() (*ast.IdentifierExpression, error) {

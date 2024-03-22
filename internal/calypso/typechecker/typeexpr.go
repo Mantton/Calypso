@@ -113,7 +113,7 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 	sg := types.NewFunctionSignature()
 
 	// Parameters
-	for _, p := range e.Params {
+	for _, p := range e.Parameters {
 		t := c.evaluateTypeExpression(p.AnnotatedType, nil)
 		v := types.NewVar(p.Value, t)
 		sg.AddParameter(v)

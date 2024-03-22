@@ -713,7 +713,7 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	}
 
 	// Parameters
-	for _, p := range e.Params {
+	for _, p := range e.Parameters {
 		t := c.evaluateTypeExpression(p.AnnotatedType, sg.TypeParameters)
 		v := types.NewVar(p.Value, t)
 		c.scope.Define(v)

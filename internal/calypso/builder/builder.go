@@ -6,7 +6,6 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
-	t "github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
 func Build(filepath string) bool {
@@ -40,21 +39,21 @@ func Build(filepath string) bool {
 
 	fmt.Println("[Parser] Completed.", "Took", duration)
 
-	// type checker
-	fmt.Println("\n[TypeChecker] Starting")
-	start = time.Now()
+	// // type checker
+	// fmt.Println("\n[TypeChecker] Starting")
+	// start = time.Now()
 
-	checker := t.New(t.STD, aFile)
-	_ = checker.Check()
+	// checker := t.New(t.STD, aFile)
+	// _ = checker.Check()
 
-	if len(checker.Errors) != 0 {
-		for _, err := range checker.Errors {
-			fmt.Println(err)
-		}
-		return false
-	}
-	duration = time.Since(start)
-	fmt.Println("[TypeChecker] Completed.", "Took", duration)
+	// if len(checker.Errors) != 0 {
+	// 	for _, err := range checker.Errors {
+	// 		fmt.Println(err)
+	// 	}
+	// 	return false
+	// }
+	// duration = time.Since(start)
+	// fmt.Println("[TypeChecker] Completed.", "Took", duration)
 
 	// LIRGen
 	// fmt.Println("\n[SSAGen] Starting")
