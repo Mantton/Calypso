@@ -213,7 +213,7 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 		}
 		return ssa.NewConst(n.Value, t)
 
-	case *ast.FunctionCallExpression:
+	case *ast.CallExpression:
 		val := b.resolveExpr(n.Target, fn)
 
 		f, ok := val.(*ssa.Function)

@@ -21,7 +21,7 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 		c.checkFunctionExpression(expr)
 	case *ast.AssignmentExpression:
 		c.checkAssignmentExpression(expr)
-	case *ast.FunctionCallExpression:
+	case *ast.CallExpression:
 		c.checkCallExpression(expr)
 	case *ast.ShorthandAssignmentExpression:
 		c.CheckShorthandAssignment(expr)
@@ -61,7 +61,7 @@ func (c *Checker) CheckShorthandAssignment(expr *ast.ShorthandAssignmentExpressi
 	c.evaluateShorthandAssignmentExpression(expr)
 }
 
-func (c *Checker) checkCallExpression(expr *ast.FunctionCallExpression) {
+func (c *Checker) checkCallExpression(expr *ast.CallExpression) {
 
 	retType := c.evaluateCallExpression(expr)
 
@@ -100,7 +100,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return c.evaluateIdentifierExpression(expr)
 	case *ast.GroupedExpression:
 		return c.evaluateGroupedExpression(expr)
-	case *ast.FunctionCallExpression:
+	case *ast.CallExpression:
 		return c.evaluateCallExpression(expr)
 	case *ast.UnaryExpression:
 		return c.evaluateUnaryExpression(expr)
@@ -146,7 +146,7 @@ func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) types.T
 	return c.evaluateExpression(expr.Expr)
 }
 
-func (c *Checker) evaluateCallExpression(expr *ast.FunctionCallExpression) types.Type {
+func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 	typ := c.evaluateExpression(expr.Target)
 	switch fn := typ.(type) {
 	case *types.FunctionSignature:
