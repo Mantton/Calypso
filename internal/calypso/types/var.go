@@ -2,7 +2,8 @@ package types
 
 type Var struct {
 	symbol
-	Mutable bool
+	Mutable    bool
+	ParamLabel string
 }
 
 func NewVar(name string, t Type) *Var {

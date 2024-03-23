@@ -32,23 +32,7 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 }
 
 func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
-	def := types.NewFunction(e.Identifier.Value, nil)
-	def.SetType(unresolved)
-	ok := c.define(def)
-
-	if !ok {
-		c.addError(
-			fmt.Sprintf("`%s` is already defined", def.Name()),
-			e.Identifier.Range(),
-		)
-		return
-	}
-	sg := types.NewFunctionSignature()
-	def.SetType(sg)
-	t := c.evaluateFunctionExpression(e, nil, sg)
-	def.SetType(t)
-
-	c.table.DefineFunction(e, def)
+	c.evaluateFunctionExpression(e, nil)
 }
 
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
@@ -65,10 +49,14 @@ func (c *Checker) checkCallExpression(expr *ast.CallExpression) {
 
 	retType := c.evaluateCallExpression(expr)
 
-	if retType != types.LookUp(types.Void) {
+	if retType != types.LookUp(types.Void) || retType != unresolved {
 		fmt.Println("[WARNING] Call Expression returning non void value is unused")
 	}
 
+	// check if function has not been resolved
+	if t, ok := retType.(*types.FunctionSet); ok {
+		c.addError(fmt.Sprintf("ambagious use of function \"%s\"", t.Name()), expr.Range())
+	}
 }
 
 // ----------- Eval ------------------
@@ -148,54 +136,22 @@ func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) types.T
 
 func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 	typ := c.evaluateExpression(expr.Target)
-	switch fn := typ.(type) {
+	// already reported error
+	if typ == unresolved {
+		return typ
+	}
+
+	switch typ := typ.(type) {
 	case *types.FunctionSignature:
+		// check if invocable
+		fn := typ
 
+		// Enum Switch Spread
 		if c.lhsType != nil {
-			lhsTyp := types.AsDefined(c.lhsType)
-
-			if lhsTyp == nil {
-				c.addError(fmt.Sprintf("expected defined type, got %s, %s", c.lhsType, fn), expr.Range())
-				return unresolved
-			}
-
-			specializations := make(map[string]types.Type)
-
-			for _, p := range lhsTyp.TypeParameters {
-				specializations[p.Name()] = p
-			}
-
-			sg := types.Apply(specializations, fn).(*types.FunctionSignature)
-
-			fmt.Println("Instantiated: ", sg)
-
-			if len(sg.Parameters) != len(expr.Arguments) {
-				c.addError(fmt.Sprintf("expected %d variables, got %d", len(sg.Parameters), len(fn.Parameters)), expr.Range())
-				return unresolved
-			}
-
-			for i, t := range sg.Parameters {
-				arg := expr.Arguments[i]
-				ident, ok := arg.(*ast.IdentifierExpression)
-
-				if !ok {
-					c.addError("expected identifier", arg.Range())
-					return unresolved
-				}
-
-				ok = c.define(types.NewVar(ident.Value, t.Type()))
-
-				if !ok {
-					c.addError(fmt.Sprintf("\"%s\" already exists in current context", ident.Value), arg.Range())
-					return unresolved
-				}
-			}
-
-			return sg.Result.Type()
+			return c.evaluateEnumDestructure(c.lhsType, fn, expr)
 		}
 
 		isGeneric := types.IsGeneric(fn)
-
 		// Guard Argument Count == Parameter Count
 		if len(expr.Arguments) != len(fn.Parameters) {
 			c.addError(
@@ -218,7 +174,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		if !isGeneric {
 			for i, arg := range expr.Arguments {
 				expected := fn.Parameters[i]
-				err := c.resolveVar(expected, arg, specializations)
+				err := c.resolveVar(expected, arg.Value, specializations)
 
 				if err != nil {
 					c.addError(err.Error(), arg.Range())
@@ -230,7 +186,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		// Function is generic, instantiate
 		for i, arg := range expr.Arguments {
 			expected := fn.Parameters[i]
-			err := c.resolveVar(expected, arg, specializations)
+			err := c.resolveVar(expected, arg.Value, specializations)
 
 			if err != nil {
 				c.addError(err.Error(), arg.Range())
@@ -242,11 +198,43 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		fmt.Println("Original:", fn)
 		fmt.Println()
 		return t.(*types.FunctionSignature).Result.Type()
-	}
 
-	// already reported error
-	if typ == unresolved {
-		return typ
+	case *types.FunctionSet:
+
+		// Overloaded Function | Function Set
+		set := typ
+
+		// build signature of call expression
+		callSg := types.NewFunctionSignature()
+		callSg.Result.SetType(types.LookUp(types.Placeholder)) // not going to be used, but stated as a safety mechanism
+
+		for _, arg := range expr.Arguments {
+			label := ""
+			if arg.Label != nil {
+				label = arg.Label.Value
+			}
+			vT := c.evaluateExpression(arg.Value)
+			v := types.NewVar("", vT)
+			v.ParamLabel = label
+			callSg.AddParameter(v)
+		}
+
+		// Find Possible Options
+		options := set.Find(callSg, false)
+
+		// No Options found
+		if options == nil {
+			c.addError(("no exact match for overloaded function"), expr.Range())
+			return unresolved
+		}
+
+		// check is there is an exact match
+		if single, ok := options.GetAsSingle(); ok {
+			fmt.Println("\t[OVERLOAD] Exact match", single.Sg())
+			return single.Sg().Result.Type()
+		}
+
+		return options.MostSpecialized()
 	}
 
 	c.addError(
@@ -652,7 +640,7 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	for i, arg := range args {
 		param := params[i]
 
-		err := c.validateConformance(param.Constraints, arg)
+		err := types.Conforms(param.Constraints, arg)
 
 		if err != nil {
 			c.addError(err.Error(), e.Clause.Arguments[i].Range())
@@ -669,9 +657,13 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	return instance
 }
 
-func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType, sg *types.FunctionSignature) types.Type {
+func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType) types.Type {
+	// Create new function
 
-	// Create new Signature
+	sg := types.NewFunctionSignature()
+	def := types.NewFunction(e.Identifier.Value, sg)
+	c.table.DefineFunction(e, def)
+
 	prevFn := c.fn
 	prevSc := c.scope
 	defer func() {
@@ -686,13 +678,6 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	sg.Scope = c.scope
 	c.table.AddScope(e, c.scope)
 	defer c.leaveScope()
-
-	// inject `self`
-	if self != nil {
-		s := types.NewVar("self", self)
-		c.scope.Parent = self.GetScope()
-		c.scope.Define(s)
-	}
 
 	// Type/Generic Parameters
 	hasError := false
@@ -714,10 +699,24 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 
 	// Parameters
 	for _, p := range e.Parameters {
-		t := c.evaluateTypeExpression(p.AnnotatedType, sg.TypeParameters)
-		v := types.NewVar(p.Value, t)
-		c.scope.Define(v)
+		t := c.evaluateTypeExpression(p.Type, sg.TypeParameters)
+
+		// Placeholder / Discard
+
+		v := types.NewVar(p.Name.Value, t)
+
+		// Parameter Has Required Label
+		if p.Label.Value != "_" {
+			v.ParamLabel = p.Label.Value
+		}
+
 		sg.AddParameter(v)
+
+		if p.Name.Value == "_" {
+			continue
+		}
+		c.scope.Define(v)
+
 	}
 
 	// Annotated Return Type
@@ -726,6 +725,21 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 		sg.Result = types.NewVar("result", t)
 	} else {
 		sg.Result = types.NewVar("result", types.LookUp(types.Void))
+	}
+
+	// At this point the signature has been constructed fully, add to scope
+	err := prevSc.Define(def)
+
+	if err != nil {
+		c.addError(err.Error(), e.Identifier.Range())
+		return unresolved
+	}
+
+	// inject `self`
+	if self != nil {
+		s := types.NewVar("self", self)
+		c.scope.Parent = self.GetScope()
+		c.scope.Define(s)
 	}
 
 	// Body
@@ -867,7 +881,7 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression) types.Type {
 	}
 
 	// 4 - Validate Conformance to Subscript Standard
-	err := c.validateConformance([]*types.Standard{standard}, target)
+	err := types.Conforms([]*types.Standard{standard}, target)
 
 	if err != nil {
 		c.addError(err.Error(), n.Target.Range())
@@ -916,4 +930,51 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression) types.Type {
 	}
 
 	return elementType
+}
+
+func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSignature, expr *ast.CallExpression) types.Type {
+	lhsTyp := types.AsDefined(inc)
+
+	if lhsTyp == nil {
+		c.addError(fmt.Sprintf("expected defined type, got %s, %s", c.lhsType, fn), expr.Range())
+		return unresolved
+	}
+
+	specializations := make(map[string]types.Type)
+
+	for _, p := range lhsTyp.TypeParameters {
+		specializations[p.Name()] = p
+	}
+
+	sg := types.Apply(specializations, fn).(*types.FunctionSignature)
+
+	fmt.Println("Instantiated: ", sg)
+
+	if len(sg.Parameters) != len(expr.Arguments) {
+		c.addError(fmt.Sprintf("expected %d arguments, got %d", len(sg.Parameters), len(fn.Parameters)), expr.Range())
+		return unresolved
+	}
+
+	for i, t := range sg.Parameters {
+		arg := expr.Arguments[i]
+
+		if arg.Label != nil {
+			c.addError("no labels allowed", arg.Range())
+		}
+		ident, ok := arg.Value.(*ast.IdentifierExpression)
+
+		if !ok {
+			c.addError("expected identifier", arg.Range())
+			return unresolved
+		}
+
+		err := c.define(types.NewVar(ident.Value, t.Type()))
+
+		if err != nil {
+			c.addError(err.Error(), arg.Range())
+			return unresolved
+		}
+	}
+
+	return sg.Result.Type()
 }

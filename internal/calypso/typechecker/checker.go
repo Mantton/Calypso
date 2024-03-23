@@ -67,11 +67,10 @@ func (c *Checker) leaveScope() {
 	}
 }
 
-func (c *Checker) define(s types.Symbol) bool {
-	result := c.scope.Define(s)
-	return result
+func (c *Checker) define(s types.Symbol) error {
+	return c.scope.Define(s)
 }
 
 func (c *Checker) find(n string) (types.Symbol, bool) {
-	return c.scope.Resolve(n)
+	return c.scope.ResolveNonFnSymbol(n)
 }

@@ -76,7 +76,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 	for i, arg := range eArgs {
 		p := tParams[i]
 
-		err := c.validateConformance(p.Constraints, arg)
+		err := types.Conforms(p.Constraints, arg)
 
 		if err != nil {
 			hasErrors = true
@@ -112,15 +112,15 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 
 	sg := types.NewFunctionSignature()
 
-	// Parameters
-	for _, p := range e.Parameters {
-		t := c.evaluateTypeExpression(p.AnnotatedType, nil)
-		v := types.NewVar(p.Value, t)
-		sg.AddParameter(v)
-	}
-
 	if (e.GenericParams) != nil {
 		panic("TODO")
+	}
+
+	// Parameters
+	for _, p := range e.Parameters {
+		t := c.evaluateTypeExpression(p.Type, nil)
+		v := types.NewVar(p.Name.Value, t)
+		sg.AddParameter(v)
 	}
 
 	// Annotated Return Type

@@ -56,11 +56,11 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
 	def := types.NewVar(stmt.Identifier.Value, unresolved)
 	def.Mutable = !stmt.IsConstant
-	ok := c.define(def)
+	err := c.define(def)
 
-	if !ok {
+	if err != nil {
 		c.addError(
-			fmt.Sprintf("`%s` is already defined", def.Name()),
+			fmt.Sprintf(err.Error(), def.Name()),
 			stmt.Identifier.Range(),
 		)
 		return
@@ -76,7 +76,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
 	initializer := c.evaluateExpression(stmt.Value)
 
-	err := c.validateAssignment(def, initializer, stmt.Value)
+	err = c.validateAssignment(def, initializer, stmt.Value)
 	if err != nil {
 		c.addError(
 			err.Error(),
@@ -138,11 +138,11 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 	// 1 - Define
 
 	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, types.NewScope(c.scope))
-	ok := c.define(def)
+	err := c.define(def)
 
-	if !ok {
+	if err != nil {
 		c.addError(
-			fmt.Sprintf("`%s` is already defined", def.Name()),
+			fmt.Sprintf(err.Error(), def.Name()),
 			n.Identifier.Range(),
 		)
 		return
@@ -156,9 +156,9 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 				continue
 			}
 
-			ok := def.AddTypeParameter(types.AsTypeParam(t))
-			if !ok {
-				c.addError(fmt.Sprintf("%s is already defined.", t), p.Identifier.Range())
+			err := def.AddTypeParameter(types.AsTypeParam(t))
+			if err != nil {
+				c.addError(err.Error(), p.Identifier.Range())
 				return
 			}
 
@@ -185,11 +185,11 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 
 	// 1 - Define
 	def := types.NewDefinedType(name, unresolved, nil, types.NewScope(c.scope))
-	ok := c.define(def)
+	err := c.define(def)
 
-	if !ok {
+	if err != nil {
 		c.addError(
-			fmt.Sprintf("`%s` is already defined", name),
+			err.Error(),
 			n.Identifier.Range(),
 		)
 		return
@@ -204,12 +204,13 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 			}
 
 			tP := t.(*types.TypeParam)
-			ok := def.AddTypeParameter(tP)
+			err := def.AddTypeParameter(tP)
 
-			if !ok {
-				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())
+			if err != nil {
+				c.addError(err.Error(), p.Identifier.Range())
 				return
 			}
+
 		}
 
 	}
@@ -228,7 +229,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 		}
 
 		// define
-		cases[name] = ok
+		cases[name] = true
 
 		// set fields
 		fields := []*types.Var{}
@@ -299,7 +300,7 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 		c.enterScope()
 
 		defer func() {
-			if len(c.scope.Symbols) != 0 {
+			if !c.scope.IsEmpty() {
 				c.table.AddScope(cs, c.scope)
 			}
 			c.leaveScope()
@@ -358,8 +359,8 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Stand
 
 	// 1 - Define
 	alias := types.NewAlias(name, types.LookUp(types.Placeholder))
-	ok := c.define(alias)
-	if !ok {
+	err := c.define(alias)
+	if err != nil {
 		c.addError(
 			fmt.Sprintf("`%s` is already defined in context", name),
 			n.Identifier.Range(),
@@ -384,11 +385,6 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Stand
 
 			tP := t.(*types.TypeParam)
 			alias.AddTypeParameter(tP)
-
-			if !ok {
-				c.addError(fmt.Sprintf("%s is already defined.", tP), p.Identifier.Range())
-				hasError = true
-			}
 		}
 	}
 

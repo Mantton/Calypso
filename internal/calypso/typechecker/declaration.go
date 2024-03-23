@@ -40,11 +40,10 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	s := types.NewDefinedType(d.Identifier.Value, typ, nil, types.NewScope(c.scope))
 
 	// define in scope
-	ok := c.define(s)
+	err := c.define(s)
 
-	if !ok {
-		msg := fmt.Sprintf("`%s` is already defined.", d.Identifier.Value)
-		c.addError(msg, d.Identifier.Range())
+	if err != nil {
+		c.addError(err.Error(), d.Identifier.Range())
 	}
 
 	// inject types
@@ -68,7 +67,7 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 
 			f := types.NewFunction(n, sg)
 			// Add method
-			ok = typ.AddMethod(n, f)
+			ok := typ.AddMethod(n, f)
 
 			// already defined in standard, add error
 			if !ok {
@@ -206,22 +205,24 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 	for _, stmt := range fns {
 
 		// eval function
-		sg := types.NewFunctionSignature()
-		fn := types.NewFunction(stmt.Func.Identifier.Value, sg)
-		ok := typ.AddMethod(fn.Name(), fn)
+		fn := types.NewFunction(stmt.Func.Identifier.Value, nil)
+		fn.SetType(unresolved)
+		err := typ.AddMethod(fn.Name(), fn)
 
 		// Define in type scope
-		if !ok {
-			c.addError(fmt.Sprintf("%s is already defined in %s", fn.Name(), typ), stmt.Func.Identifier.Range())
+		if err != nil {
+			c.addError(err.Error(), stmt.Func.Identifier.Range())
 			continue
 		}
 
-		t := c.evaluateFunctionExpression(stmt.Func, typ, sg)
+		t := c.evaluateFunctionExpression(stmt.Func, typ)
 
 		// error already reported
 		if t == unresolved {
 			continue
 		}
+
+		fn.SetSignature(t.(*types.FunctionSignature))
 	}
 }
 
@@ -237,12 +238,12 @@ func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
 			Target: target.Value,
 		}
 
-		ok := c.scope.Define(fn)
+		err := c.scope.Define(fn)
 
 		// Define in type scope
-		if !ok {
+		if err != nil {
 			c.addError(
-				fmt.Sprintf("%s is already defined in context", fn.Name()),
+				err.Error(),
 				node.Func.Identifier.Range())
 			continue
 		}

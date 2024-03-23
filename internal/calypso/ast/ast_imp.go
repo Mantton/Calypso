@@ -117,6 +117,17 @@ func (e *CallExpression) Range() token.SyntaxRange {
 	}
 }
 
+func (e *CallArgument) Range() token.SyntaxRange {
+	if e.Label == nil {
+		return e.Value.Range()
+	}
+
+	return token.SyntaxRange{
+		Start: e.Label.Pos,
+		End:   e.Value.Range().End,
+	}
+}
+
 func (e *UnaryExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
 		Start: e.OpPosition,
@@ -195,6 +206,7 @@ func (e *SwitchCaseExpression) Range() token.SyntaxRange {
 
 func (e *GroupedExpression) expressionNode()               {}
 func (e *CallExpression) expressionNode()                  {}
+func (e *CallArgument) expressionNode()                    {}
 func (e *UnaryExpression) expressionNode()                 {}
 func (e *BinaryExpression) expressionNode()                {}
 func (e *AssignmentExpression) expressionNode()            {}

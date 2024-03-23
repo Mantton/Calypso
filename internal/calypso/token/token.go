@@ -93,7 +93,6 @@ const (
 	BIT_SHIFT_LEFT  // <<
 	PIPE            // |>
 	R_ARROW         // ->
-	UNDERSCORE      // _
 	op_e            // Operators End
 
 	//* KEYWORDS
@@ -166,7 +165,6 @@ var keywords = map[string]Token{
 	"static":    STATIC,
 	"mutating":  MUTATING,
 	"async":     ASYNC,
-	"_":         UNDERSCORE,
 }
 
 func LookupIdent(ident string) Token {
@@ -280,11 +278,10 @@ var tokens = map[Token]string{
 	DEFAULT:   "default",
 	BREAK:     "break",
 
-	PUB:        "public",
-	STATIC:     "static",
-	MUTATING:   "mutating",
-	ASYNC:      "async",
-	UNDERSCORE: "_",
+	PUB:      "public",
+	STATIC:   "static",
+	MUTATING: "mutating",
+	ASYNC:    "async",
 
 	IDENTIFIER: "IDENTIFIER",
 }

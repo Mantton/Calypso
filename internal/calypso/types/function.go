@@ -44,7 +44,13 @@ func (t *FunctionSignature) String() string {
 	ret := t.Result.Type().String()
 
 	for i, p := range t.Parameters {
-		params += p.Type().String()
+		a := ""
+
+		if len(p.ParamLabel) != 0 {
+			a += fmt.Sprintf("%s: ", p.ParamLabel)
+		}
+		a += p.Type().String()
+		params += a
 
 		if i != len(t.Parameters)-1 {
 			params += ", "
@@ -82,7 +88,13 @@ func (sg *FunctionSignature) AddParameter(t *Var) {
 }
 
 func (n *Function) Sg() *FunctionSignature {
-	return n.typ.(*FunctionSignature)
+	sg, ok := n.typ.(*FunctionSignature)
+
+	if !ok {
+		return nil
+	}
+
+	return sg
 }
 
 func AsFunction(t Symbol) *Function {

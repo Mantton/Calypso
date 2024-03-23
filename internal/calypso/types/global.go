@@ -1,5 +1,7 @@
 package types
 
+import "log"
+
 var GlobalScope *Scope
 
 var globalTypes = map[BasicType]*Basic{
@@ -50,10 +52,10 @@ func init() {
 	for _, t := range globalTypes {
 		s := NewScope(GlobalScope)
 		d := NewDefinedType(t.name, t, nil, s)
-		ok := GlobalScope.Define(d)
+		err := GlobalScope.Define(d)
 
-		if !ok {
-			panic("GLOBAL TYPE ALREADY DEFINED")
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }

@@ -914,53 +914,38 @@ func (p *Parser) parseFunctionParameter() (*ast.FunctionParameter, error) {
 	var colonPos token.TokenPosition
 	var err error
 
-	if p.match(token.UNDERSCORE) {
-		label = &ast.IdentifierExpression{
-			Value: "_",
-			Pos:   p.previousScannedToken().Pos,
+	// parse initial identifier
+	label, err = p.parseIdentifierWithoutAnnotation()
+	if err != nil {
+		return nil, err
+	}
+
+	// parse next identifier
+	if p.currentMatches(token.IDENTIFIER) {
+		name, err = p.parseIdentifierWithoutAnnotation()
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	if p.match(token.COLON) {
-		colonPos = p.previousScannedToken().Pos
+	// parse colon
+	colon, err := p.expect(token.COLON)
 
-		// label is actually parameter name
-		name = label
-		label = nil
-
-		// Collect Type Expression
-		typ, err = p.parseTypeExpression()
-		if err != nil {
-			return nil, err
-		}
-
-	} else if p.currentMatches(token.IDENTIFIER) {
-		// Param name
-		name, err = p.parseIdentifierWithoutAnnotation()
-
-		if err != nil {
-			return nil, err
-		}
-
-		// Param Colon
-		colon, err := p.expect(token.COLON)
-
-		if err != nil {
-			return nil, err
-		}
-
-		colonPos = colon.Pos
-
-		// Param Type
-		typ, err = p.parseTypeExpression()
-
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		_, err = p.expect(token.COLON)
+	if err != nil {
 		return nil, err
+	}
+
+	colonPos = colon.Pos
+
+	// parse type
+	typ, err = p.parseTypeExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if name == nil {
+		name = label
 	}
 
 	return &ast.FunctionParameter{

@@ -34,7 +34,7 @@ func (s Specializations) specialize(tParam *types.TypeParam, provided types.Type
 	// No Specialization
 	if !ok {
 		// Ensure Conformance
-		err := c.validateConformance(tParam.Constraints, provided)
+		err := types.Conforms(tParam.Constraints, provided)
 
 		if err != nil {
 			return err

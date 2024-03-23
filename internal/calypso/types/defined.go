@@ -21,7 +21,7 @@ func NewDefinedType(n string, t Type, p TypeParams, scope *Scope) *DefinedType {
 	return typ
 }
 
-func (s *DefinedType) AddTypeParameter(t *TypeParam) bool {
+func (s *DefinedType) AddTypeParameter(t *TypeParam) error {
 	s.TypeParameters = append(s.TypeParameters, t)
 	return s.scope.Define(t)
 }
@@ -53,7 +53,7 @@ func (e *DefinedType) SetType(t Type) {
 	e.wrapped = t
 }
 
-func (s *DefinedType) AddMethod(n string, f *Function) bool {
+func (s *DefinedType) AddMethod(n string, f *Function) error {
 	return s.scope.Define(f)
 }
 
