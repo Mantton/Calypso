@@ -7,7 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) checkDeclaration(decl ast.Declaration) {
+func (c *Checker) checkDeclaration(decl ast.Declaration, ctx *NodeContext) {
 	fmt.Printf(
 		"Checking Declaration: %T @ Line %d\n",
 		decl,
@@ -15,11 +15,11 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 	)
 	switch decl := decl.(type) {
 	case *ast.ConstantDeclaration:
-		c.checkStatement(decl.Stmt)
+		c.checkStatement(decl.Stmt, ctx)
 	case *ast.FunctionDeclaration:
-		c.checkExpression(decl.Func)
+		c.checkExpression(decl.Func, ctx)
 	case *ast.StatementDeclaration:
-		c.checkStatement(decl.Stmt)
+		c.checkStatement(decl.Stmt, ctx)
 	case *ast.StandardDeclaration:
 		c.checkStandardDeclaration(decl)
 	case *ast.ConformanceDeclaration:
@@ -37,23 +37,18 @@ func (c *Checker) checkDeclaration(decl ast.Declaration) {
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	// declare type & it's definition
 	typ := types.NewStandard(d.Identifier.Value)
-	s := types.NewDefinedType(d.Identifier.Value, typ, nil, types.NewScope(c.scope))
+	scope := types.NewScope(c.ParentScope())
+	s := types.NewDefinedType(d.Identifier.Value, typ, nil, scope)
 
 	// define in scope
-	err := c.define(s)
+	err := c.GlobalDefine(s)
 
 	if err != nil {
 		c.addError(err.Error(), d.Identifier.Range())
 	}
 
-	// inject types
-	prevSc := c.scope
-	c.scope = s.GetScope()
-	defer func() {
-		c.scope = prevSc
-	}()
-
 	// Loop through statements in standard definition
+	ctx := NewContext(scope, nil, nil)
 	for _, expr := range d.Block.Statements {
 
 		switch node := expr.(type) {
@@ -63,7 +58,7 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 			// Parser ensures only signatures & no function bodies in standard decl
 
 			// evaluate Function Signature
-			sg := c.evaluateFunctionSignature(node.Func)
+			sg := c.evaluateFunctionSignature(node.Func, ctx)
 
 			f := types.NewFunction(n, sg)
 			// Add method
@@ -76,7 +71,7 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 			}
 
 		case *ast.TypeStatement:
-			c.checkTypeStatement(node, typ)
+			c.checkTypeStatement(node, typ, ctx)
 
 		default:
 			c.addError("cannot use statement in standard declaration", node.Range())
@@ -88,7 +83,7 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 
 func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 
-	x, ok := c.find(d.Standard.Value)
+	x, ok := c.GlobalFind(d.Standard.Value)
 
 	if !ok {
 		c.addError(fmt.Sprintf("cannot find %s", d.Standard.Value), d.Standard.Range())
@@ -102,7 +97,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 		return
 	}
 
-	target, ok := c.find(d.Target.Value)
+	target, ok := c.GlobalFind(d.Target.Value)
 
 	if !ok {
 		c.addError(fmt.Sprintf("cannot find %s", d.Target.Value), d.Target.Range())
@@ -116,21 +111,16 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 		return
 	}
 
-	// inject types
-	prevSc := c.scope
-	c.scope = typ.GetScope()
-	defer func() {
-		c.scope = prevSc
-	}()
-
+	scope := typ.GetScope()
+	ctx := NewContext(scope, nil, nil)
 	// Inject types into scope
 	for _, node := range d.Types {
-		c.checkTypeStatement(node, nil)
+		c.checkTypeStatement(node, nil, ctx)
 	}
 
 	// ensure all required types have been injected
 	for _, t := range s.Types {
-		sym := c.scope.ResolveInCurrent(t.Name())
+		sym := scope.ResolveInCurrent(t.Name())
 
 		if sym == nil {
 			c.addError(fmt.Sprintf("%s does not conform to `%s`, missing `%s`", d.Target.Value, s.Name, t.Name()), d.Target.Range())
@@ -148,7 +138,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	}
 
 	// add functions to type
-	c.injectFunctionsInType(typ, d.Signatures)
+	c.injectFunctionsInType(typ, d.Signatures, ctx)
 
 	// Ensure All Functions of Standard are implemented
 	for _, eFn := range s.Signature {
@@ -175,7 +165,7 @@ func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
 
 	// Find Symbol
 	name := d.Identifier.Value
-	sym, ok := c.find(name)
+	sym, ok := c.GlobalFind(name)
 
 	if !ok {
 		c.addError(fmt.Sprintf("cannot find %s", name), d.Identifier.Range())
@@ -190,17 +180,12 @@ func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
 		return
 	}
 
-	// inject types
-	prevSc := c.scope
-	c.scope = typ.GetScope()
-	defer func() {
-		c.scope = prevSc
-	}()
+	ctx := NewContext(typ.GetScope(), nil, nil)
 
-	c.injectFunctionsInType(typ, d.Content)
+	c.injectFunctionsInType(typ, d.Content, ctx)
 }
 
-func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement) {
+func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement, ctx *NodeContext) {
 	// Define Functions in Type Scope
 	for _, stmt := range fns {
 
@@ -215,7 +200,7 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 			continue
 		}
 
-		t := c.evaluateFunctionExpression(stmt.Func, typ)
+		t := c.evaluateFunctionExpression(stmt.Func, ctx, typ, false)
 
 		// error already reported
 		if t == unresolved {
@@ -227,10 +212,10 @@ func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.Funct
 }
 
 func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
-
 	target := n.Target
 	fmt.Printf("[DEBUG] External Target \"%s\"\n", target.Value)
 
+	ctx := NewContext(c.ParentScope(), nil, nil)
 	for _, node := range n.Signatures {
 		// eval function
 		fn := types.NewFunction(node.Func.Identifier.Value, nil)
@@ -238,7 +223,7 @@ func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
 			Target: target.Value,
 		}
 
-		err := c.scope.Define(fn)
+		err := c.GlobalDefine(fn)
 
 		// Define in type scope
 		if err != nil {
@@ -249,7 +234,7 @@ func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
 		}
 
 		// Resolve Function Body
-		sg := c.evaluateFunctionSignature(node.Func)
+		sg := c.evaluateFunctionSignature(node.Func, ctx)
 		fn.SetSignature(sg)
 	}
 }

@@ -3,7 +3,7 @@ package types
 import "fmt"
 
 func Validate(expected Type, provided Type) (Type, error) {
-	fmt.Printf("\t[VALIDATOR] Validating `%s`(provided) || `%s`(expected)\n\t\tWith %T - %T\n", provided, expected, provided, expected)
+	fmt.Printf("\t[VALIDATOR] Validating `%s`(provided) || `%s`(expected)\n", provided, expected)
 
 	if provided == LookUp(Unresolved) {
 		// should have already been reported

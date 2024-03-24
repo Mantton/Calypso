@@ -175,7 +175,7 @@ func Apply(ctx mappings, typ Type) Type {
 
 		}
 
-		copy := NewDefinedType(t.Name(), internal, params, nil)
+		copy := NewDefinedType(t.Name(), internal, params, nil) // nil scope, potential problem?
 
 		if t.InstanceOf == nil {
 			copy.InstanceOf = t

@@ -177,3 +177,33 @@ func TestFunctionOverloading(t *testing.T) {
 
 	Build(input, t, true)
 }
+
+func TestStandardDeclaration(t *testing.T) {
+	input := `
+
+		module main;
+
+		standard Foo {
+			fn Bar() -> int;
+		}
+
+		conform int to Foo {
+			fn Bar() -> int {
+				return 10;
+			}
+		}
+
+		struct Baz<T: Foo> {
+			Value : T;
+		}
+
+
+		fn main() {
+			const A: Baz<int> = Baz { Value: 1 };
+			const C = A.Value.Bar();
+		}
+	`
+
+	Build(input, t, true)
+
+}

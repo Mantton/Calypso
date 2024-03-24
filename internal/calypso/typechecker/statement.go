@@ -7,7 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) checkStatement(stmt ast.Statement) {
+func (c *Checker) checkStatement(stmt ast.Statement, ctx *NodeContext) {
 	fmt.Printf(
 		"Checking Statement: %T @ Line %d\n",
 		stmt,
@@ -15,48 +15,48 @@ func (c *Checker) checkStatement(stmt ast.Statement) {
 	)
 	switch stmt := stmt.(type) {
 	case *ast.ExpressionStatement:
-		c.checkExpression(stmt.Expr)
+		c.checkExpression(stmt.Expr, ctx)
 	case *ast.VariableStatement:
-		c.checkVariableStatement(stmt)
+		c.checkVariableStatement(stmt, ctx)
 	case *ast.BlockStatement:
 		panic("CALL `checkBlockStatement` DIRECTLY")
 	case *ast.ReturnStatement:
-		c.checkReturnStatement(stmt)
+		c.checkReturnStatement(stmt, ctx)
 	case *ast.IfStatement:
-		c.checkIfStatement(stmt)
+		c.checkIfStatement(stmt, ctx)
 	case *ast.StructStatement:
-		c.checkStructStatement(stmt)
+		c.checkStructStatement(stmt, ctx)
 	case *ast.EnumStatement:
-		c.checkEnumStatement(stmt)
+		c.checkEnumStatement(stmt, ctx)
 	case *ast.SwitchStatement:
-		c.checkSwitchStatement(stmt)
+		c.checkSwitchStatement(stmt, ctx)
 	case *ast.BreakStatement:
 		return // nothing to TC on break
 	case *ast.WhileStatement:
-		c.checkWhileStatement(stmt)
+		c.checkWhileStatement(stmt, ctx)
 	case *ast.TypeStatement:
-		c.checkTypeStatement(stmt, nil)
+		c.checkTypeStatement(stmt, nil, ctx)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
 	}
 }
 
-func (c *Checker) checkBlockStatement(blk *ast.BlockStatement) {
+func (c *Checker) checkBlockStatement(blk *ast.BlockStatement, ctx *NodeContext) {
 	if len(blk.Statements) == 0 {
 		return
 	}
 
 	for _, stmt := range blk.Statements {
-		c.checkStatement(stmt)
+		c.checkStatement(stmt, ctx)
 	}
 }
 
-func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
+func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement, ctx *NodeContext) {
 
 	def := types.NewVar(stmt.Identifier.Value, unresolved)
 	def.Mutable = !stmt.IsConstant
-	err := c.define(def)
+	err := ctx.scope.Define(def)
 
 	if err != nil {
 		c.addError(
@@ -70,11 +70,11 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 
 	// Check Annotation
 	if t := stmt.Identifier.AnnotatedType; t != nil {
-		annotation = c.evaluateTypeExpression(t, nil)
+		annotation = c.evaluateTypeExpression(t, nil, ctx)
 		def.SetType(annotation)
 	}
 
-	initializer := c.evaluateExpression(stmt.Value)
+	initializer := c.evaluateExpression(stmt.Value, ctx)
 
 	err = c.validateAssignment(def, initializer, stmt.Value)
 	if err != nil {
@@ -86,9 +86,9 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement) {
 	}
 }
 
-func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
+func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, ctx *NodeContext) {
 
-	if c.fn == nil {
+	if ctx.sg == nil {
 		c.addError(
 			"top level return is not allowed",
 			stmt.Value.Range(),
@@ -96,8 +96,8 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 		return
 	}
 
-	fn := c.fn
-	provided := c.evaluateExpression(stmt.Value)
+	fn := ctx.sg
+	provided := c.evaluateExpression(stmt.Value, ctx)
 
 	// return type is already set, validate
 	err := c.validateAssignment(fn.Result, provided, stmt.Value)
@@ -109,10 +109,11 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement) {
 	}
 }
 
-func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
-
+func (c *Checker) checkIfStatement(stmt *ast.IfStatement, ctx *NodeContext) {
+	scope := types.NewScope(ctx.scope)
+	newCtx := NewContext(scope, ctx.sg, nil)
 	// 1 - Check Condition
-	cond := c.evaluateExpression(stmt.Condition)
+	cond := c.evaluateExpression(stmt.Condition, newCtx)
 	_, err := c.validate(types.LookUp(types.Bool), cond)
 
 	if err != nil {
@@ -121,24 +122,20 @@ func (c *Checker) checkIfStatement(stmt *ast.IfStatement) {
 	}
 
 	// 2 - Check Action
-	c.enterScope()
-	c.checkBlockStatement(stmt.Action)
-	c.leaveScope()
+	c.checkBlockStatement(stmt.Action, newCtx)
 
 	// 3 - Check Alternative
 	if stmt.Alternative != nil {
-		c.enterScope()
-		c.checkBlockStatement(stmt.Alternative)
-		c.leaveScope()
+		c.checkBlockStatement(stmt.Alternative, newCtx)
 	}
 }
 
-func (c *Checker) checkStructStatement(n *ast.StructStatement) {
+func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext) {
 
 	// 1 - Define
-
-	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, types.NewScope(c.scope))
-	err := c.define(def)
+	scope := types.NewScope(ctx.scope)
+	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, scope)
+	err := ctx.scope.Define(def)
 
 	if err != nil {
 		c.addError(
@@ -151,7 +148,7 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 	// 2  Parse Generic Params
 	if n.GenericParams != nil {
 		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p)
+			t := c.evaluateGenericParameterExpression(p, ctx)
 			if t == unresolved {
 				continue
 			}
@@ -171,7 +168,7 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 
 	for _, f := range n.Fields {
 		d := types.NewVar(f.Identifier.Value, unresolved)
-		t := c.evaluateTypeExpression(f.Identifier.AnnotatedType, def.TypeParameters)
+		t := c.evaluateTypeExpression(f.Identifier.AnnotatedType, def.TypeParameters, ctx)
 		d.SetType(t)
 		fields = append(fields, d)
 	}
@@ -180,12 +177,13 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement) {
 	def.SetType(typ)
 }
 
-func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
+func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
 	name := n.Identifier.Value
 
 	// 1 - Define
-	def := types.NewDefinedType(name, unresolved, nil, types.NewScope(c.scope))
-	err := c.define(def)
+	scope := types.NewScope(ctx.scope)
+	def := types.NewDefinedType(name, unresolved, nil, scope)
+	err := ctx.scope.Define(def)
 
 	if err != nil {
 		c.addError(
@@ -198,7 +196,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 	// 2  Parse Generic Params
 	if n.GenericParams != nil {
 		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p)
+			t := c.evaluateGenericParameterExpression(p, ctx)
 			if t == unresolved {
 				continue
 			}
@@ -236,7 +234,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 
 		if v.Fields != nil {
 			for _, f := range v.Fields.Fields {
-				t := c.evaluateTypeExpression(f, def.TypeParameters)
+				t := c.evaluateTypeExpression(f, def.TypeParameters, ctx)
 				fields = append(fields, types.NewVar("", t))
 			}
 
@@ -280,10 +278,10 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement) {
 	def.SetType(e)
 }
 
-func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
+func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement, ctx *NodeContext) {
 
 	// 1 - Condition
-	condition := c.evaluateExpression(n.Condition)
+	condition := c.evaluateExpression(n.Condition, ctx)
 
 	// 2 - Cases
 
@@ -296,14 +294,12 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 
 	for _, cs := range n.Cases {
 
+		scope := types.NewScope(ctx.scope)
 		// Scope
-		c.enterScope()
-
 		defer func() {
-			if !c.scope.IsEmpty() {
-				c.table.AddScope(cs, c.scope)
+			if !scope.IsEmpty() {
+				c.table.AddScope(cs, scope)
 			}
-			c.leaveScope()
 		}()
 
 		// Default Case
@@ -315,16 +311,16 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 			}
 
 			// 2 - Block
-			c.checkBlockStatement(cs.Action)
+			ctx := NewContext(scope, ctx.sg, nil)
+			c.checkBlockStatement(cs.Action, ctx)
 			seenDefault = true
 			continue
 		}
 
 		// 1 - Condition
+		ctx := NewContext(scope, ctx.sg, condition)
 		// For Tuple types, provide lhsType, which provides the generic specializations & correct fn signature when required
-		c.lhsType = condition
-		caseCondition := c.evaluateExpression(cs.Condition)
-		c.lhsType = nil
+		caseCondition := c.evaluateExpression(cs.Condition, ctx)
 
 		_, err := c.validate(condition, caseCondition)
 
@@ -334,12 +330,12 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement) {
 		}
 
 		// 2 - Block
-		c.checkBlockStatement(cs.Action)
+		c.checkBlockStatement(cs.Action, ctx)
 	}
 }
 
-func (c *Checker) checkWhileStatement(n *ast.WhileStatement) {
-	condition := c.evaluateExpression(n.Condition)
+func (c *Checker) checkWhileStatement(n *ast.WhileStatement, ctx *NodeContext) {
+	condition := c.evaluateExpression(n.Condition, ctx)
 
 	_, err := c.validate(types.LookUp(types.Bool), condition)
 
@@ -348,18 +344,22 @@ func (c *Checker) checkWhileStatement(n *ast.WhileStatement) {
 		return
 	}
 
-	c.enterScope()
-	c.table.AddScope(n, c.scope)
-	defer c.leaveScope()
-	c.checkBlockStatement(n.Action)
+	scope := types.NewScope(ctx.scope)
+	defer func() {
+		if !scope.IsEmpty() {
+			c.table.AddScope(n, scope)
+		}
+	}()
+	newCtx := NewContext(scope, ctx.sg, ctx.lhs)
+	c.checkBlockStatement(n.Action, newCtx)
 }
 
-func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Standard) {
+func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Standard, ctx *NodeContext) {
 	name := n.Identifier.Value
 
 	// 1 - Define
 	alias := types.NewAlias(name, types.LookUp(types.Placeholder))
-	err := c.define(alias)
+	err := ctx.scope.Define(alias)
 	if err != nil {
 		c.addError(
 			fmt.Sprintf("`%s` is already defined in context", name),
@@ -378,7 +378,7 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Stand
 	hasError := false
 	if n.GenericParams != nil {
 		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p)
+			t := c.evaluateGenericParameterExpression(p, ctx)
 			if t == unresolved {
 				continue
 			}
@@ -397,7 +397,7 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Stand
 
 	if n.Value != nil {
 		fmt.Println("[DEBUG] Resolving RHS for Alias", n.Identifier.Value)
-		RHS = c.evaluateTypeExpression(n.Value, alias.TypeParameters)
+		RHS = c.evaluateTypeExpression(n.Value, alias.TypeParameters, ctx)
 		alias.SetType(RHS)
 	}
 }

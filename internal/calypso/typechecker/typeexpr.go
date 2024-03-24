@@ -7,27 +7,27 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) evaluateTypeExpression(e ast.TypeExpression, tPs []*types.TypeParam) types.Type {
+func (c *Checker) evaluateTypeExpression(e ast.TypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 	switch expr := e.(type) {
 	case *ast.IdentifierTypeExpression:
-		return c.evaluateIdentifierTypeExpression(expr, tPs)
+		return c.evaluateIdentifierTypeExpression(expr, tPs, ctx)
 	case *ast.PointerTypeExpression:
-		return c.evaluatePointerTypeExpression(expr, tPs)
+		return c.evaluatePointerTypeExpression(expr, tPs, ctx)
 	case *ast.ArrayTypeExpression:
-		return c.evaluateArrayTypeExpression(expr, tPs)
+		return c.evaluateArrayTypeExpression(expr, tPs, ctx)
 	case *ast.MapTypeExpression:
-		return c.evaluateMapTypeExpression(expr, tPs)
+		return c.evaluateMapTypeExpression(expr, tPs, ctx)
 	default:
 		msg := fmt.Sprintf("type expression check not implemented, %T", e)
 		panic(msg)
 	}
 }
 
-func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpression, tPs []*types.TypeParam) types.Type {
+func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 
 	n := expr.Identifier.Value
 
-	def, ok := c.find(n)
+	def, ok := ctx.scope.Resolve(n)
 
 	var typ types.Type
 
@@ -54,7 +54,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 
 	if expr.Arguments != nil {
 		for _, n := range expr.Arguments.Arguments {
-			eArgs = append(eArgs, c.evaluateTypeExpression(n, tPs))
+			eArgs = append(eArgs, c.evaluateTypeExpression(n, tPs, ctx))
 		}
 	}
 
@@ -97,18 +97,18 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 
 }
 
-func (c *Checker) evaluatePointerTypeExpression(expr *ast.PointerTypeExpression, tPs []*types.TypeParam) types.Type {
+func (c *Checker) evaluatePointerTypeExpression(expr *ast.PointerTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 
 	n := expr.PointerTo
 
-	p := c.evaluateTypeExpression(n, tPs)
+	p := c.evaluateTypeExpression(n, tPs, ctx)
 
 	v := types.NewPointer(p)
 
 	return v
 }
 
-func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.FunctionSignature {
+func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression, ctx *NodeContext) *types.FunctionSignature {
 
 	sg := types.NewFunctionSignature()
 
@@ -118,14 +118,14 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 
 	// Parameters
 	for _, p := range e.Parameters {
-		t := c.evaluateTypeExpression(p.Type, nil)
+		t := c.evaluateTypeExpression(p.Type, nil, ctx)
 		v := types.NewVar(p.Name.Value, t)
 		sg.AddParameter(v)
 	}
 
 	// Annotated Return Type
 	if e.ReturnType != nil {
-		t := c.evaluateTypeExpression(e.ReturnType, nil)
+		t := c.evaluateTypeExpression(e.ReturnType, nil, ctx)
 		sg.Result = types.NewVar("", t)
 	} else {
 		c.addError("missing return value in function signature", e.Range())
@@ -135,11 +135,11 @@ func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression) *types.Fu
 	return sg
 }
 
-func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpression) types.Type {
+func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpression, ctx *NodeContext) types.Type {
 	d := types.NewTypeParam(e.Identifier.Value, nil, nil)
 
 	for _, eI := range e.Standards {
-		sym, ok := c.find(eI.Value)
+		sym, ok := ctx.scope.Resolve(eI.Value)
 
 		if !ok {
 			c.addError(
@@ -167,9 +167,9 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 	return d
 }
 
-func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs []*types.TypeParam) types.Type {
-	element := c.evaluateTypeExpression(expr.Element, tPs)
-	sym, ok := c.find("Array")
+func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
+	element := c.evaluateTypeExpression(expr.Element, tPs, ctx)
+	sym, ok := ctx.scope.Resolve("Array") // TODO: This should be different
 
 	if !ok {
 		c.addError("unable to find array type", expr.Range())
@@ -180,12 +180,12 @@ func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs
 	return inst
 }
 
-func (c *Checker) evaluateMapTypeExpression(expr *ast.MapTypeExpression, tPs []*types.TypeParam) types.Type {
+func (c *Checker) evaluateMapTypeExpression(expr *ast.MapTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 
-	key := c.evaluateTypeExpression(expr.Key, tPs)
-	value := c.evaluateTypeExpression(expr.Value, tPs)
+	key := c.evaluateTypeExpression(expr.Key, tPs, ctx)
+	value := c.evaluateTypeExpression(expr.Value, tPs, ctx)
 
-	sym, ok := c.find("Map")
+	sym, ok := ctx.scope.Resolve("Map")
 
 	if !ok {
 		c.addError("unable to find map type", expr.Range())

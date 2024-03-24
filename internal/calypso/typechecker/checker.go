@@ -17,14 +17,14 @@ const (
 )
 
 type Checker struct {
-	Errors  lexer.ErrorList
-	depth   int
-	mode    CheckerMode
-	scope   *types.Scope
-	fn      *types.FunctionSignature
-	table   *SymbolTable
-	lhsType types.Type
-	file    *ast.File
+	Errors lexer.ErrorList
+	depth  int
+	mode   CheckerMode
+	// scope   *types.Scope
+	// fn      *types.FunctionSignature
+	table *SymbolTable
+	// lhsType types.Type
+	file *ast.File
 }
 
 func New(mode CheckerMode, file *ast.File) *Checker {
@@ -36,41 +36,20 @@ func New(mode CheckerMode, file *ast.File) *Checker {
 	}
 }
 
+func (c *Checker) ParentScope() *types.Scope {
+	return c.table.Main
+}
+
 var unresolved types.Type
 
 func init() {
 	unresolved = types.LookUp(types.Unresolved)
 }
 
-// * Scopes
-func (c *Checker) enterScope() {
-	c.depth += 1
-
-	if c.depth > 1000 {
-		panic("exceeded max scope depth") // TODO : Error
-	}
-
-	parent := c.scope
-	child := types.NewScope(parent)
-	c.scope = child
+func (c *Checker) GlobalDefine(s types.Symbol) error {
+	return c.ParentScope().Define(s)
 }
 
-func (c *Checker) leaveScope() {
-	parent := c.scope.Parent
-
-	if parent != nil {
-		c.scope = parent
-		c.depth -= 1
-
-	} else {
-		panic("BASE SCOPE")
-	}
-}
-
-func (c *Checker) define(s types.Symbol) error {
-	return c.scope.Define(s)
-}
-
-func (c *Checker) find(n string) (types.Symbol, bool) {
-	return c.scope.ResolveNonFnSymbol(n)
+func (c *Checker) GlobalFind(n string) (types.Symbol, bool) {
+	return c.ParentScope().Resolve(n)
 }

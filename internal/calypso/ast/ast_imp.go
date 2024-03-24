@@ -203,6 +203,19 @@ func (e *SwitchCaseExpression) Range() token.SyntaxRange {
 		End:   e.Action.RBrackPos,
 	}
 }
+func (e *FunctionParameter) Range() token.SyntaxRange {
+	if e.Label == nil {
+		return token.SyntaxRange{
+			Start: e.Name.Pos,
+			End:   e.Type.Range().End,
+		}
+	}
+
+	return token.SyntaxRange{
+		Start: e.Label.Pos,
+		End:   e.Type.Range().End,
+	}
+}
 
 func (e *GroupedExpression) expressionNode()               {}
 func (e *CallExpression) expressionNode()                  {}
@@ -217,6 +230,7 @@ func (e *KeyValueExpression) expressionNode()              {}
 func (e *CompositeLiteralField) expressionNode()           {}
 func (e *GenericParametersClause) expressionNode()         {}
 func (e *GenericSpecializationExpression) expressionNode() {}
+func (e *FunctionParameter) expressionNode()               {}
 
 // * Statements
 func (e *IfStatement) Range() token.SyntaxRange {

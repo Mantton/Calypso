@@ -29,6 +29,7 @@ func (s *Scope) Define(e Symbol) error {
 
 func (s *Scope) defineNonFnSymbol(e Symbol) error {
 	k := e.Name()
+
 	_, ok := s.symbols[k]
 
 	// if already defined in scope, return false
@@ -76,10 +77,10 @@ func (s *Scope) defineFnSymbol(fn *Function) error {
 }
 
 // Resolve searches for a symbol in the current table and parent scopes.
-func (s *Scope) ResolveNonFnSymbol(name string) (Symbol, bool) {
+func (s *Scope) Resolve(name string) (Symbol, bool) {
 	symbol, exists := s.symbols[name]
 	if !exists && s.Parent != nil {
-		return s.Parent.ResolveNonFnSymbol(name)
+		return s.Parent.Resolve(name)
 	}
 	return symbol, exists
 }

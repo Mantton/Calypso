@@ -9,7 +9,7 @@ import (
 )
 
 // ---------------------- Checks ---------------------------------
-func (c *Checker) checkExpression(expr ast.Expression) {
+func (c *Checker) checkExpression(expr ast.Expression, ctx *NodeContext) {
 
 	fmt.Printf(
 		"Checking Expression: %T @ Line %d\n",
@@ -18,36 +18,36 @@ func (c *Checker) checkExpression(expr ast.Expression) {
 	)
 	switch expr := expr.(type) {
 	case *ast.FunctionExpression:
-		c.checkFunctionExpression(expr)
+		c.checkFunctionExpression(expr, ctx)
 	case *ast.AssignmentExpression:
-		c.checkAssignmentExpression(expr)
+		c.checkAssignmentExpression(expr, ctx)
 	case *ast.CallExpression:
-		c.checkCallExpression(expr)
+		c.checkCallExpression(expr, ctx)
 	case *ast.ShorthandAssignmentExpression:
-		c.CheckShorthandAssignment(expr)
+		c.CheckShorthandAssignment(expr, ctx)
 	default:
 		msg := fmt.Sprintf("expression check not implemented, %T", expr)
 		panic(msg)
 	}
 }
 
-func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
-	c.evaluateFunctionExpression(e, nil)
+func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression, ctx *NodeContext) {
+	c.evaluateFunctionExpression(e, ctx, nil, true)
 }
 
-func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression) {
+func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression, ctx *NodeContext) {
 	// TODO: mutability checks
-	c.evaluateAssignmentExpression(expr)
+	c.evaluateAssignmentExpression(expr, ctx)
 }
 
-func (c *Checker) CheckShorthandAssignment(expr *ast.ShorthandAssignmentExpression) {
+func (c *Checker) CheckShorthandAssignment(expr *ast.ShorthandAssignmentExpression, ctx *NodeContext) {
 	// TODO: Mutability checks
-	c.evaluateShorthandAssignmentExpression(expr)
+	c.evaluateShorthandAssignmentExpression(expr, ctx)
 }
 
-func (c *Checker) checkCallExpression(expr *ast.CallExpression) {
+func (c *Checker) checkCallExpression(expr *ast.CallExpression, ctx *NodeContext) {
 
-	retType := c.evaluateCallExpression(expr)
+	retType := c.evaluateCallExpression(expr, ctx)
 
 	if retType != types.LookUp(types.Void) || retType != unresolved {
 		fmt.Println("[WARNING] Call Expression returning non void value is unused")
@@ -60,7 +60,7 @@ func (c *Checker) checkCallExpression(expr *ast.CallExpression) {
 }
 
 // ----------- Eval ------------------
-func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
+func (c *Checker) evaluateExpression(expr ast.Expression, ctx *NodeContext) types.Type {
 	fmt.Printf(
 		"Evaluating Expression: %T @ Line %d\n",
 		expr,
@@ -85,38 +85,38 @@ func (c *Checker) evaluateExpression(expr ast.Expression) types.Type {
 		return types.LookUp(types.Void)
 
 	case *ast.IdentifierExpression:
-		return c.evaluateIdentifierExpression(expr)
+		return c.evaluateIdentifierExpression(expr, ctx)
 	case *ast.GroupedExpression:
-		return c.evaluateGroupedExpression(expr)
+		return c.evaluateGroupedExpression(expr, ctx)
 	case *ast.CallExpression:
-		return c.evaluateCallExpression(expr)
+		return c.evaluateCallExpression(expr, ctx)
 	case *ast.UnaryExpression:
-		return c.evaluateUnaryExpression(expr)
+		return c.evaluateUnaryExpression(expr, ctx)
 	case *ast.BinaryExpression:
-		return c.evaluateBinaryExpression(expr)
+		return c.evaluateBinaryExpression(expr, ctx)
 	case *ast.AssignmentExpression:
-		return c.evaluateAssignmentExpression(expr)
+		return c.evaluateAssignmentExpression(expr, ctx)
 	case *ast.CompositeLiteral:
-		return c.evaluateCompositeLiteral(expr)
+		return c.evaluateCompositeLiteral(expr, ctx)
 	case *ast.FieldAccessExpression:
-		return c.evaluatePropertyExpression(expr)
+		return c.evaluatePropertyExpression(expr, ctx)
 	case *ast.GenericSpecializationExpression:
-		return c.evaluateGenericSpecializationExpression(expr)
+		return c.evaluateGenericSpecializationExpression(expr, ctx)
 	case *ast.ArrayLiteral:
-		return c.evaluateArrayLiteral(expr)
+		return c.evaluateArrayLiteral(expr, ctx)
 	case *ast.MapLiteral:
-		return c.evaluateMapLiteral(expr)
+		return c.evaluateMapLiteral(expr, ctx)
 	case *ast.IndexExpression:
-		return c.evaluateIndexExpression(expr)
+		return c.evaluateIndexExpression(expr, ctx)
 	default:
 		msg := fmt.Sprintf("expression evaluation not implemented, %T", expr)
 		panic(msg)
 	}
 }
 
-func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) types.Type {
+func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression, ctx *NodeContext) types.Type {
 
-	s, ok := c.find(expr.Value)
+	s, ok := ctx.scope.Resolve(expr.Value)
 
 	if !ok {
 		c.addError(
@@ -130,12 +130,12 @@ func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression) t
 	return s.Type()
 }
 
-func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression) types.Type {
-	return c.evaluateExpression(expr.Expr)
+func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression, ctx *NodeContext) types.Type {
+	return c.evaluateExpression(expr.Expr, ctx)
 }
 
-func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
-	typ := c.evaluateExpression(expr.Target)
+func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeContext) types.Type {
+	typ := c.evaluateExpression(expr.Target, ctx)
 	// already reported error
 	if typ == unresolved {
 		return typ
@@ -147,8 +147,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		fn := typ
 
 		// Enum Switch Spread
-		if c.lhsType != nil {
-			return c.evaluateEnumDestructure(c.lhsType, fn, expr)
+		if ctx.lhs != nil {
+			return c.evaluateEnumDestructure(ctx.lhs, fn, expr, ctx)
 		}
 
 		isGeneric := types.IsGeneric(fn)
@@ -179,7 +179,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 					c.addError(fmt.Sprintf("missing paramter label \"%s\"", expected.ParamLabel), arg.Range())
 				}
 
-				err := c.resolveVar(expected, arg.Value, specializations)
+				err := c.resolveVar(expected, arg.Value, specializations, ctx)
 
 				if err != nil {
 					c.addError(err.Error(), arg.Range())
@@ -196,7 +196,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 				c.addError(fmt.Sprintf("missing paramter label \"%s\"", expected.ParamLabel), arg.Range())
 			}
 
-			err := c.resolveVar(expected, arg.Value, specializations)
+			err := c.resolveVar(expected, arg.Value, specializations, ctx)
 
 			if err != nil {
 				c.addError(err.Error(), arg.Range())
@@ -223,7 +223,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 			if arg.Label != nil {
 				label = arg.Label.Value
 			}
-			vT := c.evaluateExpression(arg.Value)
+			vT := c.evaluateExpression(arg.Value, ctx)
 			v := types.NewVar("", vT)
 			v.ParamLabel = label
 			callSg.AddParameter(v)
@@ -254,9 +254,9 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 	return unresolved
 }
 
-func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type {
+func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression, ctx *NodeContext) types.Type {
 	op := expr.Op
-	rhs := c.evaluateExpression(expr.Expr)
+	rhs := c.evaluateExpression(expr.Expr, ctx)
 	var err error
 
 	switch op {
@@ -310,9 +310,9 @@ func (c *Checker) evaluateUnaryExpression(expr *ast.UnaryExpression) types.Type 
 
 }
 
-func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
-	lhs := c.evaluateExpression(e.Left)
-	rhs := c.evaluateExpression(e.Right)
+func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeContext) types.Type {
+	lhs := c.evaluateExpression(e.Left, ctx)
+	rhs := c.evaluateExpression(e.Right, ctx)
 
 	if lhs == unresolved || rhs == unresolved {
 		return unresolved
@@ -352,24 +352,10 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression) types.Type {
 
 }
 
-func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression) types.Type {
+func (c *Checker) evaluateAssignmentExpression(expr *ast.AssignmentExpression, ctx *NodeContext) types.Type {
 
-	lhs := c.evaluateExpression(expr.Target)
-	rhs := c.evaluateExpression(expr.Value)
-
-	_, err := c.validate(lhs, rhs)
-
-	if err != nil {
-		c.addError(err.Error(), expr.Range())
-	}
-
-	// assignment yield void
-	return types.LookUp(types.Void)
-}
-
-func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssignmentExpression) types.Type {
-	lhs := c.evaluateExpression(expr.Target)
-	rhs := c.evaluateExpression(expr.Right)
+	lhs := c.evaluateExpression(expr.Target, ctx)
+	rhs := c.evaluateExpression(expr.Value, ctx)
 
 	_, err := c.validate(lhs, rhs)
 
@@ -381,11 +367,25 @@ func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssig
 	return types.LookUp(types.Void)
 }
 
-func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
+func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssignmentExpression, ctx *NodeContext) types.Type {
+	lhs := c.evaluateExpression(expr.Target, ctx)
+	rhs := c.evaluateExpression(expr.Right, ctx)
+
+	_, err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+	}
+
+	// assignment yield void
+	return types.LookUp(types.Void)
+}
+
+func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeContext) types.Type {
 
 	// 1 - Find Defined Type
 
-	target := c.evaluateExpression(n.Target)
+	target := c.evaluateExpression(n.Target, ctx)
 	base := types.AsDefined(target)
 
 	if base == nil {
@@ -462,7 +462,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	for k, v := range seen {
 
 		f := sg.FindField(k)
-		err := c.resolveVar(f, v, specializations)
+		err := c.resolveVar(f, v, specializations, ctx)
 
 		if err != nil {
 			c.addError(err.Error(), v.Range())
@@ -493,8 +493,8 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral) types.Type {
 	return types.Apply(specializations, base)
 }
 
-func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Specializations) error {
-	vT := c.evaluateExpression(v)
+func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Specializations, ctx *NodeContext) error {
+	vT := c.evaluateExpression(v, ctx)
 
 	fmt.Println("\n", "\t[Resolver] Variable Name", f.Name(), "\n", "\t[Resolver] Variable Type", f.Type(), "\n", "\t[Resolver] Provided Type", vT)
 	if vT == unresolved {
@@ -575,9 +575,9 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Spe
 	return err
 }
 
-func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types.Type {
+func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression, ctx *NodeContext) types.Type {
 
-	a := c.evaluateExpression(n.Target)
+	a := c.evaluateExpression(n.Target, ctx)
 
 	if a == unresolved {
 		return unresolved
@@ -605,9 +605,9 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression) types
 	return unresolved
 }
 
-func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression) types.Type {
+func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression, ctx *NodeContext) types.Type {
 	// 1- Find Target
-	sym, ok := c.find(e.Identifier.Value)
+	sym, ok := ctx.scope.Resolve(e.Identifier.Value)
 	if !ok {
 		msg := fmt.Sprintf("could not find `%s` in scope", e.Identifier.Value)
 		c.addError(msg, e.Range())
@@ -636,7 +636,7 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 
 	// 4 - Collect Args
 	for _, t := range e.Clause.Arguments {
-		args = append(args, c.evaluateTypeExpression(t, nil))
+		args = append(args, c.evaluateTypeExpression(t, nil, ctx))
 	}
 
 	// 5 - Ensure Length match
@@ -667,33 +667,29 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	return instance
 }
 
-func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType) types.Type {
+func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, ctx *NodeContext, self *types.DefinedType, define bool) types.Type {
 	// Create new function
 
+	fmt.Println(ctx.scope)
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg)
 	c.table.DefineFunction(e, def)
 
-	prevFn := c.fn
-	prevSc := c.scope
-	defer func() {
-		c.fn = prevFn
-		c.scope = prevSc
-	}()
-
-	c.fn = sg
-
 	// Enter Function Scope
-	c.enterScope()
-	sg.Scope = c.scope
-	c.table.AddScope(e, c.scope)
-	defer c.leaveScope()
+	sg.Scope = types.NewScope(ctx.scope)
+	c.table.AddScope(e, sg.Scope)
+
+	// inject `self`
+	if self != nil {
+		s := types.NewVar("self", self)
+		sg.Scope.Define(s)
+	}
 
 	// Type/Generic Parameters
 	hasError := false
 	if e.GenericParams != nil {
 		for _, p := range e.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p)
+			t := c.evaluateGenericParameterExpression(p, ctx)
 			if t == unresolved {
 				hasError = true
 				continue
@@ -709,7 +705,7 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 
 	// Parameters
 	for _, p := range e.Parameters {
-		t := c.evaluateTypeExpression(p.Type, sg.TypeParameters)
+		t := c.evaluateTypeExpression(p.Type, sg.TypeParameters, ctx)
 
 		// Placeholder / Discard
 
@@ -725,35 +721,35 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 		if p.Name.Value == "_" {
 			continue
 		}
-		c.scope.Define(v)
+		err := sg.Scope.Define(v)
 
+		if err != nil {
+			c.addError(err.Error(), p.Range())
+		}
 	}
 
 	// Annotated Return Type
 	if e.ReturnType != nil {
-		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters)
+		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters, ctx)
 		sg.Result = types.NewVar("result", t)
 	} else {
 		sg.Result = types.NewVar("result", types.LookUp(types.Void))
 	}
 
-	// At this point the signature has been constructed fully, add to scope
-	err := prevSc.Define(def)
+	if define {
+		// At this point the signature has been constructed fully, add to scope
+		err := ctx.scope.Define(def)
 
-	if err != nil {
-		c.addError(err.Error(), e.Identifier.Range())
-		return unresolved
-	}
+		if err != nil {
+			c.addError(err.Error(), e.Identifier.Range())
+			return unresolved
+		}
 
-	// inject `self`
-	if self != nil {
-		s := types.NewVar("self", self)
-		c.scope.Parent = self.GetScope()
-		c.scope.Define(s)
 	}
 
 	// Body
-	c.checkBlockStatement(e.Body)
+	newCtx := NewContext(sg.Scope, sg, nil)
+	c.checkBlockStatement(e.Body, newCtx)
 
 	// TODO:
 	// Ensure All Generic Params are used
@@ -761,7 +757,7 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	return sg
 }
 
-func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral) types.Type {
+func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral, ctx *NodeContext) types.Type {
 
 	var element types.Type
 
@@ -772,7 +768,7 @@ func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral) types.Type {
 
 	hasError := false
 	for _, node := range n.Elements {
-		provided := c.evaluateExpression(node)
+		provided := c.evaluateExpression(node, ctx)
 
 		if element == nil && provided != unresolved {
 			element = provided
@@ -791,17 +787,17 @@ func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral) types.Type {
 		return unresolved
 	}
 
-	sym, ok := c.find("Array")
+	sym, ok := ctx.scope.Resolve("Array")
 
 	if !ok {
-		c.addError("unable to find map type", n.Range())
+		c.addError("unable to find array type", n.Range())
 		return unresolved
 	}
 	typ := types.AsDefined(sym.Type())
 	instantiated := types.Instantiate(typ, []types.Type{element}, nil)
 	return instantiated
 }
-func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral) types.Type {
+func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral, ctx *NodeContext) types.Type {
 
 	var key types.Type
 	var value types.Type
@@ -813,8 +809,8 @@ func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral) types.Type {
 
 	hasError := false
 	for _, node := range n.Pairs {
-		providedKey := c.evaluateExpression(node.Key)
-		providedValue := c.evaluateExpression(node.Value)
+		providedKey := c.evaluateExpression(node.Key, ctx)
+		providedValue := c.evaluateExpression(node.Value, ctx)
 
 		if key == nil && providedKey != unresolved {
 			key = providedKey
@@ -843,7 +839,7 @@ func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral) types.Type {
 		return unresolved
 	}
 
-	sym, ok := c.find("Map")
+	sym, ok := ctx.scope.Resolve("Map")
 
 	if !ok {
 		c.addError("unable to find map type", n.Range())
@@ -854,13 +850,13 @@ func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral) types.Type {
 	return instantiated
 }
 
-func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression) types.Type {
+func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeContext) types.Type {
 
 	// 1 - Eval Target
-	target := c.evaluateExpression(n.Target)
+	target := c.evaluateExpression(n.Target, ctx)
 
 	// 2 - Eval Subscript Standard
-	symbol, ok := c.find("SubscriptStandard")
+	symbol, ok := ctx.scope.Resolve("SubscriptStandard")
 
 	if !ok {
 		c.addError("unable to find subscript standard", n.Range())
@@ -914,7 +910,7 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression) types.Type {
 	}
 
 	// 6 - Resolve & Validate Index Type
-	index := c.evaluateExpression(n.Index)
+	index := c.evaluateExpression(n.Index, ctx)
 
 	_, err = c.validate(indexType, index)
 
@@ -941,11 +937,11 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression) types.Type {
 	return elementType
 }
 
-func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSignature, expr *ast.CallExpression) types.Type {
+func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSignature, expr *ast.CallExpression, ctx *NodeContext) types.Type {
 	lhsTyp := types.AsDefined(inc)
 
 	if lhsTyp == nil {
-		c.addError(fmt.Sprintf("expected defined type, got %s, %s", c.lhsType, fn), expr.Range())
+		c.addError(fmt.Sprintf("expected defined type, got %s, %s", lhsTyp, fn), expr.Range())
 		return unresolved
 	}
 
@@ -977,7 +973,7 @@ func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSign
 			return unresolved
 		}
 
-		err := c.define(types.NewVar(ident.Value, t.Type()))
+		err := ctx.scope.Define(types.NewVar(ident.Value, t.Type()))
 
 		if err != nil {
 			c.addError(err.Error(), arg.Range())

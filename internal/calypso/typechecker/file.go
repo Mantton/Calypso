@@ -1,28 +1,21 @@
 package typechecker
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 func (c *Checker) Check() *SymbolTable {
-	c.enterScope() // global enter
-	main := c.scope
+
+	main := types.NewScope(types.GlobalScope)
 	main.Parent = types.GlobalScope
+	c.table.Main = main
+	mainContext := NewContext(main, nil, nil)
+
 	if len(c.file.Declarations) != 0 {
 		for _, decl := range c.file.Declarations {
-			c.checkDeclaration(decl)
+			c.checkDeclaration(decl, mainContext)
 		}
 	}
-	c.leaveScope() // global leave
-	fmt.Println(main)
 
-	for _, s := range c.table.scopes {
-		fmt.Println(s)
-	}
-
-	c.table.Main = main
 	return c.table
-
 }
