@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -22,8 +21,7 @@ func NewFile(path string) (*File, error) {
 	data, err := os.ReadFile(path)
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return nil, err
 	}
 
 	input := string(data)
@@ -37,4 +35,24 @@ func NewFile(path string) (*File, error) {
 		Lines:  lines,
 		Tokens: nil,
 	}, nil
+}
+
+func NewFileFromString(data string) *File {
+	input := string(data)
+	lines := strings.Split(input, "\n")
+	chars := []rune(input)
+
+	f := &File{
+		Chars:  chars,
+		Length: len(chars),
+		Name:   "file",
+		Path:   "./file",
+		Lines:  lines,
+		Tokens: nil,
+	}
+
+	l := New(f)
+	l.ScanAll()
+
+	return f
 }

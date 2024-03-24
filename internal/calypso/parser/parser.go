@@ -28,6 +28,12 @@ func New(file *lexer.File) *Parser {
 	return &Parser{file: file}
 }
 
+func ParseString(input string) (*ast.File, lexer.ErrorList) {
+	lF := lexer.NewFileFromString(input)
+	p := New(lF)
+	return p.Parse(), p.errors
+}
+
 func (p *Parser) Parse() *ast.File {
 	moduleName := ""
 	var declarations []ast.Declaration
