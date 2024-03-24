@@ -1,4 +1,4 @@
-package ssa
+package lir
 
 import (
 	"github.com/mantton/calypso/internal/calypso/types"
@@ -14,14 +14,8 @@ type Global struct {
 	Value *Constant
 }
 
-func (*Constant) ssaNode() {}
-func (*Global) ssaNode()   {}
-
-func (*Constant) ssaVal() {}
-func (*Global) ssaVal()   {}
-
-func (c *Constant) Type() types.Type { return c.typ }
-func (c *Global) Type() types.Type   { return c.Value.Type() }
+func (c *Constant) Yields() types.Type { return c.typ }
+func (c *Global) Yields() types.Type   { return c.Value.Yields() }
 
 func NewConst(val any, typ types.Type) *Constant {
 	return &Constant{

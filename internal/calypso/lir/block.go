@@ -1,4 +1,4 @@
-package ssa
+package lir
 
 type Block struct {
 	Index        int

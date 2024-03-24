@@ -1,4 +1,4 @@
-package ssa
+package lir
 
 import (
 	"github.com/mantton/calypso/internal/calypso/ast"

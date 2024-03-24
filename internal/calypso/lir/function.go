@@ -1,4 +1,4 @@
-package ssa
+package lir
 
 import (
 	"github.com/mantton/calypso/internal/calypso/types"
@@ -22,14 +22,8 @@ type Function struct {
 	CurrentBlock *Block
 }
 
-func (f *Function) ssaMbr()          {}
-func (f *Function) ssaNode()         {}
-func (f *Function) Type() types.Type { return f.Symbol.Type() }
-func (f *Function) ssaVal()          {}
-
-func (f *Parameter) ssaVal()          {}
-func (f *Parameter) ssaNode()         {}
-func (f *Parameter) Type() types.Type { return f.Symbol.Type() }
+func (f *Function) Yields() types.Type  { return f.Symbol.Type() }
+func (f *Parameter) Yields() types.Type { return f.Symbol.Type() }
 
 func (f *Function) Emit(i Instruction) {
 	if f.CurrentBlock == nil {
