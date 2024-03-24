@@ -135,3 +135,45 @@ func TestFunctionDeclaration(t *testing.T) {
 	}
 
 }
+
+func TestFunctionOverloading(t *testing.T) {
+	input := `
+	module main;
+	// standard
+	fn make(_: string){}
+	fn move(_ file: string){}
+	fn populate(id: string){}
+
+
+	// overloaded standard
+	fn ping(station: int) -> int {
+		return 10;
+	}
+
+	fn ping(station: int, frequency: double) -> int {
+		return 10;
+	}
+
+	// overloaded with generic option
+	fn update(name: string){}
+	fn update<T>(name: T) {}
+
+
+	fn main() {
+
+		// standard
+		make("Hotdogs");
+		move("file.txt");
+		populate(id: "Valora");
+
+		// standard overloaded
+		const A = ping(station: 100);
+		const B = ping(station: 100, frequency: 20);
+
+		// overloaded generic
+		update(name: "Jack");
+	}
+`
+
+	Build(input, t, true)
+}
