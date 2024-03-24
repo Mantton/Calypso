@@ -1,6 +1,7 @@
 # Development
 *.test.cly
 bin/
+dev/*
 # Core
 # General
 .DS_Store

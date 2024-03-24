@@ -2,4 +2,4 @@
 run:
 	@clear
 	@go build -tags=llvm16 -o ./bin/calypso ./cmd/calypso.go 
-	@./bin/calypso ./bin/dev.test.cly 
+	@./bin/calypso ./dev/dev.test.cly 

@@ -413,46 +413,42 @@ func (p *Parser) buildCallExpression(target ast.Expression) (*ast.CallExpression
 func (p *Parser) parseCallArgument() (*ast.CallArgument, error) {
 
 	// foo(bar: 10) | foo(10)
-	var label *ast.IdentifierExpression
-	var value ast.Expression
 	var colon token.TokenPosition
 	var err error
 
-	// Ident
-	if p.currentMatches(token.IDENTIFIER) {
-		label, err = p.parseIdentifierWithoutAnnotation()
-		if err != nil {
-			return nil, err
-		}
-
-		// Next is colon, confirmed to be label
-		if p.match(token.COLON) {
-			colon = p.previousScannedToken().Pos
-
-			value, err = p.parseExpression()
-			if err != nil {
-				return nil, err
-			}
-
-		} else {
-			// next is not colon, ident was value
-			value = label
-			label = nil
-		}
-
-	} else {
-		value, err = p.parseExpression()
-
-		if err != nil {
-			return nil, err
-		}
+	expr, err := p.parseExpression()
+	if err != nil {
+		return nil, err
 	}
 
-	return &ast.CallArgument{
-		Label: label,
-		Colon: colon,
-		Value: value,
-	}, nil
+	switch expr := expr.(type) {
+	case *ast.IdentifierExpression:
+		if !p.currentMatches(token.COLON) {
+			return &ast.CallArgument{
+				Value: expr,
+			}, nil
+		}
+
+		colon = p.currentScannedToken().Pos
+		p.next()
+
+		val, err := p.parseExpression()
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &ast.CallArgument{
+			Label: expr,
+			Colon: colon,
+			Value: val,
+		}, nil
+	default:
+		return &ast.CallArgument{
+			Value: expr,
+		}, nil
+	}
+
 }
 
 func (p *Parser) parsePropertyExpression() (ast.Expression, error) {
