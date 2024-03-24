@@ -174,6 +174,11 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		if !isGeneric {
 			for i, arg := range expr.Arguments {
 				expected := fn.Parameters[i]
+
+				if expected.ParamLabel != arg.GetLabel() {
+					c.addError(fmt.Sprintf("missing paramter label \"%s\"", expected.ParamLabel), arg.Range())
+				}
+
 				err := c.resolveVar(expected, arg.Value, specializations)
 
 				if err != nil {

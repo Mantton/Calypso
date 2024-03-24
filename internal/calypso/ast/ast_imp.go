@@ -409,3 +409,11 @@ func (e *IdentifierTypeExpression) typeNode() {}
 func (e *ArrayTypeExpression) typeNode()      {}
 func (e *MapTypeExpression) typeNode()        {}
 func (e *PointerTypeExpression) typeNode()    {}
+
+func (e *CallArgument) GetLabel() string {
+	if e.Label != nil {
+		return e.Label.Value
+	} else {
+		return ""
+	}
+}
