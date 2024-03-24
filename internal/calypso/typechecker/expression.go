@@ -670,7 +670,6 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, ctx *NodeContext, self *types.DefinedType, define bool) types.Type {
 	// Create new function
 
-	fmt.Println(ctx.scope)
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg)
 	c.table.DefineFunction(e, def)

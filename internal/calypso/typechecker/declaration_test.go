@@ -178,7 +178,7 @@ func TestFunctionOverloading(t *testing.T) {
 	Build(input, t, true)
 }
 
-func TestStandardDeclaration(t *testing.T) {
+func TestStandardAndConformanceDeclaration(t *testing.T) {
 	input := `
 
 		module main;
@@ -206,4 +206,28 @@ func TestStandardDeclaration(t *testing.T) {
 
 	Build(input, t, true)
 
+}
+
+func TestExtensionDeclaration(t *testing.T) {
+	input := `
+		module main;
+
+		struct Foo {
+			Value: string;
+		}
+
+		extension string {
+			fn first() -> char {
+				return 'A';
+			}
+		}
+
+
+		fn main() {
+			const A = Foo { Value: "hello, world" };
+			const B = A.Value.first();
+		}
+	`
+
+	Build(input, t, true)
 }
