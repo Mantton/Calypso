@@ -191,6 +191,11 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression) types.Type {
 		// Function is generic, instantiate
 		for i, arg := range expr.Arguments {
 			expected := fn.Parameters[i]
+
+			if expected.ParamLabel != arg.GetLabel() {
+				c.addError(fmt.Sprintf("missing paramter label \"%s\"", expected.ParamLabel), arg.Range())
+			}
+
 			err := c.resolveVar(expected, arg.Value, specializations)
 
 			if err != nil {
@@ -753,7 +758,6 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *ty
 	// TODO:
 	// Ensure All Generic Params are used
 	// Ensure All Params are used
-
 	return sg
 }
 

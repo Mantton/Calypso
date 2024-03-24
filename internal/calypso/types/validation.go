@@ -3,7 +3,7 @@ package types
 import "fmt"
 
 func Validate(expected Type, provided Type) (Type, error) {
-	fmt.Printf("\t[VALIDATOR] Validating `%s`(provided) || `%s`(expected)\n", provided, expected)
+	fmt.Printf("\t[VALIDATOR] Validating `%s`(provided) || `%s`(expected)\n\t\tWith %T - %T\n", provided, expected, provided, expected)
 
 	if provided == LookUp(Unresolved) {
 		// should have already been reported
@@ -55,7 +55,7 @@ func Validate(expected Type, provided Type) (Type, error) {
 		}
 
 	case *Basic:
-		return validateBasicTypes(expected, provided)
+		panic("bad path")
 	}
 
 	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
@@ -70,7 +70,18 @@ func Validate(expected Type, provided Type) (Type, error) {
 
 	// resolve basic
 	if typ, ok := defExpected.Parent().(*Basic); ok {
-		return validateBasicTypes(typ, provided.Parent())
+
+		res, err := validateBasicTypes(typ, provided.Parent())
+
+		if err != nil {
+			return nil, err
+		}
+
+		if typ == res {
+			return defExpected, nil
+		} else {
+			return defProvided, nil
+		}
 	}
 
 	if defProvided == nil {
@@ -226,9 +237,7 @@ func Conforms(constraints []*Standard, x Type) error {
 
 	provided := AsDefined(x)
 	if provided == nil {
-		panic(
-			fmt.Errorf("%s is not a conforming type, %T", x, x),
-		)
+		return fmt.Errorf("%s is not a conforming type, %T", x, x)
 	}
 
 	if provided == LookUp(IntegerLiteral) {
