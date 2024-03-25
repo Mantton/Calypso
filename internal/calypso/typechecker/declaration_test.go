@@ -266,3 +266,19 @@ func TestExtensionDeclaration(t *testing.T) {
 
 	Build(input, t, true)
 }
+
+func TestExternDeclaration(t *testing.T) {
+	input := `
+		module main;
+		
+		extern "libc" {
+			fn malloc(size: u64) -> *u8;
+		}
+
+		fn main() {
+			const ptr = malloc(20);
+		}
+	`
+
+	Build(input, t, true)
+}
