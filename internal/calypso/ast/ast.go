@@ -38,6 +38,11 @@ type File struct {
 	LexerFile    *lexer.File
 }
 
+type FileSet struct {
+	ModuleName string
+	Files      []*File
+}
+
 // * Declarations
 // - Imports, Modules, Structs, Types
 type ConstantDeclaration struct {

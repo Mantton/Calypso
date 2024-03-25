@@ -1,11 +1,7 @@
 package utils
 
-type File struct {
-	Path string
-}
-
 type FileSet struct {
-	Files []File
+	FilesPaths []string
 }
 
 type Module struct {

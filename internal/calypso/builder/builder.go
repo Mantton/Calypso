@@ -4,10 +4,23 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mantton/calypso/internal/calypso/commands/utils"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
+
+func CompileFileSet(set *utils.FileSet) error {
+
+	astSet, err := parser.ParseFileSet(set)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(astSet)
+	return nil
+}
 
 func Build(filepath string) bool {
 

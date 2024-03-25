@@ -18,6 +18,15 @@ func (l *ErrorList) Add(err error) {
 	*l = append(*l, err)
 }
 
+func (l *ErrorList) String() string {
+	s := ""
+	for _, e := range *l {
+		s += e.Error()
+	}
+
+	return s
+}
+
 func (e *CompilerError) Error() string {
 	msg := fmt.Sprintf("\n%s:%d:%d -> %s", e.File.Path, e.Range.Start.Line, e.Range.Start.Offset, e.Message)
 	msg += fmt.Sprintf("\n\t%s", e.File.Lines[max(0, e.Range.Start.Line-1)])

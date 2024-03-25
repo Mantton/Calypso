@@ -7,6 +7,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/mantton/calypso/internal/calypso/builder"
+	"github.com/mantton/calypso/internal/calypso/commands/utils"
 )
 
 const CONFIG_FILE = "config.toml"
@@ -59,6 +62,7 @@ RULES:
 - All Files must belong to the same module
 */
 func buildFromFileList(paths []string) error {
+	set := &utils.FileSet{}
 
 	// Satisfy Rule 1
 
@@ -76,6 +80,8 @@ func buildFromFileList(paths []string) error {
 		}
 
 		dirs[filepath.Dir(path)] = struct{}{}
+
+		set.FilesPaths = append(set.FilesPaths, path)
 	}
 
 	// map acts as a set in this case where we check that the dir lenght is just one, meaning one directory
@@ -88,8 +94,7 @@ func buildFromFileList(paths []string) error {
 		return fmt.Errorf("all files must be in the same directory, got: %s", s)
 	}
 
-	return nil
-
+	return builder.CompileFileSet(set)
 }
 
 func buildFromDirectory(dir string) error {
