@@ -178,6 +178,41 @@ func TestFunctionOverloading(t *testing.T) {
 	Build(input, t, true)
 }
 
+func TestMethodOverloading(t *testing.T) {
+	input := `
+		module main;
+
+		struct User {
+			name : string;
+		}
+
+
+		extension User {
+			fn get_first() -> string {
+				return self.name;
+			}
+
+			fn get_first(name: string) -> string {
+				return name;
+			}
+
+			fn get_last() -> string {
+				return "foo";
+			}
+		}
+
+
+		fn main() {
+			const user = User { name : "nope" };
+
+			const A = user.get_first();
+			const B = user.get_first(name: "hello");
+			const C = user.get_last();
+		}
+	`
+
+	Build(input, t, true)
+}
 func TestStandardAndConformanceDeclaration(t *testing.T) {
 	input := `
 

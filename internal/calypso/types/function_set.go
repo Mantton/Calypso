@@ -10,7 +10,13 @@ type FunctionSet struct {
 
 func (s *FunctionSet) clyT() {}
 func (s *FunctionSet) String() string {
-	return fmt.Sprintf("<FunctionSet> %s", s.Name())
+	msg := fmt.Sprintf("<FunctionSet> %s\n", s.Name())
+
+	for _, fn := range s.Instances {
+		msg += fmt.Sprintf("\t\t%s\n", fn.Type())
+	}
+
+	return msg
 }
 
 func (s *FunctionSet) Name() string {
@@ -39,7 +45,14 @@ func (s *FunctionSet) GetAsSingle() (*Function, bool) {
 }
 
 func (s *FunctionSet) Add(fn *Function) error {
-	cr := s.Find(fn.Sg(), true)
+
+	sg := fn.Sg()
+
+	if sg == nil {
+		return fmt.Errorf("invalid function signature: %s", fn.Type())
+	}
+
+	cr := s.Find(sg, true)
 
 	if cr != nil {
 		return fmt.Errorf("invalid redeclaration of \"%s\"", fn.Name())
@@ -48,7 +61,7 @@ func (s *FunctionSet) Add(fn *Function) error {
 	creator := s.Instances[0]
 
 	// ensure function has the same return type
-	_, err := Validate(creator.Sg().Result.Type(), fn.Sg().Result.Type())
+	_, err := Validate(creator.Sg().Result.Type(), sg.Result.Type())
 
 	if err != nil {
 		return err
@@ -60,6 +73,10 @@ func (s *FunctionSet) Add(fn *Function) error {
 
 // will return a new function set containing what possible functions could match the provided signature
 func (s *FunctionSet) Find(sg *FunctionSignature, strict bool) *FunctionSet {
+	if sg == nil {
+		return nil
+	}
+
 	var set *FunctionSet
 
 	for _, fn := range s.Instances {
@@ -113,7 +130,7 @@ func (s *FunctionSet) Compare(provided, expected *FunctionSignature, strict bool
 	// when strict, ensure the return types match [Function Decl]
 	// is non-strict is call expression matching
 	if strict {
-		_, err := Validate(expected.Result.typ, provided.Result.typ)
+		_, err := Validate(expected.Result.Type(), provided.Result.Type())
 
 		if err != nil {
 			return false

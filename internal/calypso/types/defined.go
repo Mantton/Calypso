@@ -92,7 +92,7 @@ func ResolveTypeParameters(t Type) TypeParams {
 	return nil
 }
 
-func (n *DefinedType) ResolveMethod(s string) *FunctionSignature {
+func (n *DefinedType) ResolveMethod(s string) Type {
 
 	if n.scope == nil {
 		return n.instantiateMethod(s)
@@ -105,14 +105,15 @@ func (n *DefinedType) ResolveMethod(s string) *FunctionSignature {
 		return n.instantiateMethod(s)
 	}
 
-	typ := AsFunction(symbol)
-
-	if typ == nil {
-		return nil
+	// match function types
+	switch fn := symbol.(type) {
+	case *Function:
+		return fn.Type()
+	case *FunctionSet:
+		return fn
 	}
 
-	return typ.Sg()
-
+	return nil
 }
 
 func (n *DefinedType) ResolveType(s string) Type {
@@ -135,7 +136,6 @@ func (n *DefinedType) ResolveType(s string) Type {
 	}
 
 	return typ
-
 }
 
 func (n *DefinedType) ResolveField(s string) Type {
@@ -218,7 +218,7 @@ func (n *DefinedType) instantiateType(sym string) Type {
 	return symbol
 }
 
-func (n *DefinedType) instantiateMethod(sym string) *FunctionSignature {
+func (n *DefinedType) instantiateMethod(sym string) Type {
 	// no instance of, is parent with none found
 	if n.InstanceOf == nil {
 		return nil

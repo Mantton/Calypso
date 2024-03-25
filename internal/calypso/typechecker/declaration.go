@@ -183,31 +183,13 @@ func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
 	ctx := NewContext(typ.GetScope(), nil, nil)
 
 	c.injectFunctionsInType(typ, d.Content, ctx)
+	fmt.Println(ctx.scope)
 }
 
 func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement, ctx *NodeContext) {
 	// Define Functions in Type Scope
 	for _, stmt := range fns {
-
-		// eval function
-		fn := types.NewFunction(stmt.Func.Identifier.Value, nil)
-		fn.SetType(unresolved)
-		err := typ.AddMethod(fn.Name(), fn)
-
-		// Define in type scope
-		if err != nil {
-			c.addError(err.Error(), stmt.Func.Identifier.Range())
-			continue
-		}
-
-		t := c.evaluateFunctionExpression(stmt.Func, ctx, typ, false)
-
-		// error already reported
-		if t == unresolved {
-			continue
-		}
-
-		fn.SetSignature(t.(*types.FunctionSignature))
+		c.evaluateFunctionExpression(stmt.Func, ctx, typ, true)
 	}
 }
 

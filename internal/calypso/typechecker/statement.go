@@ -134,6 +134,7 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext)
 
 	// 1 - Define
 	scope := types.NewScope(ctx.scope)
+	c.table.AddScope(n, scope)
 	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, scope)
 	err := ctx.scope.Define(def)
 

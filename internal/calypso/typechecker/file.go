@@ -17,5 +17,6 @@ func (c *Checker) Check() *SymbolTable {
 		}
 	}
 
+	c.table.DebugPrintScopes()
 	return c.table
 }

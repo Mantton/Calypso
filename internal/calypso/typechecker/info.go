@@ -1,6 +1,8 @@
 package typechecker
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -45,4 +47,15 @@ func (t *SymbolTable) SetNodeType(n ast.Node, typ types.Type) {
 
 func (t *SymbolTable) GetNodeType(n ast.Node) types.Type {
 	return t.tNodes[n]
+}
+
+func (t *SymbolTable) DebugPrintScopes() {
+
+	fmt.Println("PARENT")
+	fmt.Println(t.Main)
+
+	fmt.Println("NESTED")
+	for _, scope := range t.scopes {
+		fmt.Println(scope)
+	}
 }
