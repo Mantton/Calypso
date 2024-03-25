@@ -10,6 +10,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/builder"
 	"github.com/mantton/calypso/internal/calypso/commands/utils"
+	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
 const CONFIG_FILE = "config.toml"
@@ -94,7 +95,7 @@ func buildFromFileList(paths []string) error {
 		return fmt.Errorf("all files must be in the same directory, got: %s", s)
 	}
 
-	return builder.CompileFileSet(set)
+	return builder.CompileFileSet(set, typechecker.USER)
 }
 
 func buildFromDirectory(dir string) error {

@@ -24,15 +24,16 @@ type Checker struct {
 	// fn      *types.FunctionSignature
 	table *SymbolTable
 	// lhsType types.Type
-	file *ast.File
+	file    *ast.File
+	fileSet *ast.FileSet
 }
 
-func New(mode CheckerMode, file *ast.File) *Checker {
+func New(mode CheckerMode, set *ast.FileSet) *Checker {
 	return &Checker{
-		depth: 0,
-		mode:  mode,
-		table: NewSymbolTable(),
-		file:  file,
+		depth:   0,
+		mode:    mode,
+		table:   NewSymbolTable(),
+		fileSet: set,
 	}
 }
 

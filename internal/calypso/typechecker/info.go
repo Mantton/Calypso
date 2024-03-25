@@ -56,6 +56,9 @@ func (t *SymbolTable) DebugPrintScopes() {
 
 	fmt.Println("NESTED")
 	for _, scope := range t.scopes {
+		if scope.IsEmpty() {
+			continue
+		}
 		fmt.Println(scope)
 	}
 }

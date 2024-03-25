@@ -3,26 +3,26 @@ package typechecker
 import (
 	"testing"
 
-	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func Build(input string, t *testing.T, fOnE bool) (*SymbolTable, lexer.ErrorList) {
+func MustCompile(input string, t *testing.T) *SymbolTable {
 	file, errs := parser.ParseString(input)
 
 	if len(errs) != 0 {
 		t.Fatal(errs)
 	}
 
-	c := New(USER, file)
-	res := c.Check()
+	c := New(USER, &ast.FileSet{Files: []*ast.File{file}})
+	res, err := c.Check()
 
-	if fOnE && len(c.Errors) != 0 {
+	if err != nil {
 		t.Fatalf("expected no errors, got \n\t%s", c.Errors)
 	}
 
-	return res, c.Errors
+	return res
 }
 
 func TestConstantDeclaration(t *testing.T) {
@@ -33,7 +33,7 @@ func TestConstantDeclaration(t *testing.T) {
 		const Baz = true;
 	`
 
-	res, _ := Build(input, t, true)
+	res := MustCompile(input, t)
 
 	fooSym := res.Main.MustResolve("Foo")
 
@@ -53,11 +53,7 @@ func TestInvalidConstantDeclaration(t *testing.T) {
 		const Foo = call();
 	`
 
-	_, errs := Build(input, t, false)
-
-	if len(errs) == 0 {
-		t.Error("expected error: global constants must be known at compile time")
-	}
+	MustCompile(input, t)
 }
 
 func TestFunctionDeclaration(t *testing.T) {
@@ -94,7 +90,7 @@ func TestFunctionDeclaration(t *testing.T) {
 		}
 	`
 
-	table, _ := Build(input, t, true)
+	table := MustCompile(input, t)
 
 	foo := table.Main.MustResolve("foo")
 
@@ -175,7 +171,7 @@ func TestFunctionOverloading(t *testing.T) {
 	}
 `
 
-	Build(input, t, true)
+	MustCompile(input, t)
 }
 
 func TestMethodOverloading(t *testing.T) {
@@ -211,7 +207,7 @@ func TestMethodOverloading(t *testing.T) {
 		}
 	`
 
-	Build(input, t, true)
+	MustCompile(input, t)
 }
 func TestStandardAndConformanceDeclaration(t *testing.T) {
 	input := `
@@ -239,7 +235,7 @@ func TestStandardAndConformanceDeclaration(t *testing.T) {
 		}
 	`
 
-	Build(input, t, true)
+	MustCompile(input, t)
 
 }
 
@@ -264,7 +260,7 @@ func TestExtensionDeclaration(t *testing.T) {
 		}
 	`
 
-	Build(input, t, true)
+	MustCompile(input, t)
 }
 
 func TestExternDeclaration(t *testing.T) {
@@ -280,5 +276,5 @@ func TestExternDeclaration(t *testing.T) {
 		}
 	`
 
-	Build(input, t, true)
+	MustCompile(input, t)
 }
