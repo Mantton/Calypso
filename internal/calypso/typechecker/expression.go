@@ -18,7 +18,7 @@ func (c *Checker) checkExpression(expr ast.Expression, ctx *NodeContext) {
 	)
 	switch expr := expr.(type) {
 	case *ast.FunctionExpression:
-		c.checkFunctionExpression(expr, ctx)
+		c.checkFunctionExpression(expr)
 	case *ast.AssignmentExpression:
 		c.checkAssignmentExpression(expr, ctx)
 	case *ast.CallExpression:
@@ -31,8 +31,8 @@ func (c *Checker) checkExpression(expr ast.Expression, ctx *NodeContext) {
 	}
 }
 
-func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression, ctx *NodeContext) {
-	c.evaluateFunctionExpression(e, ctx, nil, true)
+func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
+	c.evaluateFunctionExpression(e, nil)
 }
 
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression, ctx *NodeContext) {
@@ -116,7 +116,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression, ctx *NodeContext) type
 
 func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression, ctx *NodeContext) types.Type {
 
-	s, ok := ctx.scope.Resolve(expr.Value)
+	s, ok := ctx.scope.Resolve(expr.Value, c.ParentScope())
 
 	if !ok {
 		c.addError(
@@ -607,7 +607,7 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression, ctx *
 
 func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression, ctx *NodeContext) types.Type {
 	// 1- Find Target
-	sym, ok := ctx.scope.Resolve(e.Identifier.Value)
+	sym, ok := ctx.scope.Resolve(e.Identifier.Value, c.ParentScope())
 	if !ok {
 		msg := fmt.Sprintf("could not find `%s` in scope", e.Identifier.Value)
 		c.addError(msg, e.Range())
@@ -667,85 +667,21 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	return instance
 }
 
-func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, ctx *NodeContext, self *types.DefinedType, define bool) types.Type {
-	// Create new function
+func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType) types.Type {
 
-	sg := types.NewFunctionSignature()
-	def := types.NewFunction(e.Identifier.Value, sg)
-	c.table.DefineFunction(e, def)
+	fn, ok := c.table.fns[e]
 
-	// Enter Function Scope
-	sg.Scope = types.NewScope(ctx.scope)
-	c.table.AddScope(e, sg.Scope)
+	if !ok {
+		return unresolved
+	}
+
+	sg := fn.Sg()
 
 	// inject `self`
 	if self != nil {
 		s := types.NewVar("self", self)
 		sg.Scope.Define(s)
 	}
-
-	// Type/Generic Parameters
-	hasError := false
-	if e.GenericParams != nil {
-		for _, p := range e.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p, ctx)
-			if t == unresolved {
-				hasError = true
-				continue
-			}
-
-			sg.AddTypeParameter(t.(*types.TypeParam))
-		}
-	}
-
-	if hasError {
-		return unresolved
-	}
-
-	// Parameters
-	for _, p := range e.Parameters {
-		t := c.evaluateTypeExpression(p.Type, sg.TypeParameters, ctx)
-
-		// Placeholder / Discard
-
-		v := types.NewVar(p.Name.Value, t)
-
-		// Parameter Has Required Label
-		if p.Label.Value != "_" {
-			v.ParamLabel = p.Label.Value
-		}
-
-		sg.AddParameter(v)
-
-		if p.Name.Value == "_" {
-			continue
-		}
-		err := sg.Scope.Define(v)
-
-		if err != nil {
-			c.addError(err.Error(), p.Range())
-		}
-	}
-
-	// Annotated Return Type
-	if e.ReturnType != nil {
-		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters, ctx)
-		sg.Result = types.NewVar("result", t)
-	} else {
-		sg.Result = types.NewVar("result", types.LookUp(types.Void))
-	}
-
-	if define {
-		// At this point the signature has been constructed fully, add to scope
-		err := ctx.scope.Define(def)
-
-		if err != nil {
-			c.addError(err.Error(), e.Identifier.Range())
-			return unresolved
-		}
-
-	}
-
 	// Body
 	newCtx := NewContext(sg.Scope, sg, nil)
 	c.checkBlockStatement(e.Body, newCtx)
@@ -786,7 +722,7 @@ func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral, ctx *NodeContext) ty
 		return unresolved
 	}
 
-	sym, ok := ctx.scope.Resolve("Array")
+	sym, ok := ctx.scope.Resolve("Array", c.ParentScope())
 
 	if !ok {
 		c.addError("unable to find array type", n.Range())
@@ -838,7 +774,7 @@ func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral, ctx *NodeContext) types.
 		return unresolved
 	}
 
-	sym, ok := ctx.scope.Resolve("Map")
+	sym, ok := ctx.scope.Resolve("Map", c.ParentScope())
 
 	if !ok {
 		c.addError("unable to find map type", n.Range())
@@ -855,7 +791,7 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeConte
 	target := c.evaluateExpression(n.Target, ctx)
 
 	// 2 - Eval Subscript Standard
-	symbol, ok := ctx.scope.Resolve("SubscriptStandard")
+	symbol, ok := ctx.scope.Resolve("SubscriptStandard", c.ParentScope())
 
 	if !ok {
 		c.addError("unable to find subscript standard", n.Range())

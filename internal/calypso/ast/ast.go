@@ -32,10 +32,22 @@ type Declaration interface {
 }
 
 type File struct {
-	ModuleName   string
-	Declarations []Declaration
-	Errors       lexer.ErrorList
-	LexerFile    *lexer.File
+	ModuleName string
+	Nodes      *Nodes
+	Errors     lexer.ErrorList
+	LexerFile  *lexer.File
+}
+
+type Nodes struct {
+	Constants         []*ConstantDeclaration
+	Functions         []*FunctionDeclaration
+	Types             []*TypeStatement
+	Structs           []*StructStatement
+	Enums             []*EnumStatement
+	Standards         []*StandardDeclaration
+	Extensions        []*ExtensionDeclaration
+	Conformances      []*ConformanceDeclaration
+	ExternalFunctions []*ExternDeclaration
 }
 
 type FileSet struct {

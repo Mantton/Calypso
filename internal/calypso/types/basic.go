@@ -167,3 +167,9 @@ func resolveDefined(t *DefinedType) Type {
 func IsEquatable(t Type) bool {
 	return t == LookUp(Bool) || IsNumeric(t)
 }
+
+func IsConstant(t Type) bool {
+	_, ok := t.(*Basic)
+
+	return ok
+}

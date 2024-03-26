@@ -40,12 +40,11 @@ func ParseString(input string) (*ast.File, lexer.ErrorList) {
 
 func (p *Parser) Parse() *ast.File {
 	moduleName := ""
-	var declarations []ast.Declaration
 
 	file := &ast.File{
-		ModuleName:   moduleName,
-		Declarations: declarations,
-		LexerFile:    p.file,
+		ModuleName: moduleName,
+		Nodes:      &ast.Nodes{},
+		LexerFile:  p.file,
 	}
 	defer func() {
 		file.Errors = p.errors
@@ -81,11 +80,40 @@ func (p *Parser) Parse() *ast.File {
 			p.handleError(err, DECL)
 			return file
 		}
-		declarations = append(declarations, decl)
+
+		p.addNode(decl, file.Nodes)
 	}
 
-	file.Declarations = declarations
 	return file
+}
+
+func (p *Parser) addNode(d ast.Declaration, n *ast.Nodes) {
+	switch d := d.(type) {
+	case *ast.ConstantDeclaration:
+		n.Constants = append(n.Constants, d)
+	case *ast.FunctionDeclaration:
+		n.Functions = append(n.Functions, d)
+	case *ast.StatementDeclaration:
+		switch d := d.Stmt.(type) {
+		case *ast.TypeStatement:
+			n.Types = append(n.Types, d)
+		case *ast.StructStatement:
+			n.Structs = append(n.Structs, d)
+		case *ast.EnumStatement:
+			n.Enums = append(n.Enums, d)
+		}
+	case *ast.StandardDeclaration:
+		n.Standards = append(n.Standards, d)
+	case *ast.ConformanceDeclaration:
+		n.Conformances = append(n.Conformances, d)
+	case *ast.ExtensionDeclaration:
+		n.Extensions = append(n.Extensions, d)
+	case *ast.ExternDeclaration:
+		n.ExternalFunctions = append(n.ExternalFunctions, d)
+	default:
+		msg := fmt.Sprintf("node addition not implemented, %T", d)
+		panic(msg)
+	}
 }
 
 // 0 -> Decl

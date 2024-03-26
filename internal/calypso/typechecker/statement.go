@@ -17,6 +17,10 @@ func (c *Checker) checkStatement(stmt ast.Statement, ctx *NodeContext) {
 	case *ast.ExpressionStatement:
 		c.checkExpression(stmt.Expr, ctx)
 	case *ast.VariableStatement:
+		// Global Constant has already been declared/registered
+		if ctx.scope == c.ParentScope() {
+			return
+		}
 		c.checkVariableStatement(stmt, ctx)
 	case *ast.BlockStatement:
 		panic("CALL `checkBlockStatement` DIRECTLY")
@@ -84,6 +88,12 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement, ctx *NodeC
 		)
 		return
 	}
+
+	// main context, ensure constant is known at compile time
+	if ctx == c.ctx && !types.IsConstant(def.Type().Parent()) {
+		c.addError(fmt.Sprintf("global constant \"%s\" must be a known compile-time constant", def.Name()),
+			stmt.Range())
+	}
 }
 
 func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, ctx *NodeContext) {
@@ -110,7 +120,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, ctx *NodeConte
 }
 
 func (c *Checker) checkIfStatement(stmt *ast.IfStatement, ctx *NodeContext) {
-	scope := types.NewScope(ctx.scope)
+	scope := types.NewScope(ctx.scope, "")
 	newCtx := NewContext(scope, ctx.sg, nil)
 	// 1 - Check Condition
 	cond := c.evaluateExpression(stmt.Condition, newCtx)
@@ -131,18 +141,10 @@ func (c *Checker) checkIfStatement(stmt *ast.IfStatement, ctx *NodeContext) {
 }
 
 func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext) {
+	def := c.resolve(n.Identifier, n, ctx.scope)
 
-	// 1 - Define
-	scope := types.NewScope(ctx.scope)
-	c.table.AddScope(n, scope)
-	def := types.NewDefinedType(n.Identifier.Value, unresolved, nil, scope)
-	err := ctx.scope.Define(def)
-
-	if err != nil {
-		c.addError(
-			fmt.Sprintf(err.Error(), def.Name()),
-			n.Identifier.Range(),
-		)
+	// already reported
+	if def == nil {
 		return
 	}
 
@@ -179,18 +181,10 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext)
 }
 
 func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
-	name := n.Identifier.Value
+	def := c.resolve(n.Identifier, n, ctx.scope)
 
-	// 1 - Define
-	scope := types.NewScope(ctx.scope)
-	def := types.NewDefinedType(name, unresolved, nil, scope)
-	err := ctx.scope.Define(def)
-
-	if err != nil {
-		c.addError(
-			err.Error(),
-			n.Identifier.Range(),
-		)
+	// already reported
+	if def == nil {
 		return
 	}
 
@@ -275,7 +269,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
 		c.addError("expected at least 1 enum variant", n.Identifier.Range())
 	}
 
-	e := types.NewEnum(name, variants)
+	e := types.NewEnum(n.Identifier.Value, variants)
 	def.SetType(e)
 }
 
@@ -295,7 +289,7 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement, ctx *NodeContext)
 
 	for _, cs := range n.Cases {
 
-		scope := types.NewScope(ctx.scope)
+		scope := types.NewScope(ctx.scope, "")
 		// Scope
 		defer func() {
 			if !scope.IsEmpty() {
@@ -345,7 +339,7 @@ func (c *Checker) checkWhileStatement(n *ast.WhileStatement, ctx *NodeContext) {
 		return
 	}
 
-	scope := types.NewScope(ctx.scope)
+	scope := types.NewScope(ctx.scope, fmt.Sprintf("__if_Block__%v", n))
 	defer func() {
 		if !scope.IsEmpty() {
 			c.table.AddScope(n, scope)
@@ -356,17 +350,14 @@ func (c *Checker) checkWhileStatement(n *ast.WhileStatement, ctx *NodeContext) {
 }
 
 func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Standard, ctx *NodeContext) {
-	name := n.Identifier.Value
+	var alias *types.Alias
 
-	// 1 - Define
-	alias := types.NewAlias(name, types.LookUp(types.Placeholder))
-	err := ctx.scope.Define(alias)
-	if err != nil {
-		c.addError(
-			fmt.Sprintf("`%s` is already defined in context", name),
-			n.Identifier.Range(),
-		)
-		return
+	for alias == nil {
+		if v, ok := c.table.tNodes[n]; ok {
+			alias = types.AsAlias(v)
+		} else {
+			c.defineAlias(n, ctx)
+		}
 	}
 
 	// 2 - Add to Standard

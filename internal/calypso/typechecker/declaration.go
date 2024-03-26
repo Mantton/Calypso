@@ -27,7 +27,7 @@ func (c *Checker) checkDeclaration(decl ast.Declaration, ctx *NodeContext) {
 	case *ast.ExtensionDeclaration:
 		c.checkExtensionDeclaration(decl)
 	case *ast.ExternDeclaration:
-		c.checkExternDeclaration(decl)
+		break // Function Signature is registered in first loop through
 	default:
 		msg := fmt.Sprintf("declaration check not implemented, %T", decl)
 		panic(msg)
@@ -35,18 +35,9 @@ func (c *Checker) checkDeclaration(decl ast.Declaration, ctx *NodeContext) {
 }
 
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
-	// declare type & it's definition
-	typ := types.NewStandard(d.Identifier.Value)
-	scope := types.NewScope(c.ParentScope())
-	s := types.NewDefinedType(d.Identifier.Value, typ, nil, scope)
-
-	// define in scope
-	err := c.GlobalDefine(s)
-
-	if err != nil {
-		c.addError(err.Error(), d.Identifier.Range())
-	}
-
+	standard := c.resolve(d.Identifier, d, c.ctx.scope)
+	scope := standard.GetScope()
+	underlying := standard.Parent().(*types.Standard)
 	// Loop through statements in standard definition
 	ctx := NewContext(scope, nil, nil)
 	for _, expr := range d.Block.Statements {
@@ -62,16 +53,16 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 
 			f := types.NewFunction(n, sg)
 			// Add method
-			ok := typ.AddMethod(n, f)
+			err := standard.AddMethod(n, f)
 
 			// already defined in standard, add error
-			if !ok {
-				c.addError(fmt.Sprintf("`%s` is already defined in `%s`", n, s.Name()), node.Range())
+			if err != nil {
+				c.addError(fmt.Sprintf("`%s` is already defined in `%s`", n, standard.Name()), node.Range())
 				continue
 			}
 
 		case *ast.TypeStatement:
-			c.checkTypeStatement(node, typ, ctx)
+			c.checkTypeStatement(node, underlying, ctx)
 
 		default:
 			c.addError("cannot use statement in standard declaration", node.Range())
@@ -138,7 +129,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	}
 
 	// add functions to type
-	c.injectFunctionsInType(typ, d.Signatures, ctx)
+	c.injectFunctionsInType(typ, d.Signatures)
 
 	// Ensure All Functions of Standard are implemented
 	for _, eFn := range s.Signature {
@@ -180,16 +171,13 @@ func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
 		return
 	}
 
-	ctx := NewContext(typ.GetScope(), nil, nil)
-
-	c.injectFunctionsInType(typ, d.Content, ctx)
-	fmt.Println(ctx.scope)
+	c.injectFunctionsInType(typ, d.Content)
 }
 
-func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement, ctx *NodeContext) {
+func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement) {
 	// Define Functions in Type Scope
 	for _, stmt := range fns {
-		c.evaluateFunctionExpression(stmt.Func, ctx, typ, true)
+		c.evaluateFunctionExpression(stmt.Func, typ)
 	}
 }
 
@@ -218,5 +206,9 @@ func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
 		// Resolve Function Body
 		sg := c.evaluateFunctionSignature(node.Func, ctx)
 		fn.SetSignature(sg)
+
+		if types.IsGeneric(sg) {
+			c.addError("external function cannot be generic", node.Func.Identifier.Range())
+		}
 	}
 }

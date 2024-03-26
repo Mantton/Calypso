@@ -7,12 +7,14 @@ import (
 type Scope struct {
 	Parent  *Scope
 	symbols map[string]Symbol
+	label   string
 }
 
-func NewScope(p *Scope) *Scope {
+func NewScope(p *Scope, label string) *Scope {
 	return &Scope{
 		Parent:  p,
 		symbols: make(map[string]Symbol),
+		label:   label,
 	}
 }
 
@@ -77,11 +79,32 @@ func (s *Scope) defineFnSymbol(fn *Function) error {
 }
 
 // Resolve searches for a symbol in the current table and parent scopes.
-func (s *Scope) Resolve(name string) (Symbol, bool) {
+func (s *Scope) Resolve(name string, fallback *Scope) (Symbol, bool) {
 	symbol, exists := s.symbols[name]
-	if !exists && s.Parent != nil {
-		return s.Parent.Resolve(name)
+
+	// found in current scope
+	if exists {
+		return symbol, exists
 	}
+
+	// does not exist in scope & has parent check
+	if !exists && s.Parent != nil {
+		symbol, exists = s.Parent.Resolve(name, nil)
+	}
+
+	// Parent had symbol
+	if exists {
+		return symbol, exists
+	}
+
+	// does not exist, and fall back is not nil
+	if fallback != nil {
+		symbol = fallback.ResolveInCurrent(name)
+		if symbol != nil {
+			return symbol, true
+		}
+	}
+
 	return symbol, exists
 }
 
@@ -103,7 +126,7 @@ func (s *Scope) ResolveInCurrent(name string) Symbol {
 
 func (s *Scope) String() string {
 	var str string
-	str += "------SCOPE-----\n"
+	str += fmt.Sprintf("------ SCOPE <%s>  -----\n", s.label)
 
 	for k, v := range s.symbols {
 		str += fmt.Sprintf("%s : ", k)
@@ -114,4 +137,21 @@ func (s *Scope) String() string {
 
 func (s *Scope) IsEmpty() bool {
 	return len(s.symbols) == 0
+}
+
+func (s *Scope) DebugPrintChildrenScopes() {
+
+	for _, symbol := range s.symbols {
+		definition := AsDefined(symbol.Type())
+
+		if definition == nil {
+			continue
+		}
+
+		if definition.scope.IsEmpty() {
+			continue
+		}
+
+		fmt.Println(definition.scope)
+	}
 }

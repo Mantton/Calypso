@@ -51,6 +51,10 @@ func (t *SymbolTable) GetNodeType(n ast.Node) types.Type {
 
 func (t *SymbolTable) DebugPrintScopes() {
 
+	fmt.Println("GLOBAL")
+	// fmt.Println(types.GlobalScope)
+	types.GlobalScope.DebugPrintChildrenScopes()
+
 	fmt.Println("PARENT")
 	fmt.Println(t.Main)
 
@@ -61,4 +65,5 @@ func (t *SymbolTable) DebugPrintScopes() {
 		}
 		fmt.Println(scope)
 	}
+
 }

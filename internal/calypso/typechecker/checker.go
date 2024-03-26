@@ -8,6 +8,8 @@ import (
 
 type CheckerMode byte
 
+const DEBUG = true
+
 const (
 	//  Standard Library, Certain Restrictions are lifted
 	STD CheckerMode = iota
@@ -23,6 +25,7 @@ type Checker struct {
 	// scope   *types.Scope
 	// fn      *types.FunctionSignature
 	table *SymbolTable
+	ctx   *NodeContext
 	// lhsType types.Type
 	file    *ast.File
 	fileSet *ast.FileSet
@@ -52,5 +55,5 @@ func (c *Checker) GlobalDefine(s types.Symbol) error {
 }
 
 func (c *Checker) GlobalFind(n string) (types.Symbol, bool) {
-	return c.ParentScope().Resolve(n)
+	return c.ParentScope().Resolve(n, c.ParentScope())
 }

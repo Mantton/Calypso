@@ -27,7 +27,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 
 	n := expr.Identifier.Value
 
-	def, ok := ctx.scope.Resolve(n)
+	def, ok := ctx.scope.Resolve(n, c.ParentScope())
 
 	var typ types.Type
 
@@ -139,7 +139,7 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 	d := types.NewTypeParam(e.Identifier.Value, nil, nil)
 
 	for _, eI := range e.Standards {
-		sym, ok := ctx.scope.Resolve(eI.Value)
+		sym, ok := ctx.scope.Resolve(eI.Value, c.ParentScope())
 
 		if !ok {
 			c.addError(
@@ -169,7 +169,7 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 
 func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 	element := c.evaluateTypeExpression(expr.Element, tPs, ctx)
-	sym, ok := ctx.scope.Resolve("Array") // TODO: This should be different
+	sym, ok := ctx.scope.Resolve("Array", c.ParentScope()) // TODO: This should be different
 
 	if !ok {
 		c.addError("unable to find array type", expr.Range())
@@ -185,7 +185,7 @@ func (c *Checker) evaluateMapTypeExpression(expr *ast.MapTypeExpression, tPs []*
 	key := c.evaluateTypeExpression(expr.Key, tPs, ctx)
 	value := c.evaluateTypeExpression(expr.Value, tPs, ctx)
 
-	sym, ok := ctx.scope.Resolve("Map")
+	sym, ok := ctx.scope.Resolve("Map", c.ParentScope())
 
 	if !ok {
 		c.addError("unable to find map type", expr.Range())

@@ -47,10 +47,10 @@ var globalTypes = map[BasicType]*Basic{
 }
 
 func init() {
-	GlobalScope = NewScope(nil)
+	GlobalScope = NewScope(nil, "__cly__global_scope")
 	// Define Global Types
 	for _, t := range globalTypes {
-		s := NewScope(GlobalScope)
+		s := NewScope(GlobalScope, "__cly_type__"+t.Name())
 		d := NewDefinedType(t.name, t, nil, s)
 		err := GlobalScope.Define(d)
 
