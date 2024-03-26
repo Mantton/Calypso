@@ -108,36 +108,7 @@ func (c *Checker) evaluatePointerTypeExpression(expr *ast.PointerTypeExpression,
 	return v
 }
 
-func (c *Checker) evaluateFunctionSignature(e *ast.FunctionExpression, ctx *NodeContext) *types.FunctionSignature {
-
-	sg := types.NewFunctionSignature()
-
-	if (e.GenericParams) != nil {
-		panic("TODO")
-	}
-
-	// Parameters
-	for _, p := range e.Parameters {
-		t := c.evaluateTypeExpression(p.Type, nil, ctx)
-		v := types.NewVar(p.Name.Value, t)
-		sg.AddParameter(v)
-	}
-
-	// Annotated Return Type
-	if e.ReturnType != nil {
-		t := c.evaluateTypeExpression(e.ReturnType, nil, ctx)
-		sg.Result = types.NewVar("", t)
-	} else {
-		c.addError("missing return value in function signature", e.Range())
-		sg.Result = types.NewVar("", unresolved)
-	}
-
-	return sg
-}
-
-func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpression, ctx *NodeContext) types.Type {
-	d := types.NewTypeParam(e.Identifier.Value, nil, nil)
-
+func (c *Checker) evaluateTypeParamterStandards(e *ast.GenericParameterExpression, tP *types.TypeParam, ctx *NodeContext) {
 	for _, eI := range e.Standards {
 		sym, ok := ctx.scope.Resolve(eI.Value, c.ParentScope())
 
@@ -146,7 +117,7 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 				fmt.Sprintf("`%s` cannot be found in context.", eI.Value),
 				e.Identifier.Range(),
 			)
-			return unresolved
+			return
 		}
 
 		s, ok := sym.Type().Parent().(*types.Standard)
@@ -157,14 +128,13 @@ func (c *Checker) evaluateGenericParameterExpression(e *ast.GenericParameterExpr
 					fmt.Sprintf("`%s` is not a standard", eI.Value),
 					e.Identifier.Range(),
 				)
-				return unresolved
+				return
 			}
 		}
 
-		d.AddConstraint(s)
+		tP.AddConstraint(s)
 
 	}
-	return d
 }
 
 func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {

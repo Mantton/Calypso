@@ -7,7 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, node ast.Expression) error {
+func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, node ast.Node, allowGeneric bool) error {
 	// fmt.Println("[ASSIGNMENT]", v.Name(), "of Type", v.Type(), "to", t)
 	// if LHS has not been assigned a value
 	expected := variable.Type()
@@ -17,7 +17,9 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 		case provided == types.LookUp(types.NilLiteral):
 			return fmt.Errorf("use of unspecialized nil in assignment")
 		case types.IsGeneric(provided):
-			if param := types.AsTypeParam(provided); param != nil && param.Bound != nil {
+			if allowGeneric {
+				expected = provided
+			} else if param := types.AsTypeParam(provided); param != nil && param.Bound != nil {
 				expected = param.Bound
 			} else {
 				err := fmt.Errorf("unable to infer specialization of generic type `%s`", provided)

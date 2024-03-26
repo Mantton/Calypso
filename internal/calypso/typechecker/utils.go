@@ -48,7 +48,7 @@ func (s Specializations) specialize(tParam *types.TypeParam, provided types.Type
 	// Specialization Found
 	// has been specialized, ensure strict match
 	temp := types.NewVar("", currentSpec)
-	err := c.validateAssignment(temp, provided, expr)
+	err := c.validateAssignment(temp, provided, expr, false)
 
 	if err != nil {
 		return err

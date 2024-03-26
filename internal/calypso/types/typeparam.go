@@ -47,3 +47,44 @@ func (n *TypeParam) Unwrapped() Type {
 	}
 	return n
 }
+
+func (n *TypeParam) ResolveField(field string) Type {
+
+	if n.Bound != nil {
+		panic("not implemented")
+	}
+
+	if len(n.Constraints) == 0 {
+		return nil
+	}
+
+	options := FunctionList{}
+
+	for _, constraint := range n.Constraints {
+		fn, ok := constraint.Signature[field]
+
+		if !ok {
+
+			t, ok := constraint.Types[field]
+			if ok {
+				return t
+			}
+
+			continue
+		}
+
+		options = append(options, fn)
+	}
+
+	switch len(options) {
+	case 0:
+		return nil
+	case 1:
+		return options[0].Sg()
+	default:
+		set := NewFunctionSet(options[0])
+		set.Instances = append(set.Instances, options[1:]...)
+		return set
+	}
+
+}

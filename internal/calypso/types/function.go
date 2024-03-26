@@ -16,6 +16,9 @@ type FunctionSignature struct {
 	TypeParameters []*TypeParam
 	Parameters     []*Var
 	Result         *Var
+	IsAsync        bool
+	IsStatic       bool
+	IsMutating     bool
 }
 
 func (t *FunctionSignature) clyT()        {}
@@ -79,8 +82,10 @@ func (n *Function) SetSignature(sg *FunctionSignature) {
 	n.SetType(sg)
 }
 
-func (sg *FunctionSignature) AddTypeParameter(t *TypeParam) {
+func (sg *FunctionSignature) AddTypeParameter(t *TypeParam) error {
 	sg.TypeParameters = append(sg.TypeParameters, t)
+	return sg.Scope.Define(t)
+
 }
 
 func (sg *FunctionSignature) AddParameter(t *Var) {

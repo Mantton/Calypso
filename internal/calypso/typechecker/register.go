@@ -7,7 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *types.Scope) {
+func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *types.Scope) *types.Function {
 	// Create new function
 
 	sg := types.NewFunctionSignature()
@@ -22,9 +22,13 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
-		for range e.GenericParams.Parameters {
-			d := types.NewTypeParam(e.Identifier.Value, nil, types.LookUp(types.Placeholder))
-			sg.AddTypeParameter(d)
+		for _, p := range e.GenericParams.Parameters {
+			d := types.NewTypeParam(p.Identifier.Value, nil, nil)
+			err := sg.AddTypeParameter(d)
+
+			if err != nil {
+				c.addError(err.Error(), p.Identifier.Range())
+			}
 		}
 	}
 
@@ -33,7 +37,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 
 		// Placeholder / Discard
 
-		v := types.NewVar(p.Name.Value, types.LookUp(types.Placeholder))
+		v := types.NewVar(p.Name.Value, unresolved)
 
 		// Parameter Has Required Label
 		if p.Label.Value != "_" {
@@ -54,8 +58,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 
 	// Annotated Return Type
 	if e.ReturnType != nil {
-		// t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters, ctx)
-		sg.Result = types.NewVar("result", types.LookUp(types.Placeholder))
+		sg.Result = types.NewVar("result", unresolved)
 	} else {
 		sg.Result = types.NewVar("result", types.LookUp(types.Void))
 	}
@@ -66,6 +69,8 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	if err != nil {
 		c.addError(err.Error(), e.Identifier.Range())
 	}
+
+	return def
 }
 
 func (c *Checker) registerConformance(d *ast.ConformanceDeclaration) {
@@ -100,7 +105,7 @@ func (c *Checker) registerConformance(d *ast.ConformanceDeclaration) {
 	// Types
 	ctx := NewContext(tDefinition.GetScope(), nil, nil)
 	for _, t := range d.Types {
-		c.checkTypeStatement(t, standard, ctx)
+		c.defineAlias(t, ctx)
 	}
 
 	// Functions
@@ -148,4 +153,71 @@ func (c *Checker) resolve(n *ast.IdentifierExpression, core ast.Node, scope *typ
 		return types.AsDefined(def)
 	}
 	return c.define(n, core, scope)
+}
+
+func (c *Checker) registerTypeParameters(g *ast.GenericParametersClause, t *types.DefinedType) {
+	if g == nil || t == nil {
+		return
+	}
+
+	for _, p := range g.Parameters {
+		d := types.NewTypeParam(p.Identifier.Value, nil, nil)
+		err := t.AddTypeParameter(d)
+
+		if err != nil {
+			c.addError(err.Error(), p.Identifier.Range())
+		}
+	}
+}
+
+func (c *Checker) registerFunctionSignatures(e *ast.FunctionExpression) *types.FunctionSignature {
+
+	fn, ok := c.table.fns[e]
+
+	if !ok {
+		panic("passes missed function")
+	}
+
+	sg := fn.Sg()
+
+	if sg == nil {
+		return nil
+	}
+
+	ctx := NewContext(sg.Scope, sg, nil)
+	//  Generic Params
+	if e.GenericParams != nil {
+		for i, p := range e.GenericParams.Parameters {
+			tP := sg.TypeParameters[i]
+			c.evaluateTypeParamterStandards(p, tP, ctx)
+		}
+	}
+
+	// Parameters
+	for i, p := range e.Parameters {
+		param := sg.Parameters[i]
+
+		// Type Check Parameter Value
+		t := c.evaluateTypeExpression(p.Type, sg.TypeParameters, ctx)
+		err := c.validateAssignment(param, t, p, true)
+		if err != nil {
+			c.addError(err.Error(), p.Range())
+		}
+	}
+
+	// Annotated Return Type
+	if e.ReturnType != nil {
+		t := c.evaluateTypeExpression(e.ReturnType, sg.TypeParameters, ctx)
+		err := c.validateAssignment(sg.Result, t, e.ReturnType, true)
+
+		if err != nil {
+			c.addError(err.Error(), e.ReturnType.Range())
+		}
+	}
+
+	sg.IsAsync = e.IsAsync
+	sg.IsMutating = e.IsMutating
+	sg.IsStatic = e.IsStatic
+
+	return sg
 }

@@ -7,39 +7,23 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) checkDeclaration(decl ast.Declaration, ctx *NodeContext) {
-	fmt.Printf(
-		"Checking Declaration: %T @ Line %d\n",
-		decl,
-		decl.Range().Start.Line,
-	)
-	switch decl := decl.(type) {
-	case *ast.ConstantDeclaration:
-		c.checkStatement(decl.Stmt, ctx)
-	case *ast.FunctionDeclaration:
-		c.checkExpression(decl.Func, ctx)
-	case *ast.StatementDeclaration:
-		c.checkStatement(decl.Stmt, ctx)
-	case *ast.StandardDeclaration:
-		c.checkStandardDeclaration(decl)
-	case *ast.ConformanceDeclaration:
-		c.checkConformanceDeclaration(decl)
-	case *ast.ExtensionDeclaration:
-		c.checkExtensionDeclaration(decl)
-	case *ast.ExternDeclaration:
-		break // Function Signature is registered in first loop through
-	default:
-		msg := fmt.Sprintf("declaration check not implemented, %T", decl)
-		panic(msg)
-	}
-}
-
 func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 	standard := c.resolve(d.Identifier, d, c.ctx.scope)
-	scope := standard.GetScope()
+
+	if standard == nil {
+		return
+	}
 	underlying := standard.Parent().(*types.Standard)
-	// Loop through statements in standard definition
+
+	if underlying == nil {
+		return
+	}
+
+	scope := standard.GetScope()
 	ctx := NewContext(scope, nil, nil)
+
+	// Loop through statements in standard definition
+
 	for _, expr := range d.Block.Statements {
 
 		switch node := expr.(type) {
@@ -49,20 +33,20 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 			// Parser ensures only signatures & no function bodies in standard decl
 
 			// evaluate Function Signature
-			sg := c.evaluateFunctionSignature(node.Func, ctx)
+			sg := c.registerFunctionSignatures(node.Func)
 
 			f := types.NewFunction(n, sg)
 			// Add method
-			err := standard.AddMethod(n, f)
+			ok := underlying.AddMethod(n, f)
 
 			// already defined in standard, add error
-			if err != nil {
+			if !ok {
 				c.addError(fmt.Sprintf("`%s` is already defined in `%s`", n, standard.Name()), node.Range())
 				continue
 			}
 
 		case *ast.TypeStatement:
-			c.checkTypeStatement(node, underlying, ctx)
+			c.checkTypeStatement(node, ctx)
 
 		default:
 			c.addError("cannot use statement in standard declaration", node.Range())
@@ -106,7 +90,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	ctx := NewContext(scope, nil, nil)
 	// Inject types into scope
 	for _, node := range d.Types {
-		c.checkTypeStatement(node, nil, ctx)
+		c.checkTypeStatement(node, ctx)
 	}
 
 	// ensure all required types have been injected
@@ -129,7 +113,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	}
 
 	// add functions to type
-	c.injectFunctionsInType(typ, d.Signatures)
+	c.injectFunctionsInType(d.Signatures, typ)
 
 	// Ensure All Functions of Standard are implemented
 	for _, eFn := range s.Signature {
@@ -171,44 +155,24 @@ func (c *Checker) checkExtensionDeclaration(d *ast.ExtensionDeclaration) {
 		return
 	}
 
-	c.injectFunctionsInType(typ, d.Content)
+	c.injectFunctionsInType(d.Content, typ)
 }
 
-func (c *Checker) injectFunctionsInType(typ *types.DefinedType, fns []*ast.FunctionStatement) {
+func (c *Checker) injectFunctionsInType(fns []*ast.FunctionStatement, t *types.DefinedType) {
 	// Define Functions in Type Scope
 	for _, stmt := range fns {
-		c.evaluateFunctionExpression(stmt.Func, typ)
-	}
-}
+		fn := stmt.Func
+		sg := c.registerFunctionSignatures(fn)
 
-func (c *Checker) checkExternDeclaration(n *ast.ExternDeclaration) {
-	target := n.Target
-	fmt.Printf("[DEBUG] External Target \"%s\"\n", target.Value)
-
-	ctx := NewContext(c.ParentScope(), nil, nil)
-	for _, node := range n.Signatures {
-		// eval function
-		fn := types.NewFunction(node.Func.Identifier.Value, nil)
-		fn.Target = &types.FunctionTarget{
-			Target: target.Value,
-		}
-
-		err := c.GlobalDefine(fn)
-
-		// Define in type scope
-		if err != nil {
-			c.addError(
-				err.Error(),
-				node.Func.Identifier.Range())
+		if sg.IsStatic {
 			continue
 		}
 
-		// Resolve Function Body
-		sg := c.evaluateFunctionSignature(node.Func, ctx)
-		fn.SetSignature(sg)
+		// Inject `self`
+		self := types.NewVar("self", t)
+		self.Mutable = sg.IsMutating
 
-		if types.IsGeneric(sg) {
-			c.addError("external function cannot be generic", node.Func.Identifier.Range())
-		}
+		// Default
+		sg.Scope.Define(self)
 	}
 }

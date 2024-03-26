@@ -14,3 +14,16 @@ func NewVar(name string, t Type) *Var {
 		},
 	}
 }
+
+func AsVar(t Symbol) *Var {
+	if t == nil {
+		return nil
+	}
+	v, ok := t.(*Var)
+
+	if !ok {
+		return nil
+	}
+
+	return v
+}

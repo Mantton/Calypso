@@ -32,7 +32,7 @@ func (c *Checker) checkExpression(expr ast.Expression, ctx *NodeContext) {
 }
 
 func (c *Checker) checkFunctionExpression(e *ast.FunctionExpression) {
-	c.evaluateFunctionExpression(e, nil)
+	c.evaluateFunctionExpression(e)
 }
 
 func (c *Checker) checkAssignmentExpression(expr *ast.AssignmentExpression, ctx *NodeContext) {
@@ -571,7 +571,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Spe
 	}
 
 	// resolve non generic types
-	err := c.validateAssignment(f, vT, v)
+	err := c.validateAssignment(f, vT, v, false)
 	return err
 }
 
@@ -595,6 +595,11 @@ func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression, ctx *
 
 	switch a := a.(type) {
 	case *types.DefinedType:
+		f := a.ResolveField(field)
+		if f != nil {
+			return f
+		}
+	case *types.TypeParam:
 		f := a.ResolveField(field)
 		if f != nil {
 			return f
@@ -667,28 +672,24 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	return instance
 }
 
-func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression, self *types.DefinedType) types.Type {
+func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression) types.Type {
 
 	fn, ok := c.table.fns[e]
 
 	if !ok {
-		return unresolved
+		panic("passes missed function")
 	}
 
 	sg := fn.Sg()
 
-	// inject `self`
-	if self != nil {
-		s := types.NewVar("self", self)
-		sg.Scope.Define(s)
+	if sg == nil {
+		return unresolved
 	}
+
 	// Body
 	newCtx := NewContext(sg.Scope, sg, nil)
 	c.checkBlockStatement(e.Body, newCtx)
 
-	// TODO:
-	// Ensure All Generic Params are used
-	// Ensure All Params are used
 	return sg
 }
 

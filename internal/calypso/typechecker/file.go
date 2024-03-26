@@ -44,7 +44,12 @@ Local Functions Signatures,
 Passes 5-8
 */
 func (c *Checker) pass() {
-	passes := []func(*ast.File){c.pass0, c.pass1, c.pass2, c.pass3, c.pass4}
+	passes := []func(*ast.File){
+		// Set 1 - White
+		c.pass0, c.pass1, c.pass2, c.pass3, c.pass4,
+		// Set 2
+		c.pass5, c.pass6, c.pass7, c.pass8,
+	}
 
 	for _, pass := range passes {
 		for _, file := range c.fileSet.Files {
@@ -56,6 +61,20 @@ func (c *Checker) pass() {
 
 // Collects Types & Standards
 func (c *Checker) pass0(f *ast.File) {
+
+	// Types
+	for _, d := range f.Nodes.Types {
+		alias := c.defineAlias(d, c.ctx)
+		if alias == nil {
+			continue
+		}
+		if d.GenericParams != nil {
+			for _, p := range d.GenericParams.Parameters {
+				d := types.NewTypeParam(p.Identifier.Value, nil, nil)
+				alias.AddTypeParameter(d)
+			}
+		}
+	}
 
 	// Standards
 	for _, d := range f.Nodes.Standards {
@@ -78,23 +97,21 @@ func (c *Checker) pass0(f *ast.File) {
 			}
 		}
 	}
-
-	// Types
-	for _, d := range f.Nodes.Types {
-		c.defineAlias(d, c.ctx)
-	}
 }
 
 // Pass 1 - Collect Composite Types
 func (c *Checker) pass1(f *ast.File) {
 	// Enums
 	for _, d := range f.Nodes.Enums {
-		c.define(d.Identifier, d, c.ParentScope())
+		def := c.define(d.Identifier, d, c.ParentScope())
+		c.registerTypeParameters(d.GenericParams, def)
+
 	}
 
 	// Structs
 	for _, d := range f.Nodes.Structs {
-		c.define(d.Identifier, d, c.ParentScope())
+		def := c.define(d.Identifier, d, c.ParentScope())
+		c.registerTypeParameters(d.GenericParams, def)
 	}
 }
 
@@ -147,7 +164,8 @@ func (c *Checker) pass4(f *ast.File) {
 	// External Functions
 	for _, d := range f.Nodes.ExternalFunctions {
 		for _, fn := range d.Signatures {
-			c.registerFunctionExpression(fn.Func, c.ParentScope())
+			def := c.registerFunctionExpression(fn.Func, c.ParentScope())
+			def.Target = &types.FunctionTarget{Target: d.Target.Value}
 		}
 	}
 	// Functions
@@ -157,6 +175,86 @@ func (c *Checker) pass4(f *ast.File) {
 }
 
 // At this point, all required entries are in scope, their RHS Values & bodies are left to color
+// eval types, enums, structs & standards
 func (c *Checker) pass5(f *ast.File) {
 
+	// Types
+	for _, d := range f.Nodes.Types {
+		c.checkTypeStatement(d, c.ctx)
+	}
+
+	// Enums
+	for _, d := range f.Nodes.Enums {
+		c.checkEnumStatement(d, c.ctx)
+	}
+
+	// Structs
+	for _, d := range f.Nodes.Structs {
+		c.checkStructStatement(d, c.ctx)
+	}
+
+	// Variables
+	for _, d := range f.Nodes.Constants {
+		c.checkVariableStatement(d.Stmt, c.ctx, true)
+	}
+
+	// Standards
+	for _, d := range f.Nodes.Standards {
+		c.checkStandardDeclaration(d)
+	}
+}
+
+// Functions Signatures
+func (c *Checker) pass6(f *ast.File) {
+	// Conformance Types & Functions
+	for _, d := range f.Nodes.Conformances {
+		c.checkConformanceDeclaration(d)
+	}
+
+	// Extensions
+	for _, d := range f.Nodes.Extensions {
+		c.checkExtensionDeclaration(d)
+	}
+
+	// External Functions
+	for _, d := range f.Nodes.ExternalFunctions {
+		for _, fn := range d.Signatures {
+			sg := c.registerFunctionSignatures(fn.Func)
+
+			if types.IsGeneric(sg) {
+				c.addError(fmt.Sprintf("external function %s cannot be generic", fn.Func.Identifier.Value), fn.Range())
+			}
+		}
+	}
+	// Functions
+	for _, d := range f.Nodes.Functions {
+		c.registerFunctionSignatures(d.Func)
+	}
+}
+
+// constraint checking
+func (c *Checker) pass7(f *ast.File) {
+
+}
+
+// bodies
+func (c *Checker) pass8(f *ast.File) {
+	for _, d := range f.Nodes.Conformances {
+		for _, e := range d.Signatures {
+			c.evaluateFunctionExpression(e.Func)
+		}
+	}
+
+	// Extensions
+	for _, d := range f.Nodes.Extensions {
+		for _, e := range d.Content {
+			c.evaluateFunctionExpression(e.Func)
+		}
+	}
+	// NOTE: External Functions are complete
+
+	// Functions
+	for _, d := range f.Nodes.Functions {
+		c.evaluateFunctionExpression(d.Func)
+	}
 }

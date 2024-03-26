@@ -272,7 +272,7 @@ func TestExternDeclaration(t *testing.T) {
 		}
 
 		fn main() {
-			const ptr = malloc(20);
+			const ptr = malloc(size: 20);
 		}
 	`
 

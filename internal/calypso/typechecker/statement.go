@@ -21,7 +21,7 @@ func (c *Checker) checkStatement(stmt ast.Statement, ctx *NodeContext) {
 		if ctx.scope == c.ParentScope() {
 			return
 		}
-		c.checkVariableStatement(stmt, ctx)
+		c.checkVariableStatement(stmt, ctx, false)
 	case *ast.BlockStatement:
 		panic("CALL `checkBlockStatement` DIRECTLY")
 	case *ast.ReturnStatement:
@@ -39,7 +39,7 @@ func (c *Checker) checkStatement(stmt ast.Statement, ctx *NodeContext) {
 	case *ast.WhileStatement:
 		c.checkWhileStatement(stmt, ctx)
 	case *ast.TypeStatement:
-		c.checkTypeStatement(stmt, nil, ctx)
+		c.checkTypeStatement(stmt, ctx)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -56,18 +56,32 @@ func (c *Checker) checkBlockStatement(blk *ast.BlockStatement, ctx *NodeContext)
 	}
 }
 
-func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement, ctx *NodeContext) {
+func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement, ctx *NodeContext, global bool) {
 
-	def := types.NewVar(stmt.Identifier.Value, unresolved)
-	def.Mutable = !stmt.IsConstant
-	err := ctx.scope.Define(def)
+	var def *types.Var
+	if !global {
+		def = types.NewVar(stmt.Identifier.Value, unresolved)
+		def.Mutable = !stmt.IsConstant
+		err := ctx.scope.Define(def)
 
-	if err != nil {
-		c.addError(
-			fmt.Sprintf(err.Error(), def.Name()),
-			stmt.Identifier.Range(),
-		)
-		return
+		if err != nil {
+			c.addError(
+				fmt.Sprintf(err.Error(), def.Name()),
+				stmt.Identifier.Range(),
+			)
+			return
+		}
+	} else {
+		symbol := c.ParentScope().MustResolve(stmt.Identifier.Value)
+
+		if symbol == nil {
+			return
+		}
+
+		def = types.AsVar(symbol)
+		if def == nil {
+			return
+		}
 	}
 
 	var annotation types.Type
@@ -80,7 +94,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement, ctx *NodeC
 
 	initializer := c.evaluateExpression(stmt.Value, ctx)
 
-	err = c.validateAssignment(def, initializer, stmt.Value)
+	err := c.validateAssignment(def, initializer, stmt.Value, false)
 	if err != nil {
 		c.addError(
 			err.Error(),
@@ -110,7 +124,7 @@ func (c *Checker) checkReturnStatement(stmt *ast.ReturnStatement, ctx *NodeConte
 	provided := c.evaluateExpression(stmt.Value, ctx)
 
 	// return type is already set, validate
-	err := c.validateAssignment(fn.Result, provided, stmt.Value)
+	err := c.validateAssignment(fn.Result, provided, stmt.Value, false)
 
 	if err != nil {
 		c.addError(err.Error(), stmt.Range())
@@ -150,18 +164,9 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext)
 
 	// 2  Parse Generic Params
 	if n.GenericParams != nil {
-		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p, ctx)
-			if t == unresolved {
-				continue
-			}
-
-			err := def.AddTypeParameter(types.AsTypeParam(t))
-			if err != nil {
-				c.addError(err.Error(), p.Identifier.Range())
-				return
-			}
-
+		for i, p := range n.GenericParams.Parameters {
+			tP := def.TypeParameters[i]
+			c.evaluateTypeParamterStandards(p, tP, ctx)
 		}
 
 	}
@@ -190,22 +195,10 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
 
 	// 2  Parse Generic Params
 	if n.GenericParams != nil {
-		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p, ctx)
-			if t == unresolved {
-				continue
-			}
-
-			tP := t.(*types.TypeParam)
-			err := def.AddTypeParameter(tP)
-
-			if err != nil {
-				c.addError(err.Error(), p.Identifier.Range())
-				return
-			}
-
+		for i, p := range n.GenericParams.Parameters {
+			tP := def.TypeParameters[i]
+			c.evaluateTypeParamterStandards(p, tP, ctx)
 		}
-
 	}
 
 	cases := make(map[string]bool)
@@ -349,9 +342,10 @@ func (c *Checker) checkWhileStatement(n *ast.WhileStatement, ctx *NodeContext) {
 	c.checkBlockStatement(n.Action, newCtx)
 }
 
-func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Standard, ctx *NodeContext) {
-	var alias *types.Alias
+func (c *Checker) checkTypeStatement(n *ast.TypeStatement, ctx *NodeContext) {
 
+	// Fetch Alias
+	var alias *types.Alias
 	for alias == nil {
 		if v, ok := c.table.tNodes[n]; ok {
 			alias = types.AsAlias(v)
@@ -360,31 +354,16 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, standard *types.Stand
 		}
 	}
 
-	// 2 - Add to Standard
-	if standard != nil {
-		standard.AddType(alias)
-	}
+	// 2 - Evaluate Type Paramters
 
-	// 3 - Type Parameters
-
-	hasError := false
 	if n.GenericParams != nil {
-		for _, p := range n.GenericParams.Parameters {
-			t := c.evaluateGenericParameterExpression(p, ctx)
-			if t == unresolved {
-				continue
-			}
-
-			tP := t.(*types.TypeParam)
-			alias.AddTypeParameter(tP)
+		for i, p := range n.GenericParams.Parameters {
+			tP := alias.TypeParameters[i]
+			c.evaluateTypeParamterStandards(p, tP, ctx)
 		}
 	}
 
-	if hasError {
-		return
-	}
-
-	// 4 - RHS Type
+	// 3 - RHS Type
 	var RHS types.Type
 
 	if n.Value != nil {
