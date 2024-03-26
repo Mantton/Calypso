@@ -15,7 +15,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	c.table.DefineFunction(e, def)
 
 	// Enter Function Scope
-	sg.Scope = types.NewScope(scope, "__cly__fn__"+e.Identifier.Value)
+	sg.Scope = types.NewScope(scope, e.Identifier.Value)
 	c.table.AddScope(e, sg.Scope)
 
 	// ctx := NewContext(sg.Scope, sg, nil)
@@ -115,7 +115,7 @@ func (c *Checker) registerConformance(d *ast.ConformanceDeclaration) {
 }
 
 func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *types.Scope) *types.DefinedType {
-	scope := types.NewScope(parent, "__cly__type__"+n.Value)
+	scope := types.NewScope(parent, n.Value)
 	c.table.AddScope(core, scope)
 	def := types.NewDefinedType(n.Value, unresolved, nil, scope)
 	err := parent.Define(def)

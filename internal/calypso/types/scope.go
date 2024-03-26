@@ -36,7 +36,7 @@ func (s *Scope) defineNonFnSymbol(e Symbol) error {
 
 	// if already defined in scope, return false
 	if ok {
-		return fmt.Errorf("invalid redeclaration of \"%s\"", k)
+		return fmt.Errorf("invalid redeclaration of symbol \"%s\"", k)
 	}
 
 	s.symbols[k] = e
@@ -73,7 +73,7 @@ func (s *Scope) defineFnSymbol(fn *Function) error {
 	case *FunctionSet:
 		return t.Add(fn)
 	default:
-		return fmt.Errorf("invalid redeclaration of %s", fn.name)
+		return fmt.Errorf("invalid redeclaration of function %s", fn.name)
 	}
 
 }

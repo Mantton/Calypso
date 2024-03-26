@@ -51,8 +51,8 @@ func buildFromPath(path string) error {
 }
 
 func buildFromFile(pth string) error {
-	fmt.Println("Build from file", pth)
-	return nil
+	set := &utils.FileSet{FilesPaths: []string{pth}}
+	return builder.CompileFileSet(set, typechecker.USER)
 }
 
 /*

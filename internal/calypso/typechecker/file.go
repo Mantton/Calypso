@@ -10,7 +10,7 @@ import (
 
 func (c *Checker) Check() (*SymbolTable, error) {
 
-	main := types.NewScope(types.GlobalScope, "__cly__main__scope")
+	main := types.NewScope(types.GlobalScope, "MAIN_SCOPE")
 	main.Parent = types.GlobalScope
 	c.table.Main = main
 	c.ctx = NewContext(main, nil, nil)

@@ -135,6 +135,10 @@ func (s *FunctionSet) Compare(provided, expected *FunctionSignature, strict bool
 		if err != nil {
 			return false
 		}
+
+		if len(expected.TypeParameters) != len(provided.TypeParameters) {
+			return false
+		}
 	}
 
 	// uneven parameter count

@@ -8,7 +8,7 @@ import (
 
 type CheckerMode byte
 
-const DEBUG = true
+const DEBUG = false
 
 const (
 	//  Standard Library, Certain Restrictions are lifted
