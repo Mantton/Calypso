@@ -6,7 +6,6 @@ import (
 
 func NewExecutable(file *ast.File) *Executable {
 	return &Executable{
-		IncludedFile: file,
-		Modules:      make(map[string]*Module),
+		Modules: make(map[string]*Module),
 	}
 }

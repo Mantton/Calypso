@@ -22,7 +22,7 @@ func MustCompile(input string, t *testing.T) *SymbolTable {
 		t.Fatalf("expected no errors, got \n\t%s", c.Errors)
 	}
 
-	return res
+	return res.Table
 }
 
 func TestConstantDeclaration(t *testing.T) {

@@ -8,7 +8,12 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (c *Checker) Check() (*SymbolTable, error) {
+type Module struct {
+	Table   *SymbolTable
+	FileSet *ast.FileSet
+}
+
+func (c *Checker) Check() (*Module, error) {
 
 	main := types.NewScope(types.GlobalScope, "MAIN_SCOPE")
 	main.Parent = types.GlobalScope
@@ -26,7 +31,10 @@ func (c *Checker) Check() (*SymbolTable, error) {
 		return nil, errors.New(c.Errors.String())
 	}
 
-	return c.table, nil
+	return &Module{
+		Table:   c.table,
+		FileSet: c.fileSet,
+	}, nil
 }
 
 /*
