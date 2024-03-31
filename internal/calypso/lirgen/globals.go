@@ -20,6 +20,6 @@ func (b *builder) genConstant(c *ast.ConstantDeclaration) {
 		panic("not a constant value")
 	}
 
-	emitGlobalVar(b.Mod, value, ident)
+	b.emitGlobalVar(b.Mod, value, ident)
 
 }

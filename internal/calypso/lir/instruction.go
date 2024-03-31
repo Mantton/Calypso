@@ -29,6 +29,9 @@ type Return struct {
 	Result Value
 }
 
+type ReturnVoid struct {
+}
+
 type Binary struct {
 	yielder
 	Left  Value

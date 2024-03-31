@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/commands/utils"
 	"github.com/mantton/calypso/internal/calypso/lirgen"
 	"github.com/mantton/calypso/internal/calypso/parser"
@@ -15,6 +17,8 @@ func CompileFileSet(set *utils.FileSet, mode typechecker.CheckerMode) error {
 		return err
 	}
 
+	fmt.Println()
+	fmt.Println("----------  TYPECHECKER ----------")
 	c := typechecker.New(mode, astSet)
 	mod, err := c.Check()
 
@@ -22,6 +26,8 @@ func CompileFileSet(set *utils.FileSet, mode typechecker.CheckerMode) error {
 		return err
 	}
 
+	fmt.Println()
+	fmt.Println("----------  LIRGEN ----------")
 	_, err = lirgen.Generate(mod)
 	if err != nil {
 		return err

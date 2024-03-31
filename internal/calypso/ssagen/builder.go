@@ -272,10 +272,7 @@ func (b *builder) resolveExpr(n ast.Expression, fn *ssa.Function) ssa.Value {
 		panic("unable to locate identifier")
 
 	case *ast.AssignmentExpression:
-		a := b.resolveExpr(n.Target, fn)
-		v := b.resolveExpr(n.Value, fn)
-		emitStore(fn, a, v)
-		return nil
+
 	case *ast.BinaryExpression:
 		lhs, rhs := b.resolveExpr(n.Left, fn), b.resolveExpr(n.Right, fn)
 		i := &ssa.Binary{

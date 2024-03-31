@@ -6,15 +6,18 @@ import (
 )
 
 type builder struct {
-	Mod *lir.Module
+	Mod       *lir.Module
+	Functions map[*ast.FunctionExpression]*lir.Function
 }
 
 func build(mod *lir.Module) error {
 	b := &builder{
-		Mod: mod,
+		Mod:       mod,
+		Functions: make(map[*ast.FunctionExpression]*lir.Function),
 	}
 
 	b.pass()
+	b.debugPrint()
 	return nil
 }
 
@@ -23,6 +26,9 @@ func (b *builder) pass() {
 	passes := []func(*ast.File){
 		b.pass0,
 		b.pass1,
+		b.pass2,
+		b.pass3,
+		b.pass4,
 	}
 
 	for _, fn := range passes {
