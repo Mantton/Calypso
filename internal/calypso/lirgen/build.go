@@ -17,7 +17,7 @@ func build(mod *lir.Module) error {
 	}
 
 	b.pass()
-	b.debugPrint()
+	// b.debugPrint()
 	return nil
 }
 

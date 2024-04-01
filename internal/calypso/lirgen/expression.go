@@ -80,10 +80,12 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	typ := b.Mod.TModule.Table.GetNodeType(n)
 
 	if typ == nil {
-		panic("???")
+		i.SetType(types.LookUp(types.Void))
+	} else {
+		i.SetType(typ)
+
 	}
 
-	i.SetType(typ)
 	fn.Emit(i)
 	return i
 }
