@@ -39,12 +39,12 @@ type Binary struct {
 	Right Value
 }
 
-type Branch struct {
+type ConditionalBranch struct {
 	Condition   Value
 	Action      *Block // Then
 	Alternative *Block // Else
 }
 
-type Jump struct {
+type Branch struct {
 	Block *Block
 }

@@ -113,7 +113,7 @@ func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 
 	// Resolve Condition
 	fn.CurrentBlock = entryBlock
-	fn.Emit(&lir.Branch{
+	fn.Emit(&lir.ConditionalBranch{
 		Condition:   cond,
 		Action:      then,
 		Alternative: elseBlock,
@@ -122,7 +122,7 @@ func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 	// Action
 	fn.CurrentBlock = then
 	b.visitBlockStatement(n.Action, fn)
-	fn.Emit(&lir.Jump{
+	fn.Emit(&lir.Branch{
 		Block: done,
 	})
 
@@ -130,7 +130,7 @@ func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 	if n.Alternative != nil {
 		fn.CurrentBlock = elseBlock
 		b.visitBlockStatement(n.Alternative, fn)
-		elseBlock.Emit(&lir.Jump{
+		elseBlock.Emit(&lir.Branch{
 			Block: done,
 		})
 	}
@@ -148,7 +148,7 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 	// Emit Condition
 	fn.CurrentBlock = loop
 	cond := b.evaluateExpression(n.Condition, fn)
-	fn.Emit(&lir.Branch{
+	fn.Emit(&lir.ConditionalBranch{
 		Condition:   cond,
 		Action:      body,
 		Alternative: done,
@@ -157,7 +157,7 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 	// Emit Body
 	fn.CurrentBlock = body
 	b.visitBlockStatement(n.Action, fn)
-	fn.Emit(&lir.Jump{
+	fn.Emit(&lir.Branch{
 		Block: loop,
 	})
 

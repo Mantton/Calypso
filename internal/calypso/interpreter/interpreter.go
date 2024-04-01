@@ -59,9 +59,9 @@ func (i *Interpreter) visitInstruction(n lir.Instruction) {
 		i.visitStoreInstruction(n)
 	case *lir.Call:
 		i.visitCallInstruction(n)
-	case *lir.Jump:
-	case *lir.Return:
 	case *lir.Branch:
+	case *lir.Return:
+	case *lir.ConditionalBranch:
 	case *lir.Binary:
 	default:
 		fmt.Printf("INSTRUCTION %T\n", n)

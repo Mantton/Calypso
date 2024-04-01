@@ -10,7 +10,6 @@ import (
 )
 
 func (b *builder) getValue(v lir.Value) llvm.Value {
-
 	switch v := v.(type) {
 	case *lir.Constant:
 		return b.createConstant(v)
@@ -24,7 +23,6 @@ func (b *builder) getValue(v lir.Value) llvm.Value {
 
 		return lV
 	}
-
 }
 
 func (b *builder) setValue(k lir.Value, v llvm.Value) {
@@ -32,8 +30,6 @@ func (b *builder) setValue(k lir.Value, v llvm.Value) {
 }
 
 func (b *builder) createValue(v lir.Value) llvm.Value {
-	fmt.Printf("[EMIT VALUE] %T\n", v)
-
 	switch v := v.(type) {
 	case *lir.Constant:
 		return b.compiler.createConstant(v)
@@ -110,6 +106,7 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 		return r
 
 	default:
-		panic("TODO: NOT IMPLMENTED")
+		msg := fmt.Sprintf("[LIRGEN] Value not implemented, %T", v)
+		panic(msg)
 	}
 }
