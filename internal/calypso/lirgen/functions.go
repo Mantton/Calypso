@@ -94,7 +94,7 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 	fn := b.Functions[n]
 
 	// Parameters
-	for _, p := range fn.Symbol.Parameters {
+	for _, p := range fn.Signature().Parameters {
 		fn.AddParameter(p)
 	}
 

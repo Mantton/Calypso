@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/commands/utils"
+	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/lirgen"
+	"github.com/mantton/calypso/internal/calypso/llir"
 	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
@@ -28,10 +30,14 @@ func CompileFileSet(set *utils.FileSet, mode typechecker.CheckerMode) error {
 
 	fmt.Println()
 	fmt.Println("----------  LIRGEN ----------")
-	_, err = lirgen.Generate(mod)
+	lirMod, err := lirgen.Generate(mod)
 	if err != nil {
 		return err
 	}
 
+	// return nil
+	exec := lir.NewExecutable()
+	exec.Modules[lirMod.Name()] = lirMod
+	llir.Compile(exec)
 	return nil
 }
