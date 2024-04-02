@@ -50,6 +50,8 @@ func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 			return llvm.ConstInt(c.context.Int1Type(), uint64(o), true)
 		case types.NilLiteral:
 			panic("unreachable")
+		case types.Void:
+			return llvm.ConstPointerNull(c.context.Int1Type())
 		default:
 			panic("basic type constant type has not been defined yet")
 		}

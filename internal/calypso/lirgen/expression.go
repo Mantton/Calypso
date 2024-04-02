@@ -53,6 +53,8 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 		return b.evaluateExpression(e.Expr, fn)
 	case *ast.UnaryExpression:
 		return b.evaluateUnaryExpression(e, fn)
+	case *ast.ShorthandAssignmentExpression:
+		return b.evaluateShortHandExpression(e, fn)
 	default:
 		msg := fmt.Sprintf("unknown expr %T\n", e)
 		panic(msg)
@@ -132,7 +134,7 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 }
 
 func (b *builder) evaluateAssignmentExpression(n *ast.AssignmentExpression, fn *lir.Function) lir.Value {
-	a := b.evaluateExpression(n.Target, fn)
+	a := b.evaluateAddressOfExpression(n.Target, fn)
 	v := b.evaluateExpression(n.Target, fn)
 	b.emitStore(fn, a, v)
 	return nil
@@ -505,4 +507,83 @@ func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn 
 
 	fn.Emit(phi)
 	return phi
+}
+
+func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function) lir.Value {
+	switch n := n.(type) {
+	case *ast.IdentifierExpression:
+		val, ok := fn.Variables[n.Value]
+
+		if !ok {
+			panic("unknown identifier")
+		}
+
+		return val
+	default:
+		panic("unimplmented address of")
+	}
+}
+
+func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpression, fn *lir.Function) lir.Value {
+	var rhs lir.Value
+	addr := b.evaluateAddressOfExpression(n.Target, fn)
+
+	switch n.Op {
+	case token.PLUS_EQ:
+		rhs = b.evaluateArithmeticAddExpression(&ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.MINUS_EQ:
+		rhs = b.evaluateArithmeticSubExpression(&ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.QUO_EQ:
+		rhs = b.evaluateArithmeticDivExpression(&ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.STAR_EQ:
+		rhs = b.evaluateArithmeticMulExpression(&ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.PCT_EQ:
+		rhs = b.evaluateArithmeticRemExpression(&ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.AMP_EQ:
+		rhs = b.evaluateBooleanOp(token.AMP, &ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.BAR_EQ:
+		rhs = b.evaluateBooleanOp(token.BAR, &ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.CARET_EQ:
+		rhs = b.evaluateBooleanOp(token.CARET, &ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.BIT_SHIFT_LEFT_EQ:
+		rhs = b.evaluateBooleanOp(token.BIT_SHIFT_LEFT, &ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+	case token.BIT_SHIFT_RIGHT_EQ:
+		rhs = b.evaluateBooleanOp(token.BIT_SHIFT_RIGHT, &ast.BinaryExpression{
+			Left:  n.Target,
+			Right: n.Right,
+		}, fn)
+
+	default:
+		panic("unimplemented shorthand expression")
+	}
+
+	b.emitStore(fn, addr, rhs)
+	return lir.NewConst(nil, types.LookUp(types.Void))
 }
