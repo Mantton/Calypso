@@ -38,6 +38,9 @@ func CompileFileSet(set *utils.FileSet, mode typechecker.CheckerMode) error {
 	// return nil
 	exec := lir.NewExecutable()
 	exec.Modules[lirMod.Name()] = lirMod
+
+	fmt.Println()
+	fmt.Println("----------  LLVM-IR GEN ----------")
 	llir.Compile(exec)
 	return nil
 }

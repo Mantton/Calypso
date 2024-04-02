@@ -1,8 +1,6 @@
 package llir
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/lir"
 	"tinygo.org/x/go-llvm"
 )
@@ -35,8 +33,6 @@ func newBuilder(fn *lir.Function, c *compiler, b llvm.Builder) *builder {
 }
 
 func (b *builder) buildFunction() {
-	fmt.Printf("[EMITTING FUNC] %s\n", b.lirFn.Name())
-
 	// Create Blocks
 	var entry llvm.BasicBlock
 	for i, block := range b.lirFn.Blocks {

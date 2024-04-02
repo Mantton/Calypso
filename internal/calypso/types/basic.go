@@ -82,6 +82,24 @@ func IsFloatingPoint(t Type) bool {
 	return false
 }
 
+func IsInteger(t Type) bool {
+	switch t := t.(type) {
+	case *Basic:
+		switch t.Literal {
+		case Int, Int8, Int16, Int32, Int64, IntegerLiteral:
+			return true
+		case UInt, UInt8, UInt16, UInt32, UInt64:
+			return true
+		default:
+			return false
+		}
+	case *DefinedType:
+		return IsNumeric(t.Parent())
+	default:
+		return false
+	}
+}
+
 func IsUnsigned(t Type) bool {
 	switch t := t.(type) {
 	case *Basic:

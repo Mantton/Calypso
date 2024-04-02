@@ -8,6 +8,23 @@ import (
 	"tinygo.org/x/go-llvm"
 )
 
+var IntPredicateMap = map[lir.ICompOp]llvm.IntPredicate{
+	lir.EQL: llvm.IntEQ,
+	lir.NEQ: llvm.IntNE,
+
+	// Unsigned:
+	lir.ULSS: llvm.IntULT,
+	lir.UGTR: llvm.IntUGT,
+	lir.UGEQ: llvm.IntUGE,
+	lir.ULEQ: llvm.IntULE,
+
+	// Signed:
+	lir.SLSS: llvm.IntSLT,
+	lir.SGTR: llvm.IntSGT,
+	lir.SGEQ: llvm.IntSGE,
+	lir.SLEQ: llvm.IntSLE,
+}
+
 func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 	switch t := n.Yields().Parent().(type) {
 	case *types.Basic:

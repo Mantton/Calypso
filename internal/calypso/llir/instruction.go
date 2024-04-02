@@ -27,8 +27,7 @@ func (b *builder) visitInstruction(i lir.Instruction) {
 }
 
 func (b *builder) visitYieldingInstruction(i lir.Value) {
-	val := b.createValue(i)
-	b.setValue(i, val)
+	b.getValue(i)
 }
 
 func (b *builder) visitReturnInstruction(i *lir.Return) {

@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/lir"
-	"github.com/mantton/calypso/internal/calypso/token"
-	"github.com/mantton/calypso/internal/calypso/types"
 	"tinygo.org/x/go-llvm"
 )
 
@@ -17,8 +15,9 @@ func (b *builder) getValue(v lir.Value) llvm.Value {
 		lV, ok := b.locals[v]
 
 		if !ok {
-			m := fmt.Sprintf("Val not found: %T", v)
-			panic(m)
+			lV = b.createValue(v)
+			b.setValue(v, lV)
+			return lV
 		}
 
 		return lV
@@ -34,7 +33,7 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 	case *lir.Constant:
 		return b.compiler.createConstant(v)
 	case *lir.Allocate:
-		// TODO: Head/Stack
+		// TODO: Heap/Stack
 		typ := b.compiler.getType(v.Yields())
 		addr := b.CreateAlloca(typ, "")
 		return addr
@@ -43,57 +42,56 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 		typ := b.compiler.getType(v.Address.Yields())
 		val := b.CreateLoad(typ, addr, "")
 		return val
-	case *lir.Binary:
-
-		lhs := b.getValue(v.Left)
+	case *lir.Add:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateAdd(lhs, rhs, "")
+	case *lir.FAdd:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateFAdd(lhs, rhs, "")
+	case *lir.Sub:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateSub(lhs, rhs, "")
+	case *lir.FSub:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateFSub(lhs, rhs, "")
+	case *lir.Mul:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateMul(lhs, rhs, "")
+	case *lir.FMul:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateFMul(lhs, rhs, "")
+	case *lir.UDiv:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateUDiv(lhs, rhs, "")
+	case *lir.SDiv:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateSDiv(lhs, rhs, "")
+	case *lir.FDiv:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateFDiv(lhs, rhs, "")
+	case *lir.URem:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateURem(lhs, rhs, "")
+	case *lir.SRem:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateSRem(lhs, rhs, "")
+	case *lir.FRem:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateFRem(lhs, rhs, "")
+	case *lir.INeg:
 		rhs := b.getValue(v.Right)
-		op := v.Op
-		typ := v.Left.Yields()
+		return b.CreateNeg(rhs, "")
+	case *lir.FNeg:
+		rhs := b.getValue(v.Right)
+		return b.CreateFNeg(rhs, "")
 
-		if typ == nil {
-			fmt.Printf("%T", v.Left)
-			panic("type is nil")
-		}
-
-		switch typ := typ.Parent().(type) {
-		case *types.Basic:
-			switch typ.Literal {
-
-			case types.Bool:
-				switch op {
-				case token.EQL:
-					return b.CreateICmp(llvm.IntEQ, lhs, rhs, "")
-				case token.NEQ:
-					return b.CreateICmp(llvm.IntNE, lhs, rhs, "")
-				}
-
-			case types.Int, types.IntegerLiteral, types.Int64, types.Int32, types.Int16, types.Int8:
-				switch op {
-				case token.PLUS:
-					return b.CreateAdd(lhs, rhs, "")
-				case token.MINUS:
-					return b.CreateSub(lhs, rhs, "")
-				// Compare
-
-				case token.L_CHEVRON:
-					return b.CreateICmp(llvm.IntSLT, lhs, rhs, "")
-				case token.R_CHEVRON:
-					return b.CreateICmp(llvm.IntSGT, lhs, rhs, "")
-				case token.GEQ:
-					return b.CreateICmp(llvm.IntSGE, lhs, rhs, "")
-				case token.LEQ:
-					return b.CreateICmp(llvm.IntSLE, lhs, rhs, "")
-				case token.EQL:
-					return b.CreateICmp(llvm.IntEQ, lhs, rhs, "")
-				case token.NEQ:
-					return b.CreateICmp(llvm.IntNE, lhs, rhs, "")
-				}
-			}
-
-		}
-
-		fmt.Println(token.LookUp(op), typ)
-		panic("not ready")
+	case *lir.ICmp:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		p := IntPredicateMap[v.Comparison]
+		return b.CreateICmp(p, lhs, rhs, "")
+	case *lir.XOR:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateXor(lhs, rhs, "")
 	case *lir.Call:
 		lV, lT := b.getFunction(v.Target.Type)
 		var lA []llvm.Value
@@ -106,7 +104,7 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 		return r
 
 	default:
-		msg := fmt.Sprintf("[LIRGEN] Value not implemented, %T", v)
+		msg := fmt.Sprintf("[LLIRGEN] Value not implemented, %T", v)
 		panic(msg)
 	}
 }
