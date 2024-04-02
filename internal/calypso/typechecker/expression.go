@@ -328,7 +328,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 	}
 
 	switch op {
-	case token.PLUS, token.MINUS, token.QUO, token.STAR:
+	case token.PLUS, token.MINUS, token.QUO, token.STAR, token.PCT:
 		if types.IsNumeric(typ) {
 			return typ
 		}
@@ -343,10 +343,21 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 			return types.LookUp(types.Bool)
 		}
 		panic("EQUATABLE STANDARD NOT IMPLEMENTED")
+
+	case token.DOUBLE_AMP, token.DOUBLE_BAR:
+		if types.IsBoolean(typ) {
+			return typ
+		}
+
+	case token.BIT_SHIFT_LEFT, token.BIT_SHIFT_RIGHT,
+		token.BAR, token.AMP, token.CARET:
+		if types.IsInteger(typ) {
+			return typ
+		}
 	}
 
 	// no matching operand
-	err = fmt.Errorf("unsupported binary operand `%s` on `%s`", token.LookUp(op), lhs)
+	err = fmt.Errorf("unsupported binary operand `%s` on `%s`", op, lhs)
 	c.addError(err.Error(), e.Range())
 	return unresolved
 

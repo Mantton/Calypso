@@ -32,16 +32,7 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 	switch v := v.(type) {
 	case *lir.Constant:
 		return b.compiler.createConstant(v)
-	case *lir.Allocate:
-		// TODO: Heap/Stack
-		typ := b.compiler.getType(v.Yields())
-		addr := b.CreateAlloca(typ, "")
-		return addr
-	case *lir.Load:
-		addr := b.getValue(v.Address)
-		typ := b.compiler.getType(v.Address.Yields())
-		val := b.CreateLoad(typ, addr, "")
-		return val
+
 	case *lir.Add:
 		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
 		return b.CreateAdd(lhs, rhs, "")
@@ -89,22 +80,81 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
 		p := IntPredicateMap[v.Comparison]
 		return b.CreateICmp(p, lhs, rhs, "")
+	case *lir.AND:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateAnd(lhs, rhs, "")
+	case *lir.OR:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateOr(lhs, rhs, "")
 	case *lir.XOR:
 		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
 		return b.CreateXor(lhs, rhs, "")
+	case *lir.ShiftLeft:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateShl(lhs, rhs, "")
+	case *lir.ArithmeticShiftRight:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateAShr(lhs, rhs, "")
+	case *lir.LogicalShiftRight:
+		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
+		return b.CreateLShr(lhs, rhs, "")
 	case *lir.Call:
-		lV, lT := b.getFunction(v.Target.Type)
-		var lA []llvm.Value
-
-		for _, p := range v.Arguments {
-			lA = append(lA, b.getValue(p))
-		}
-
-		r := b.CreateCall(lT, lV, lA, "")
-		return r
-
+		return b.createCall(v)
+	case *lir.PHI:
+		return b.createPhi(v)
+	case *lir.Load:
+		return b.createLoad(v)
+	case *lir.Allocate:
+		return b.createAlloc(v)
 	default:
 		msg := fmt.Sprintf("[LLIRGEN] Value not implemented, %T", v)
 		panic(msg)
 	}
+}
+
+func (b *builder) createPhi(v *lir.PHI) llvm.Value {
+	// Values
+	phi_vals := []llvm.Value{}
+	for _, n := range v.Nodes {
+		phi_vals = append(phi_vals, b.getValue(n.Value))
+
+	}
+
+	// Blocks
+	phi_blocks := []llvm.BasicBlock{}
+
+	for _, n := range v.Nodes {
+		phi_blocks = append(phi_blocks, b.blocks[n.Block])
+	}
+
+	typ := b.getType(v.Yields())
+	phi := b.CreatePHI(typ, "")
+	phi.AddIncoming(phi_vals, phi_blocks)
+	return phi
+}
+
+func (b *builder) createLoad(v *lir.Load) llvm.Value {
+	addr := b.getValue(v.Address)
+	typ := b.compiler.getType(v.Address.Yields())
+	val := b.CreateLoad(typ, addr, "")
+	return val
+}
+
+func (b *builder) createAlloc(v *lir.Allocate) llvm.Value {
+	// TODO: Heap/Stack
+	typ := b.compiler.getType(v.Yields())
+	addr := b.CreateAlloca(typ, "")
+	return addr
+}
+
+func (b *builder) createCall(v *lir.Call) llvm.Value {
+	lV, lT := b.getFunction(v.Target.Type)
+	var lA []llvm.Value
+
+	for _, p := range v.Arguments {
+		lA = append(lA, b.getValue(p))
+	}
+
+	r := b.CreateCall(lT, lV, lA, "")
+	return r
 }

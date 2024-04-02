@@ -1,6 +1,9 @@
 package lir
 
-import "github.com/mantton/calypso/internal/calypso/token"
+import (
+	"github.com/mantton/calypso/internal/calypso/token"
+	"github.com/mantton/calypso/internal/calypso/types"
+)
 
 // LLVM Langauge Reference : https://llvm.org/docs/LangRef.html
 type ICompOp byte
@@ -84,76 +87,64 @@ type Branch struct {
 
 // Addition
 type Add struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 type FAdd struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 // Subtraction
 type Sub struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 type FSub struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 // Multiplication
 type Mul struct {
-	yielder
 	Left  Value
 	Right Value
 }
 type FMul struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 // Division
 type UDiv struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 type SDiv struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 type FDiv struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 // Remainder
 type URem struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 type SRem struct {
-	yielder
 	Left  Value
 	Right Value
 }
 
 type FRem struct {
-	yielder
 	Left  Value
 	Right Value
 }
@@ -161,24 +152,20 @@ type FRem struct {
 // Negation
 
 type INeg struct {
-	yielder
 	Right Value
 }
 type FNeg struct {
-	yielder
 	Right Value
 }
 
 // Comparisons
 type ICmp struct {
-	yielder
 	Left       Value
 	Right      Value
 	Comparison ICompOp
 }
 
 type FCmp struct {
-	yielder
 	Left       Value
 	Right      Value
 	Comparison ICompOp
@@ -186,23 +173,78 @@ type FCmp struct {
 
 // XOR
 type XOR struct {
-	yielder
-	Left  Value
-	Right Value
+	Left, Right Value
+}
+
+type ShiftLeft struct {
+	Left, Right Value
+}
+
+type ArithmeticShiftRight struct {
+	Left, Right Value
+}
+
+type LogicalShiftRight struct {
+	Left, Right Value
+}
+
+type AND struct {
+	Left, Right Value
+}
+
+type OR struct {
+	Left, Right Value
+}
+
+type PHI struct {
+	Nodes []*PhiNode
+}
+
+type PhiNode struct {
+	Value Value
+	Block *Block
 }
 
 var UOpMap = map[token.Token]ICompOp{
 	token.L_CHEVRON: ULSS,
 	token.R_CHEVRON: UGTR,
-	token.EQL:       EQL,
 	token.LEQ:       ULEQ,
 	token.GEQ:       UGEQ,
+	token.EQL:       EQL,
+	token.NEQ:       NEQ,
 }
 
 var SOpMap = map[token.Token]ICompOp{
-	token.L_CHEVRON: SLSS,
+	token.NEQ: NEQ,
+	token.EQL: EQL, token.L_CHEVRON: SLSS,
 	token.R_CHEVRON: SGTR,
-	token.EQL:       EQL,
 	token.LEQ:       SLEQ,
 	token.GEQ:       SGEQ,
 }
+
+// Conformance
+func (c *Add) Yields() types.Type  { return c.Left.Yields() }
+func (c *FAdd) Yields() types.Type { return c.Left.Yields() }
+func (c *Sub) Yields() types.Type  { return c.Left.Yields() }
+func (c *FSub) Yields() types.Type { return c.Left.Yields() }
+func (c *Mul) Yields() types.Type  { return c.Left.Yields() }
+func (c *FMul) Yields() types.Type { return c.Left.Yields() }
+func (c *UDiv) Yields() types.Type { return c.Left.Yields() }
+func (c *SDiv) Yields() types.Type { return c.Left.Yields() }
+func (c *FDiv) Yields() types.Type { return c.Left.Yields() }
+func (c *URem) Yields() types.Type { return c.Left.Yields() }
+func (c *SRem) Yields() types.Type { return c.Left.Yields() }
+func (c *FRem) Yields() types.Type { return c.Left.Yields() }
+func (c *ICmp) Yields() types.Type { return c.Left.Yields() }
+func (c *FCmp) Yields() types.Type { return c.Left.Yields() }
+
+func (c *INeg) Yields() types.Type { return c.Right.Yields() }
+func (c *FNeg) Yields() types.Type { return c.Right.Yields() }
+
+func (c *XOR) Yields() types.Type                  { return c.Left.Yields() }
+func (c *ShiftLeft) Yields() types.Type            { return c.Left.Yields() }
+func (c *ArithmeticShiftRight) Yields() types.Type { return c.Left.Yields() }
+func (c *LogicalShiftRight) Yields() types.Type    { return c.Left.Yields() }
+func (c *AND) Yields() types.Type                  { return c.Left.Yields() }
+func (c *OR) Yields() types.Type                   { return c.Left.Yields() }
+func (c *PHI) Yields() types.Type                  { return c.Nodes[0].Value.Yields() }

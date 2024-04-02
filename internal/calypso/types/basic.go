@@ -64,6 +64,8 @@ func IsNumeric(t Type) bool {
 		}
 	case *DefinedType:
 		return IsNumeric(t.Parent())
+	case *Alias:
+		return IsNumeric(t.RHS)
 	}
 
 	return false
@@ -78,6 +80,8 @@ func IsFloatingPoint(t Type) bool {
 		}
 	case *DefinedType:
 		return IsFloatingPoint(t.Parent())
+	case *Alias:
+		return IsFloatingPoint(t.RHS)
 	}
 	return false
 }
@@ -94,7 +98,9 @@ func IsInteger(t Type) bool {
 			return false
 		}
 	case *DefinedType:
-		return IsNumeric(t.Parent())
+		return IsInteger(t.Parent())
+	case *Alias:
+		return IsInteger(t.RHS)
 	default:
 		return false
 	}
@@ -111,6 +117,8 @@ func IsUnsigned(t Type) bool {
 		}
 	case *DefinedType:
 		return IsUnsigned(t.Parent())
+	case *Alias:
+		return IsUnsigned(t.RHS)
 	}
 	return false
 }
@@ -125,6 +133,8 @@ func IsGroupLiteral(t Type) bool {
 		}
 	case *DefinedType:
 		return IsGroupLiteral(t.Parent())
+	case *Alias:
+		return IsGroupLiteral(t.RHS)
 	}
 	return false
 }
@@ -182,8 +192,18 @@ func resolveDefined(t *DefinedType) Type {
 	}
 }
 
+func IsBoolean(t Type) bool {
+	switch t := t.(type) {
+	case *DefinedType:
+		return t == LookUp(Bool)
+	case *Alias:
+		return IsBoolean(t.RHS)
+	default:
+		return false
+	}
+}
 func IsEquatable(t Type) bool {
-	return t == LookUp(Bool) || IsNumeric(t)
+	return IsBoolean(t) || IsNumeric(t)
 }
 
 func IsConstant(t Type) bool {

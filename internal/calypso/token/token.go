@@ -308,6 +308,6 @@ func LookUp(t Token) string {
 	return fmt.Sprintf("UNKNOWN %d", t)
 }
 
-func String(t Token) string {
+func (t Token) String() string {
 	return LookUp(t)
 }

@@ -140,17 +140,15 @@ func (b *builder) evaluateAssignmentExpression(n *ast.AssignmentExpression, fn *
 
 func (b *builder) evaluateUnaryExpression(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
 
-	rhs := b.evaluateExpression(n.Expr, fn)
-
 	switch n.Op {
 	case token.STAR:
 		panic("todo: dereference")
 	case token.AMP:
 		panic("todo: get pointer Reference")
 	case token.NOT:
-		return b.evaluateLogicalNot(rhs)
+		return b.evaluateLogicalNot(n, fn)
 	case token.MINUS:
-		return b.evaluateArithmeticNegate(rhs)
+		return b.evaluateArithmeticNegate(n, fn)
 	default:
 		msg := fmt.Sprintf("unimplemented unary operand, %s", token.LookUp(n.Op))
 		panic(msg)
@@ -158,21 +156,23 @@ func (b *builder) evaluateUnaryExpression(n *ast.UnaryExpression, fn *lir.Functi
 }
 
 func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
 	switch n.Op {
 	case token.PLUS:
-		return b.evaluateArithmeticAddExpression(lhs, rhs)
+		return b.evaluateArithmeticAddExpression(n, fn)
 	case token.MINUS:
-		return b.evaluateArithmeticSubExpression(lhs, rhs)
+		return b.evaluateArithmeticSubExpression(n, fn)
 	case token.QUO:
-		return b.evaluateArithmeticDivExpression(lhs, rhs)
+		return b.evaluateArithmeticDivExpression(n, fn)
 	case token.STAR:
-		return b.evaluateArithmeticMulExpression(lhs, rhs)
+		return b.evaluateArithmeticMulExpression(n, fn)
 	case token.PCT:
-		return b.evaluateArithmeticRemExpression(lhs, rhs)
-	case token.L_CHEVRON, token.R_CHEVRON, token.EQL, token.LEQ, token.GEQ:
-		return b.evaluateArithmeticComparison(n.Op, lhs, rhs)
-
+		return b.evaluateArithmeticRemExpression(n, fn)
+	case token.L_CHEVRON, token.R_CHEVRON, token.EQL, token.LEQ, token.GEQ, token.NEQ:
+		return b.evaluateArithmeticComparison(n.Op, n, fn)
+	case token.BIT_SHIFT_LEFT, token.BIT_SHIFT_RIGHT, token.AMP, token.BAR, token.CARET:
+		return b.evaluateBitOperation(n.Op, n, fn)
+	case token.DOUBLE_AMP, token.DOUBLE_BAR:
+		return b.evaluateBooleanOp(n.Op, n, fn)
 	default:
 		msg := fmt.Sprintf("unimplemented binary operand, %s", token.LookUp(n.Op))
 		panic(msg)
@@ -180,7 +180,9 @@ func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Func
 
 }
 
-func (b *builder) evaluateArithmeticAddExpression(lhs, rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -200,7 +202,9 @@ func (b *builder) evaluateArithmeticAddExpression(lhs, rhs lir.Value) lir.Value 
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticSubExpression(lhs, rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticSubExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -220,7 +224,9 @@ func (b *builder) evaluateArithmeticSubExpression(lhs, rhs lir.Value) lir.Value 
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticMulExpression(lhs, rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticMulExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -240,7 +246,9 @@ func (b *builder) evaluateArithmeticMulExpression(lhs, rhs lir.Value) lir.Value 
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticDivExpression(lhs, rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticDivExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -266,7 +274,9 @@ func (b *builder) evaluateArithmeticDivExpression(lhs, rhs lir.Value) lir.Value 
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticRemExpression(lhs, rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticRemExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -292,7 +302,9 @@ func (b *builder) evaluateArithmeticRemExpression(lhs, rhs lir.Value) lir.Value 
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticComparison(op token.Token, lhs, rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticComparison(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -305,7 +317,7 @@ func (b *builder) evaluateArithmeticComparison(op token.Token, lhs, rhs lir.Valu
 		}
 
 		if comp == lir.INVALID_ICOMP {
-			panic("invalid comparison operand")
+			panic(fmt.Sprintf("invalid comparison operand, %s", op))
 		}
 
 		instr := &lir.ICmp{
@@ -326,7 +338,8 @@ func (b *builder) evaluateArithmeticComparison(op token.Token, lhs, rhs lir.Valu
 
 }
 
-func (b *builder) evaluateArithmeticNegate(rhs lir.Value) lir.Value {
+func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
+	rhs := b.evaluateExpression(n.Expr, fn)
 
 	typ := rhs.Yields()
 
@@ -345,7 +358,9 @@ func (b *builder) evaluateArithmeticNegate(rhs lir.Value) lir.Value {
 	panic("negate on unsupported type")
 }
 
-func (b *builder) evaluateLogicalNot(rhs lir.Value) lir.Value {
+func (b *builder) evaluateLogicalNot(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
+	rhs := b.evaluateExpression(n.Expr, fn)
+
 	typ := rhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -356,7 +371,7 @@ func (b *builder) evaluateLogicalNot(rhs lir.Value) lir.Value {
 		}
 	}
 
-	if typ == types.LookUp(types.Bool) {
+	if types.IsBoolean(typ) {
 		return &lir.XOR{
 			Left:  rhs,
 			Right: lir.NewConst(true, typ),
@@ -364,4 +379,130 @@ func (b *builder) evaluateLogicalNot(rhs lir.Value) lir.Value {
 	}
 
 	panic(fmt.Sprintf("unimplemented logical not %s", typ))
+}
+
+func (b *builder) evaluateBitOperation(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+
+	typ := lhs.Yields()
+
+	if !types.IsInteger(typ) {
+		panic("unsupported type")
+	}
+
+	switch op {
+	case token.BIT_SHIFT_LEFT:
+		return &lir.ShiftLeft{
+			Left: lhs, Right: rhs,
+		}
+	case token.BIT_SHIFT_RIGHT:
+
+		// For Unsigned use logical shift right
+		if types.IsUnsigned(typ) {
+			return &lir.LogicalShiftRight{
+				Left: lhs, Right: rhs,
+			}
+		}
+
+		// Else use arithmetic shift
+		return &lir.ArithmeticShiftRight{
+			Left: lhs, Right: rhs,
+		}
+
+	case token.AMP:
+		return &lir.AND{
+			Left: lhs, Right: rhs,
+		}
+	case token.BAR:
+		return &lir.OR{
+			Left: lhs, Right: rhs,
+		}
+	case token.CARET:
+		return &lir.XOR{
+			Left: lhs, Right: rhs,
+		}
+	default:
+		panic(fmt.Sprintf("unimplemented bit operation %s", op))
+	}
+}
+
+// Reference: https://en.wikipedia.org/wiki/Short-circuit_evaluation
+func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+	lhs := b.evaluateExpression(n.Left, fn)
+	typ := lhs.Yields()
+	if !types.IsBoolean(typ) {
+		panic("unsupported type")
+	}
+
+	prev := fn.CurrentBlock
+	next := fn.NewBlock()
+	done := fn.NewBlock()
+
+	// 1 - Compare if LHS != false
+	fn.CurrentBlock = prev
+	cmp := &lir.ICmp{
+		Left:       lhs,
+		Right:      lir.NewConst(false, typ),
+		Comparison: lir.NEQ,
+	}
+
+	// 2 - If LHS is not false, branch to resolve RHS else, branch to done block
+	var br *lir.ConditionalBranch
+
+	switch op {
+	case token.DOUBLE_AMP:
+		// && / AND Operation, only Branch to Next if condition LHS true
+		br = &lir.ConditionalBranch{
+			Condition:   cmp,
+			Action:      next,
+			Alternative: done,
+		}
+
+	case token.DOUBLE_BAR:
+		// || / OR Operation, branch to done if LHS is true
+		br = &lir.ConditionalBranch{
+			Condition:   cmp,
+			Action:      done,
+			Alternative: next,
+		}
+	default:
+		panic("unsupported operand")
+	}
+
+	fn.Emit(br)
+
+	// 2 - Populate RHS Resolution Block
+	// Create comparison checking if RHS != false
+	fn.CurrentBlock = next
+	rhs := b.evaluateExpression(n.Right, fn)
+	cmp2 := &lir.ICmp{
+		Left:       rhs,
+		Right:      lir.NewConst(false, typ),
+		Comparison: lir.NEQ,
+	}
+
+	br2 := &lir.Branch{
+		Block: done,
+	}
+
+	fn.Emit(cmp2)
+	fn.Emit(br2)
+
+	// 3 - Done Block, Use Phi to pick value based on which block executed prior
+	fn.CurrentBlock = done
+	phi := &lir.PHI{
+		Nodes: []*lir.PhiNode{
+			{
+				Value: lir.NewConst(false, typ),
+				Block: prev,
+			},
+			{
+				Value: cmp2,
+				Block: next,
+			},
+		},
+	}
+
+	fn.Emit(phi)
+	return phi
 }
