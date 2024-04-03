@@ -22,8 +22,12 @@ func (b *builder) emitHeapAlloc(fn *lir.Function, t types.Type) *lir.Allocate {
 	return i
 }
 
-func (b *builder) emitLocalVar(fn *lir.Function, n string, t types.Type) *lir.Allocate {
-	addr := b.emitStackAlloc(fn, t)
+func (b *builder) emitLocalVar(fn *lir.Function, n string, t types.Type, addr *lir.Allocate) *lir.Allocate {
+	if addr == nil {
+		addr := b.emitStackAlloc(fn, t)
+		fn.Variables[n] = addr
+		return addr
+	}
 	fn.Variables[n] = addr
 	return addr
 }

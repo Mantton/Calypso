@@ -55,6 +55,10 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 		return b.evaluateUnaryExpression(e, fn)
 	case *ast.ShorthandAssignmentExpression:
 		return b.evaluateShortHandExpression(e, fn)
+	case *ast.CompositeLiteral:
+		return b.evaluateCompositeLiteral(e, fn)
+	case *ast.FieldAccessExpression:
+		return b.evaluateFieldAccessExpression(e, fn, true)
 	default:
 		msg := fmt.Sprintf("unknown expr %T\n", e)
 		panic(msg)
@@ -135,7 +139,7 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 
 func (b *builder) evaluateAssignmentExpression(n *ast.AssignmentExpression, fn *lir.Function) lir.Value {
 	a := b.evaluateAddressOfExpression(n.Target, fn)
-	v := b.evaluateExpression(n.Target, fn)
+	v := b.evaluateExpression(n.Value, fn)
 	b.emitStore(fn, a, v)
 	return nil
 }
@@ -515,10 +519,12 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 		val, ok := fn.Variables[n.Value]
 
 		if !ok {
-			panic("unknown identifier")
+			panic(fmt.Sprintf("unknown identifier, %s", n.Value))
 		}
 
 		return val
+	case *ast.FieldAccessExpression:
+		return b.evaluateFieldAccessExpression(n, fn, false)
 	default:
 		panic("unimplmented address of")
 	}
@@ -586,4 +592,70 @@ func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpressi
 
 	b.emitStore(fn, addr, rhs)
 	return lir.NewConst(nil, types.LookUp(types.Void))
+}
+
+func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Function) lir.Value {
+
+	// 1 - Allocate
+
+	typ := b.Mod.TypeTable().GetNodeType(n)
+
+	if typ == nil {
+		panic("nil type")
+	}
+
+	addr := b.emitHeapAlloc(fn, typ)
+	return addr
+
+	// TODO: 2 - Store Properties
+}
+
+func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn *lir.Function, load bool) lir.Value {
+	addr := b.evaluateAddressOfExpression(n.Target, fn)
+	targetTyp := b.Mod.TypeTable().GetNodeType(n.Target)
+	composite := b.Mod.Composites[targetTyp.Parent()]
+	def := types.AsDefined(targetTyp)
+	if def == nil {
+		panic("nil defined type")
+	}
+
+	switch p := n.Field.(type) {
+	case *ast.IdentifierExpression:
+		field := p.Value
+
+		// Is Method
+		possibleMethod := def.ResolveMethod(field)
+		if possibleMethod != nil {
+			fmt.Println(b.Mod.Functions)
+			panic("unimplemented method access")
+		}
+
+		// Is Field
+		index := types.GetFieldIndex(field, def)
+
+		// Invalid Field
+		if index == -1 {
+			panic("unknown field")
+		}
+
+		// Get Element Pointer of Field
+		ptr := &lir.GEP{
+			Index:     index,
+			Address:   addr,
+			Composite: composite,
+		}
+
+		// If SHould Load, return load instruction
+		if load {
+			return &lir.Load{
+				Address: ptr,
+			}
+		}
+
+		// return GEP instruction, yeilding ptr to field
+		return ptr
+
+	default:
+		panic("unimplemented access expression")
+	}
 }

@@ -2,6 +2,7 @@ package llir
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lir"
+	"github.com/mantton/calypso/internal/calypso/types"
 	"tinygo.org/x/go-llvm"
 )
 
@@ -22,14 +23,16 @@ func Compile(s *lir.Executable) {
 }
 
 type compiler struct {
-	context llvm.Context
-	module  llvm.Module
-	lirMod  *lir.Module
+	context    llvm.Context
+	module     llvm.Module
+	lirMod     *lir.Module
+	typesTable map[types.Type]llvm.Type
 }
 
 func newCompiler(module *lir.Module) *compiler {
 	c := &compiler{
-		context: llvm.NewContext(),
+		context:    llvm.NewContext(),
+		typesTable: make(map[types.Type]llvm.Type),
 	}
 
 	c.module = c.context.NewModule(module.Name())
@@ -43,6 +46,11 @@ func (c *compiler) compileModule() {
 	b := c.context.NewBuilder()
 	defer b.Dispose()
 
+	// Structs
+	for _, cm := range c.lirMod.Composites {
+		c.buildComposite(cm)
+	}
+
 	// Declare Functions
 	for _, fn := range c.lirMod.Functions {
 		b := newBuilder(fn, c, b)
@@ -50,5 +58,20 @@ func (c *compiler) compileModule() {
 	}
 
 	c.module.Dump()
+
+}
+
+func (c *compiler) buildComposite(cm *lir.Composite) llvm.Type {
+	members := []llvm.Type{}
+
+	for _, t := range cm.Members {
+		typ := c.getType(t)
+		members = append(members, typ)
+	}
+
+	llvmType := c.context.StructCreateNamed(cm.Name)
+	c.typesTable[cm.Actual] = llvmType
+	llvmType.StructSetBody(members, false)
+	return llvmType
 
 }

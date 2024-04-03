@@ -66,9 +66,12 @@ func (b *builder) visitVariableStatement(n *ast.VariableStatement, fn *lir.Funct
 		panic("unable to resolve node type")
 	}
 
-	addr := b.emitLocalVar(fn, n.Identifier.Value, symbol)
-	b.emitStore(fn, addr, val)
+	vAddr, _ := val.(*lir.Allocate)
+	addr := b.emitLocalVar(fn, n.Identifier.Value, symbol, vAddr)
 
+	if vAddr == nil {
+		b.emitStore(fn, addr, val)
+	}
 }
 
 func (b *builder) visitReturnStatement(n *ast.ReturnStatement, fn *lir.Function) {

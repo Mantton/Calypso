@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
@@ -35,4 +36,14 @@ func (b *builder) genStruct(n *ast.StructStatement) {
 	}
 
 	fmt.Println("<STRUCT>", t)
+
+	c := &lir.Composite{
+		Actual: t,
+		Name:   n.Identifier.Value,
+	}
+	for _, f := range t.Fields {
+		c.Members = append(c.Members, f.Type())
+	}
+
+	b.Mod.Composites[t] = c
 }

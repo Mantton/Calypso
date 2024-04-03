@@ -1,6 +1,8 @@
 package lir
 
-import "github.com/mantton/calypso/internal/calypso/types"
+import (
+	"github.com/mantton/calypso/internal/calypso/types"
+)
 
 // Size of a Type in Bytes
 func SizeOf(t types.Type) uint64 {

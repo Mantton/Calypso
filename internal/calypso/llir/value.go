@@ -106,6 +106,10 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 		return b.createLoad(v)
 	case *lir.Allocate:
 		return b.createAlloc(v)
+	case *lir.GEP:
+		return b.createGEP(v)
+	case *lir.ExtractValue:
+		return b.createExtractValue(v)
 	default:
 		msg := fmt.Sprintf("[LLIRGEN] Value not implemented, %T", v)
 		panic(msg)
@@ -157,4 +161,22 @@ func (b *builder) createCall(v *lir.Call) llvm.Value {
 
 	r := b.CreateCall(lT, lV, lA, "")
 	return r
+}
+
+func (b *builder) createGEP(v *lir.GEP) llvm.Value {
+	addr := b.getValue(v.Address)
+
+	indices := []llvm.Value{
+		llvm.ConstInt(b.context.Int32Type(), 0, false),
+		llvm.ConstInt(b.context.Int32Type(), uint64(v.Index), false),
+	}
+
+	elemT := b.getType(v.Yields())
+	return b.CreateInBoundsGEP(elemT, addr, indices, "")
+}
+
+func (b *builder) createExtractValue(v *lir.ExtractValue) llvm.Value {
+	addr := b.getValue(v.Address)
+	fmt.Println("ADDR:", addr)
+	return b.CreateExtractValue(addr, v.Index, "")
 }

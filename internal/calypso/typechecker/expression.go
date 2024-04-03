@@ -69,7 +69,6 @@ func (c *Checker) evaluateExpression(expr ast.Expression, ctx *NodeContext) type
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.IntegerLiteral:
-		// c.table.AddNode(expr, types.LookUp(types.IntegerLiteral), nil, nil)
 		return types.LookUp(types.IntegerLiteral)
 	case *ast.BooleanLiteral:
 		return types.LookUp(types.Bool)
@@ -99,7 +98,7 @@ func (c *Checker) evaluateExpression(expr ast.Expression, ctx *NodeContext) type
 	case *ast.CompositeLiteral:
 		return c.evaluateCompositeLiteral(expr, ctx)
 	case *ast.FieldAccessExpression:
-		return c.evaluatePropertyExpression(expr, ctx)
+		return c.evaluateFieldAccessExpression(expr, ctx)
 	case *ast.GenericSpecializationExpression:
 		return c.evaluateGenericSpecializationExpression(expr, ctx)
 	case *ast.ArrayLiteral:
@@ -586,9 +585,10 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Spe
 	return err
 }
 
-func (c *Checker) evaluatePropertyExpression(n *ast.FieldAccessExpression, ctx *NodeContext) types.Type {
+func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ctx *NodeContext) types.Type {
 
 	a := c.evaluateExpression(n.Target, ctx)
+	c.table.SetNodeType(n.Target, a)
 
 	if a == unresolved {
 		return unresolved

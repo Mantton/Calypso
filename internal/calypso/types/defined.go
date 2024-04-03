@@ -150,10 +150,10 @@ func (n *DefinedType) ResolveField(s string) Type {
 	// Access Field
 	switch parent := n.Parent().(type) {
 	case *Struct:
-		for _, f := range parent.Fields {
-			if s == f.Name() {
-				return f.Type()
-			}
+		target, ok := parent.Fields[s]
+
+		if ok {
+			return target.Type()
 		}
 
 	case *Enum:

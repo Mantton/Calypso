@@ -205,6 +205,20 @@ type PhiNode struct {
 	Block *Block
 }
 
+// Get Element Pointer
+type GEP struct {
+	Index     int
+	Address   Value
+	Composite *Composite
+}
+
+// Extract Value
+type ExtractValue struct {
+	Index     int
+	Address   Value
+	Composite *Composite
+}
+
 var UOpMap = map[token.Token]ICompOp{
 	token.L_CHEVRON: ULSS,
 	token.R_CHEVRON: UGTR,
@@ -248,3 +262,5 @@ func (c *LogicalShiftRight) Yields() types.Type    { return c.Left.Yields() }
 func (c *AND) Yields() types.Type                  { return c.Left.Yields() }
 func (c *OR) Yields() types.Type                   { return c.Left.Yields() }
 func (c *PHI) Yields() types.Type                  { return c.Nodes[0].Value.Yields() }
+func (c *GEP) Yields() types.Type                  { return c.Composite.Members[c.Index] }
+func (c *ExtractValue) Yields() types.Type         { return c.Composite.Members[c.Index] }

@@ -63,6 +63,12 @@ func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 }
 
 func (c *compiler) getType(t types.Type) llvm.Type {
+	v, ok := c.typesTable[t.Parent()]
+
+	if ok {
+		return v
+	}
+
 	switch t := t.Parent().(type) {
 	case *types.Basic:
 		switch t.Literal {
@@ -89,6 +95,10 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 		default:
 			panic("unhandled basic type")
 		}
+	case *types.Struct:
+		x := c.buildComposite(c.lirMod.Composites[t])
+		c.typesTable[t] = x
+		return x
 
 	case *types.Pointer:
 		pt := c.getType(t.PointerTo)

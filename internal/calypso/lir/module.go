@@ -10,7 +10,7 @@ type Module struct {
 	Functions         map[string]*Function
 	GlobalConstants   map[string]*Global
 	ExternalFunctions map[string]*types.FunctionSignature
-	Composites        map[string]types.Symbol
+	Composites        map[types.Type]*Composite
 	TModule           *typechecker.Module
 }
 
@@ -18,7 +18,7 @@ func NewModule(mod *typechecker.Module) *Module {
 	return &Module{
 		Functions:       make(map[string]*Function),
 		GlobalConstants: make(map[string]*Global),
-		Composites:      make(map[string]types.Symbol),
+		Composites:      make(map[types.Type]*Composite),
 		TModule:         mod,
 	}
 }

@@ -124,6 +124,20 @@ func (s *Scope) ResolveInCurrent(name string) Symbol {
 	return symbol
 }
 
+func (s *Scope) ResolveVarInCurrent(name string) *Var {
+	symbol, exists := s.symbols[name]
+	if !exists {
+		return nil
+	}
+	x, ok := symbol.(*Var)
+
+	if ok {
+		return x
+	}
+
+	return nil
+}
+
 func (s *Scope) String() string {
 	var str string
 	str += fmt.Sprintf("------ SCOPE <%s>  -----\n", s.label)

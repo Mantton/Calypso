@@ -16,6 +16,7 @@ type FunctionSignature struct {
 	TypeParameters []*TypeParam
 	Parameters     []*Var
 	Result         *Var
+	Self           *Var
 	IsAsync        bool
 	IsStatic       bool
 	IsMutating     bool
@@ -113,4 +114,13 @@ func AsFunction(t Symbol) *Function {
 
 	return nil
 
+}
+
+func IsFunctionSignature(t Type) bool {
+	if t == nil {
+		return false
+	}
+
+	_, ok := t.(*FunctionSignature)
+	return ok
 }

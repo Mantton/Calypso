@@ -171,6 +171,7 @@ func (c *Checker) injectFunctionsInType(fns []*ast.FunctionStatement, t *types.D
 		// Inject `self`
 		self := types.NewVar("self", t)
 		self.Mutable = sg.IsMutating
+		sg.Self = self
 
 		// Default
 		sg.Scope.Define(self)
