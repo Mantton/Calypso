@@ -18,6 +18,7 @@ type Function struct {
 	Parameters   []*Parameter
 	Owner        *Member
 	CurrentBlock *Block
+	External     bool
 }
 
 func (f *Function) Signature() *types.FunctionSignature { return f.Type.Sg() }

@@ -56,8 +56,12 @@ func (c *compiler) compileModule() {
 
 	// Declare Functions
 	for _, fn := range c.lirMod.Functions {
-		b := newBuilder(fn, c, b)
-		b.buildFunction()
+		if fn.External {
+
+		} else {
+			b := newBuilder(fn, c, b)
+			b.buildFunction()
+		}
 	}
 
 	err := llvm.VerifyModule(c.module, llvm.ReturnStatusAction)
@@ -68,6 +72,7 @@ func (c *compiler) compileModule() {
 		os.Exit(1)
 	}
 
+	c.module.Dump()
 	fmt.Println("Valid Module")
 
 	// trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())

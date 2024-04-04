@@ -28,7 +28,6 @@ func (b *builder) pass() {
 		b.pass1,
 		b.pass2,
 		b.pass3,
-		b.pass4,
 	}
 
 	for _, fn := range passes {

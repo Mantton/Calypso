@@ -7,11 +7,10 @@ import (
 )
 
 type Module struct {
-	Functions         map[string]*Function
-	GlobalConstants   map[string]*Global
-	ExternalFunctions map[string]*types.FunctionSignature
-	Composites        map[types.Type]*Composite
-	TModule           *typechecker.Module
+	Functions       map[string]*Function
+	GlobalConstants map[string]*Global
+	Composites      map[types.Type]*Composite
+	TModule         *typechecker.Module
 }
 
 func NewModule(mod *typechecker.Module) *Module {
