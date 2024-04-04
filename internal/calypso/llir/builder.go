@@ -20,7 +20,7 @@ type builder struct {
 
 func newBuilder(fn *lir.Function, c *compiler, b llvm.Builder) *builder {
 	// Initialize Function
-	f, fnType := c.getFunction(fn.Type)
+	f, fnType := c.getFunction(fn)
 	return &builder{
 		compiler:   c,
 		lirFn:      fn,

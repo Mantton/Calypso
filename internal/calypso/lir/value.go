@@ -23,3 +23,10 @@ func NewConst(val any, typ types.Type) *Constant {
 		typ:   typ,
 	}
 }
+
+type Method struct {
+	Fn   *Function
+	Self Value
+}
+
+func (c *Method) Yields() types.Type { return c.Fn.Yields() }

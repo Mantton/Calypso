@@ -152,7 +152,7 @@ func (b *builder) createAlloc(v *lir.Allocate) llvm.Value {
 }
 
 func (b *builder) createCall(v *lir.Call) llvm.Value {
-	lV, lT := b.getFunction(v.Target.Type)
+	lV, lT := b.getFunction(v.Target)
 	var lA []llvm.Value
 
 	for _, p := range v.Arguments {
@@ -171,7 +171,8 @@ func (b *builder) createGEP(v *lir.GEP) llvm.Value {
 		llvm.ConstInt(b.context.Int32Type(), uint64(v.Index), false),
 	}
 
-	elemT := b.getType(v.Yields())
+	elemT := b.getType(v.Composite.Actual.Parent())
+	// b.module.Dump()
 	return b.CreateInBoundsGEP(elemT, addr, indices, "")
 }
 

@@ -56,6 +56,22 @@ func (f *Function) AddParameter(t *types.Var) {
 	f.Variables[t.Name()] = p
 }
 
+func (f *Function) AddSelf() {
+	self := f.Signature().Self
+	if self == nil || f.Signature().IsStatic {
+		return
+	}
+
+	p := &Parameter{
+		Name:   "self",
+		Symbol: types.NewPointer(self.Type()),
+		Parent: f,
+	}
+	f.Parameters = append(f.Parameters, p)
+	f.Variables[p.Name] = p
+
+}
+
 func NewFunction(fn *types.Function) *Function {
 	f := &Function{
 		Variables: make(map[string]Value),

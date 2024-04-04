@@ -108,19 +108,19 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 	panic(fmt.Sprintf("Unsupported Type: %T", t))
 }
 
-func (c *compiler) getFunction(fn *types.Function) (llvm.Value, llvm.Type) {
+func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {
 	llvmFn := c.module.NamedFunction(fn.Name())
 
 	if !llvmFn.IsNil() {
 		return llvmFn, llvmFn.GlobalValueType()
 	}
-	sg := fn.Type().(*types.FunctionSignature)
+	sg := fn.Signature()
 	retType := c.getType(sg.Result.Type())
 
 	var params []llvm.Type
 
-	for _, param := range sg.Parameters {
-		t := c.getType(param.Type())
+	for _, param := range fn.Parameters {
+		t := c.getType(param.Symbol)
 		params = append(params, t)
 	}
 

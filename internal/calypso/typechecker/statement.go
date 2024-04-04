@@ -179,6 +179,11 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext)
 		t := c.evaluateTypeExpression(f.Identifier.AnnotatedType, def.TypeParameters, ctx)
 		d.SetType(t)
 		fields = append(fields, d)
+		err := def.GetScope().Define(d)
+
+		if err != nil {
+			c.addError(err.Error(), f.Identifier.Range())
+		}
 	}
 
 	typ := types.NewStruct(fields)

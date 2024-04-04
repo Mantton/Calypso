@@ -5,6 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lir"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 func (b *builder) visitStatement(node ast.Statement, fn *lir.Function) {
@@ -77,11 +78,14 @@ func (b *builder) visitVariableStatement(n *ast.VariableStatement, fn *lir.Funct
 func (b *builder) visitReturnStatement(n *ast.ReturnStatement, fn *lir.Function) {
 	val := b.evaluateExpression(n.Value, fn)
 
-	i := &lir.Return{
-		Result: val,
+	if val.Yields() == types.LookUp(types.Void) {
+		fn.Emit(&lir.ReturnVoid{})
+	} else {
+		i := &lir.Return{
+			Result: val,
+		}
+		fn.Emit(i)
 	}
-
-	fn.Emit(i)
 	fn.CurrentBlock.Complete = true
 }
 

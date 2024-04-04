@@ -39,6 +39,8 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 		}
 
 		return lir.NewConst(0, typ)
+	case *ast.VoidLiteral:
+		return lir.NewConst(0, types.LookUp(types.Void))
 	case *ast.IdentifierExpression:
 		return b.evaluateIdentifierExpression(e, fn)
 	case *ast.CallExpression:
@@ -68,13 +70,18 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
 	val := b.evaluateExpression(n.Target, fn)
 
-	f, ok := val.(*lir.Function)
-
-	if !ok {
-		panic("target cannot be invoked")
-	}
-
+	var f *lir.Function
 	var args []lir.Value
+
+	switch val := val.(type) {
+	case *lir.Function:
+		f = val
+	case *lir.Method:
+		f = val.Fn
+		if val.Self != nil {
+			args = append(args, val.Self)
+		}
+	}
 
 	for _, p := range n.Arguments {
 		v := b.evaluateExpression(p, fn)
@@ -623,37 +630,53 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	case *ast.IdentifierExpression:
 		field := p.Value
 
-		// Is Method
-		possibleMethod := def.ResolveMethod(field)
-		if possibleMethod != nil {
-			fmt.Println(b.Mod.Functions)
-			panic("unimplemented method access")
+		sym := def.GetScope().MustResolve(field)
+
+		if sym == nil {
+			panic(fmt.Sprintf("unresolved symbol, %s", field))
 		}
 
-		// Is Field
-		index := types.GetFieldIndex(field, def)
+		switch sym := sym.(type) {
+		case *types.Var:
+			// Is Field
+			index := sym.StructIndex
 
-		// Invalid Field
-		if index == -1 {
-			panic("unknown field")
-		}
-
-		// Get Element Pointer of Field
-		ptr := &lir.GEP{
-			Index:     index,
-			Address:   addr,
-			Composite: composite,
-		}
-
-		// If SHould Load, return load instruction
-		if load {
-			return &lir.Load{
-				Address: ptr,
+			// Invalid Field
+			if index == -1 {
+				panic("unknown field")
 			}
-		}
 
-		// return GEP instruction, yeilding ptr to field
-		return ptr
+			// Get Element Pointer of Field
+			ptr := &lir.GEP{
+				Index:     index,
+				Address:   addr,
+				Composite: composite,
+			}
+
+			// If SHould Load, return load instruction
+			if load {
+				return &lir.Load{
+					Address: ptr,
+				}
+			}
+
+			// return GEP instruction, yeilding ptr to field
+			return ptr
+		case *types.Function:
+			// Is Method
+			astTarget := b.Mod.TypeTable().GetRevFunction(sym)
+			target := b.Functions[astTarget]
+			if target.Signature().IsStatic {
+				return target
+			}
+
+			return &lir.Method{
+				Fn:   target,
+				Self: addr,
+			}
+		default:
+			panic(fmt.Sprintf("unimplemented method access, %T", sym))
+		}
 
 	default:
 		panic("unimplemented access expression")

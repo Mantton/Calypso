@@ -9,6 +9,7 @@ type Symbol interface {
 type symbol struct {
 	name string
 	typ  Type
+	// TODO: MODULE
 }
 
 func (e *symbol) Name() string { return e.name }

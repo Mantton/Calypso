@@ -1,6 +1,9 @@
 package llir
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/types"
 	"tinygo.org/x/go-llvm"
@@ -57,7 +60,35 @@ func (c *compiler) compileModule() {
 		b.buildFunction()
 	}
 
-	c.module.Dump()
+	err := llvm.VerifyModule(c.module, llvm.ReturnStatusAction)
+
+	if err != nil {
+		c.module.Dump()
+		fmt.Printf("\n\n[Validation Error]\n%s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Valid Module")
+
+	// trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// c.module.SetTarget(trg.Description())
+
+	// mt := trg.CreateTargetMachine(llvm.DefaultTargetTriple(), "", "", llvm.CodeGenLevelDefault, llvm.RelocDefault, llvm.CodeModelDefault)
+
+	// pbo := llvm.NewPassBuilderOptions()
+	// defer pbo.Dispose()
+
+	// pm := llvm.NewPassManager()
+	// mt.AddAnalysisPasses(pm)
+
+	// err = c.module.RunPasses("default<Os>", mt, pbo)
+
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 }
 

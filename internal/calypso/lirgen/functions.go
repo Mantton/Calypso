@@ -37,25 +37,25 @@ func (b *builder) addExternalFunction(fn *types.Function) {
 func (b *builder) pass3(f *ast.File) {
 	// General
 	for _, fn := range f.Nodes.Functions {
-		b.registerFunction(fn.Func, "")
+		b.registerFunction(fn.Func)
 	}
 
 	// Extensions
 	for _, n := range f.Nodes.Extensions {
 		for _, fn := range n.Content {
-			b.registerFunction(fn.Func, n.Identifier.Value)
+			b.registerFunction(fn.Func)
 		}
 	}
 
 	// Conformances
 	for _, n := range f.Nodes.Conformances {
 		for _, fn := range n.Signatures {
-			b.registerFunction(fn.Func, n.Target.Value)
+			b.registerFunction(fn.Func)
 		}
 	}
 }
 
-func (b *builder) registerFunction(n *ast.FunctionExpression, s string) {
+func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	tFn := b.Mod.TModule.Table.GetFunction(n)
 
 	if tFn == nil {
@@ -93,11 +93,7 @@ func (b *builder) pass4(f *ast.File) {
 func (b *builder) visitFunction(n *ast.FunctionExpression) {
 	fn := b.Functions[n]
 
-	// Self
-	self := fn.Signature().Self
-	if self != nil {
-		fn.AddParameter(self)
-	}
+	fn.AddSelf()
 
 	// Parameters
 	for _, p := range fn.Signature().Parameters {

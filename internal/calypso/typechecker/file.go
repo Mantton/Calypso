@@ -8,9 +8,13 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
+type Package struct {
+	Name string
+}
 type Module struct {
 	Table   *SymbolTable
 	FileSet *ast.FileSet
+	Package *Package
 }
 
 func (c *Checker) Check() (*Module, error) {
