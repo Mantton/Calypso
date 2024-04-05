@@ -107,8 +107,12 @@ func (b *builder) visitBlockStatement(n *ast.BlockStatement, fn *lir.Function) {
 
 func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 
-	entryBlock := fn.CurrentBlock
 	cond := b.evaluateExpression(n.Condition, fn)
+
+	br := &lir.ConditionalBranch{
+		Condition: cond,
+	}
+	fn.Emit(br)
 
 	// Generate Blocks
 	then := fn.NewBlock()
@@ -118,13 +122,12 @@ func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 	}
 	done := fn.NewBlock()
 
-	// Resolve Condition
-	fn.CurrentBlock = entryBlock
-	fn.Emit(&lir.ConditionalBranch{
-		Condition:   cond,
-		Action:      then,
-		Alternative: elseBlock,
-	})
+	br.Action = then
+	if elseBlock != nil {
+		br.Alternative = elseBlock
+	} else {
+		br.Alternative = then
+	}
 
 	// Action
 	fn.CurrentBlock = then
@@ -137,7 +140,7 @@ func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 	if n.Alternative != nil {
 		fn.CurrentBlock = elseBlock
 		b.visitBlockStatement(n.Alternative, fn)
-		elseBlock.Emit(&lir.Branch{
+		fn.Emit(&lir.Branch{
 			Block: done,
 		})
 	}
