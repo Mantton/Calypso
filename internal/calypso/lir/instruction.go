@@ -63,7 +63,6 @@ type Store struct {
 }
 
 type Call struct {
-	yielder
 	Target    *Function
 	Arguments []Value
 }
@@ -237,6 +236,7 @@ var SOpMap = map[token.Token]ICompOp{
 }
 
 // Conformance
+func (c *Call) Yields() types.Type { return c.Target.Signature().Result.Type() }
 func (c *Add) Yields() types.Type  { return c.Left.Yields() }
 func (c *FAdd) Yields() types.Type { return c.Left.Yields() }
 func (c *Sub) Yields() types.Type  { return c.Left.Yields() }

@@ -93,15 +93,6 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 		Arguments: args,
 	}
 
-	typ := b.Mod.TModule.Table.GetNodeType(n)
-
-	if typ == nil {
-		i.SetType(types.LookUp(types.Void))
-	} else {
-		i.SetType(typ)
-
-	}
-
 	fn.Emit(i)
 	return i
 }
@@ -195,7 +186,7 @@ func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Func
 
 func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
 	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
-
+	fmt.Printf("%T", lhs.Yields())
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -212,7 +203,8 @@ func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *l
 		}
 	}
 
-	panic("todo: implement operand calls")
+	msg := fmt.Sprintf("TODO: Operand Calls, %s", typ)
+	panic(msg)
 }
 
 func (b *builder) evaluateArithmeticSubExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
@@ -234,7 +226,8 @@ func (b *builder) evaluateArithmeticSubExpression(n *ast.BinaryExpression, fn *l
 		}
 	}
 
-	panic("todo: implement operand calls")
+	msg := fmt.Sprintf("TODO: Operand Calls, %s", typ)
+	panic(msg)
 }
 
 func (b *builder) evaluateArithmeticMulExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
@@ -256,7 +249,8 @@ func (b *builder) evaluateArithmeticMulExpression(n *ast.BinaryExpression, fn *l
 		}
 	}
 
-	panic("todo: implement operand calls")
+	msg := fmt.Sprintf("TODO: Operand Calls, %s", typ)
+	panic(msg)
 }
 
 func (b *builder) evaluateArithmeticDivExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
@@ -368,7 +362,7 @@ func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Funct
 		}
 	}
 
-	panic("negate on unsupported type")
+	panic(fmt.Sprintf("neagate: unsupported type, %s", typ))
 }
 
 func (b *builder) evaluateLogicalNot(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
@@ -400,7 +394,7 @@ func (b *builder) evaluateBitOperation(op token.Token, n *ast.BinaryExpression, 
 	typ := lhs.Yields()
 
 	if !types.IsInteger(typ) {
-		panic("unsupported type")
+		panic(fmt.Sprintf("unsupported type, %s, operand: %s", typ, op))
 	}
 
 	switch op {
@@ -443,8 +437,9 @@ func (b *builder) evaluateBitOperation(op token.Token, n *ast.BinaryExpression, 
 func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
 	lhs := b.evaluateExpression(n.Left, fn)
 	typ := lhs.Yields()
+
 	if !types.IsBoolean(typ) {
-		panic("unsupported type")
+		panic(fmt.Sprintf("unsupported type, %s, operand: %s", typ, op))
 	}
 
 	prev := fn.CurrentBlock
@@ -568,27 +563,27 @@ func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpressi
 			Right: n.Right,
 		}, fn)
 	case token.AMP_EQ:
-		rhs = b.evaluateBooleanOp(token.AMP, &ast.BinaryExpression{
+		rhs = b.evaluateBitOperation(token.AMP, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
 		}, fn)
 	case token.BAR_EQ:
-		rhs = b.evaluateBooleanOp(token.BAR, &ast.BinaryExpression{
+		rhs = b.evaluateBitOperation(token.BAR, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
 		}, fn)
 	case token.CARET_EQ:
-		rhs = b.evaluateBooleanOp(token.CARET, &ast.BinaryExpression{
+		rhs = b.evaluateBitOperation(token.CARET, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
 		}, fn)
 	case token.BIT_SHIFT_LEFT_EQ:
-		rhs = b.evaluateBooleanOp(token.BIT_SHIFT_LEFT, &ast.BinaryExpression{
+		rhs = b.evaluateBitOperation(token.BIT_SHIFT_LEFT, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
 		}, fn)
 	case token.BIT_SHIFT_RIGHT_EQ:
-		rhs = b.evaluateBooleanOp(token.BIT_SHIFT_RIGHT, &ast.BinaryExpression{
+		rhs = b.evaluateBitOperation(token.BIT_SHIFT_RIGHT, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
 		}, fn)
