@@ -622,10 +622,47 @@ func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Func
 		panic("nil type")
 	}
 
-	addr := b.emitHeapAlloc(fn, typ)
-	return addr
+	def := types.AsDefined(typ)
 
-	// TODO: 2 - Store Properties
+	addr := b.emitHeapAlloc(fn, def)
+
+	for _, field := range n.Body.Fields {
+		sym := def.GetScope().MustResolve(field.Key.Value)
+		composite := b.Mod.Composites[def.Parent()]
+
+		value := b.evaluateExpression(field.Value, fn)
+
+		if sym == nil {
+			panic(fmt.Sprintf("unresolved symbol, %s", field.Key.Value))
+		}
+
+		switch sym := sym.(type) {
+		case *types.Var:
+			index := sym.StructIndex
+
+			// Get Pointer to Property
+
+			prop_ptr := &lir.GEP{
+				Index:     index,
+				Address:   addr,
+				Composite: composite,
+			}
+
+			fn.Emit(prop_ptr)
+
+			// Store
+			store := &lir.Store{
+				Address: prop_ptr,
+				Value:   value,
+			}
+
+			fn.Emit(store)
+		default:
+			panic("cannot set non variable property")
+		}
+	}
+
+	return addr
 }
 
 func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn *lir.Function, load bool) lir.Value {
