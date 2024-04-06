@@ -326,6 +326,10 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 		return unresolved
 	}
 
+	if rhs == types.LookUp(types.NilLiteral) {
+		c.table.tNodes[e.Right] = lhs
+	}
+
 	switch op {
 	case token.PLUS, token.MINUS, token.QUO, token.STAR, token.PCT:
 		if types.IsNumeric(typ) {

@@ -203,11 +203,17 @@ func IsBoolean(t Type) bool {
 	}
 }
 func IsEquatable(t Type) bool {
-	return IsBoolean(t) || IsNumeric(t)
+	return IsBoolean(t) || IsNumeric(t) || IsPointer(t)
 }
 
 func IsConstant(t Type) bool {
 	_, ok := t.(*Basic)
+
+	return ok
+}
+
+func IsPointer(t Type) bool {
+	_, ok := t.(*Pointer)
 
 	return ok
 }

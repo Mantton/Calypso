@@ -56,7 +56,8 @@ func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 			panic("basic type constant type has not been defined yet")
 		}
 	case *types.Pointer:
-		return llvm.ConstPointerNull(c.getType(t.PointerTo))
+		x := llvm.PointerType(c.getType(t.PointerTo), 0)
+		return llvm.ConstPointerNull(x)
 	default:
 		panic(" type constant type has not been defined yet")
 	}

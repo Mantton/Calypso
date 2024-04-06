@@ -117,6 +117,11 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 	if ok {
 		switch val := val.(type) {
 		case *lir.Allocate:
+
+			if types.IsPointer(val.Yields()) || types.IsStruct(val.Yields()) {
+				return val
+			}
+
 			i := &lir.Load{
 				Address: val,
 			}
@@ -339,6 +344,17 @@ func (b *builder) evaluateArithmeticComparison(op token.Token, n *ast.BinaryExpr
 
 	if types.IsFloatingPoint(typ) {
 		panic("todo: floating point comparisons")
+	}
+
+	if types.IsPointer(typ) {
+
+		instr := &lir.ICmp{
+			Left:       lhs,
+			Right:      rhs,
+			Comparison: lir.EQL,
+		}
+
+		return instr
 	}
 
 	panic("todo: implement operand calls")
