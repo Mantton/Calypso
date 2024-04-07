@@ -8,16 +8,18 @@ import (
 type builder struct {
 	Mod       *lir.Module
 	Functions map[*ast.FunctionExpression]*lir.Function
+	Refs      map[string]*lir.TypeRef
 }
 
 func build(mod *lir.Module) error {
 	b := &builder{
 		Mod:       mod,
 		Functions: make(map[*ast.FunctionExpression]*lir.Function),
+		Refs:      make(map[string]*lir.TypeRef),
 	}
 
 	b.pass()
-	// b.debugPrint()
+	b.debugPrint()
 	return nil
 }
 

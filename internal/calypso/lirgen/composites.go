@@ -20,13 +20,19 @@ func (b *builder) pass1(f *ast.File) {
 }
 
 func (b *builder) genEnum(n *ast.EnumStatement) {
-	t, ok := b.Mod.TypeTable().GetNodeType(n).Parent().(*types.Enum)
+	def := b.Mod.TypeTable().GetNodeType(n)
+	t, ok := def.Parent().(*types.Enum)
 
 	if !ok {
 		panic("node is not enum type")
 	}
 
-	fmt.Println("<ENUM>", t)
+	b.Refs[t.Name] = &lir.TypeRef{
+		Type: def,
+	}
+
+	fmt.Println("<ENUM>", t, t.IsUnion())
+
 }
 func (b *builder) genStruct(n *ast.StructStatement) {
 	t, ok := b.Mod.TypeTable().GetNodeType(n).Parent().(*types.Struct)

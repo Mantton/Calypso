@@ -31,3 +31,23 @@ func NewEnumVariant(name string, discriminant int, fields []*Var) *EnumVariant {
 		Fields:       fields,
 	}
 }
+
+func (e *Enum) IsUnion() bool {
+	for _, v := range e.Variants {
+		if len(v.Fields) != 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *Enum) FindVariant(n string) *EnumVariant {
+	for _, x := range e.Variants {
+		if x.Name == n {
+			return x
+		}
+	}
+
+	return nil
+}

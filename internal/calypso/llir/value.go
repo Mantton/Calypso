@@ -32,7 +32,8 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 	switch v := v.(type) {
 	case *lir.Constant:
 		return b.compiler.createConstant(v)
-
+	case *lir.Global:
+		return b.compiler.createConstant(v.Value)
 	case *lir.Add:
 		lhs, rhs := b.getValue(v.Left), b.getValue(v.Right)
 		return b.CreateAdd(lhs, rhs, "")

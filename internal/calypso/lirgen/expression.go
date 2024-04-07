@@ -536,11 +536,16 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 	case *ast.IdentifierExpression:
 		val, ok := fn.Variables[n.Value]
 
-		if !ok {
-			panic(fmt.Sprintf("unknown identifier, %s", n.Value))
+		if ok {
+			return val
 		}
 
-		return val
+		ref, ok := b.Refs[n.Value]
+
+		if ok {
+			return ref
+		}
+		panic(fmt.Sprintf("unknown identifier, %s", n.Value))
 	case *ast.FieldAccessExpression:
 		return b.evaluateFieldAccessExpression(n, fn, false)
 	default:
@@ -666,67 +671,101 @@ func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Func
 }
 
 func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn *lir.Function, load bool) lir.Value {
-	addr := b.evaluateAddressOfExpression(n.Target, fn)
-	targetTyp := b.Mod.TypeTable().GetNodeType(n.Target)
-	composite := b.Mod.Composites[targetTyp.Parent()]
-	def := types.AsDefined(targetTyp)
-	if def == nil {
-		panic("nil defined type")
+	// 1 - Evaluate Address or Type Reference
+	target := b.evaluateAddressOfExpression(n.Target, fn)
+
+	// 2 - Cast Field Property to Ident to access string name
+	fExpr, ok := n.Field.(*ast.IdentifierExpression)
+	if !ok {
+		panic("non ident field access")
 	}
 
-	switch p := n.Field.(type) {
-	case *ast.IdentifierExpression:
-		field := p.Value
+	field := fExpr.Value
+	isTypeAccess := false
 
-		sym := def.GetScope().MustResolve(field)
-
-		if sym == nil {
-			panic(fmt.Sprintf("unresolved symbol, %s", field))
-		}
-
-		switch sym := sym.(type) {
-		case *types.Var:
-			// Is Field
-			index := sym.StructIndex
-
-			// Invalid Field
-			if index == -1 {
-				panic("unknown field")
-			}
-
-			// Get Element Pointer of Field
-			ptr := &lir.GEP{
-				Index:     index,
-				Address:   addr,
-				Composite: composite,
-			}
-
-			// If SHould Load, return load instruction
-			if load {
-				return &lir.Load{
-					Address: ptr,
-				}
-			}
-
-			// return GEP instruction, yeilding ptr to field
-			return ptr
-		case *types.Function:
-			// Is Method
-			astTarget := b.Mod.TypeTable().GetRevFunction(sym)
-			target := b.Functions[astTarget]
-			if target.Signature().IsStatic {
-				return target
-			}
-
-			return &lir.Method{
-				Fn:   target,
-				Self: addr,
-			}
-		default:
-			panic(fmt.Sprintf("unimplemented method access, %T", sym))
-		}
-
+	// Resolve Type of Target
+	var definition *types.DefinedType
+	switch target := target.(type) {
+	// Accessing a type
+	case *lir.TypeRef:
+		definition = types.AsDefined(target.Type)
+		isTypeAccess = true
 	default:
-		panic("unimplemented access expression")
+		// Accessing Property of an Address
+		targetTyp := b.Mod.TypeTable().GetNodeType(n.Target)
+		definition = types.AsDefined(targetTyp)
 	}
+
+	if definition == nil {
+		panic("Type is not a defined type")
+	}
+
+	// Check if resolving function on type
+	function := types.AsFunction(definition.GetScope().MustResolve(field))
+
+	// Is Function Call
+	if function != nil {
+		astTarget := b.Mod.TypeTable().GetRevFunction(function)
+		lirTarget := b.Functions[astTarget]
+		if lirTarget.Signature().IsStatic {
+			return lirTarget
+		}
+		return &lir.Method{
+			Fn:   lirTarget,
+			Self: target,
+		}
+	}
+
+	// Is Variable Field
+	symbol, ok := definition.GetScope().MustResolve(field).(*types.Var)
+
+	if ok {
+		index := symbol.StructIndex
+		composite := b.Mod.Composites[definition.Parent()]
+
+		// Invalid Field
+		if index == -1 {
+			panic("unknown field")
+		}
+
+		// Get Element Pointer of Field
+		ptr := &lir.GEP{
+			Index:     index,
+			Address:   target,
+			Composite: composite,
+		}
+
+		// If SHould Load, return load instruction
+		if load {
+			return &lir.Load{
+				Address: ptr,
+			}
+		}
+
+		// return GEP instruction, yeilding ptr to field
+		return ptr
+	}
+
+	// Accessing a type, if accessing static funciton, it would've been resolved earlier, so most likely accessing an enum
+	if en, ok := definition.Parent().(*types.Enum); ok && isTypeAccess {
+		variant := en.FindVariant(field)
+
+		// Composites are treated like a function call
+		if en.IsUnion() {
+			panic("composite enum")
+		} else {
+			return lir.NewConst(int64(variant.Discriminant), types.LookUp(types.Int32))
+		}
+
+	}
+	// Non Function Call
+	panic("unimplemented field access case")
+
+}
+
+func (b *builder) resolveFieldOn(t types.Type, f string, load bool) {
+	// if def == nil {
+	// 	panic(fmt.Sprintf("Type is not a defined type, %T", target.Type))
+	// }
+
 }

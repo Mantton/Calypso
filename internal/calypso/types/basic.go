@@ -203,7 +203,23 @@ func IsBoolean(t Type) bool {
 	}
 }
 func IsEquatable(t Type) bool {
-	return IsBoolean(t) || IsNumeric(t) || IsPointer(t)
+	basic := IsBoolean(t) || IsNumeric(t) || IsPointer(t)
+	if basic {
+		return basic
+	}
+
+	// enums
+	en, ok := t.Parent().(*Enum)
+
+	if !ok {
+		return basic
+	}
+
+	if !en.IsUnion() {
+		return true
+	}
+
+	return false
 }
 
 func IsConstant(t Type) bool {
