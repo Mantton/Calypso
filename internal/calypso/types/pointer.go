@@ -19,3 +19,15 @@ func (t *Pointer) String() string {
 
 	return fmt.Sprintf(f, t.PointerTo)
 }
+
+func Dereference(t Type) Type {
+
+	ptr, ok := t.(*Pointer)
+
+	if ok {
+		return ptr.PointerTo
+	}
+
+	// return t
+	panic(fmt.Sprintf("cannot dereference non pointer type, %s", t))
+}

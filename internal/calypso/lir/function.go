@@ -8,6 +8,7 @@ type Parameter struct {
 	Name   string
 	Symbol types.Type
 	Parent *Function
+	IsSelf bool
 }
 
 type Function struct {
@@ -63,14 +64,24 @@ func (f *Function) AddSelf() {
 		return
 	}
 
+	var s types.Type
+	// Mutable Self || Composite
+	if f.Signature().IsMutating || types.IsStruct(self.Type().Parent()) {
+		// Mutating pass self as pointer
+		s = types.NewPointer(self.Type())
+	} else {
+		s = self.Type()
+	}
+
 	p := &Parameter{
 		Name:   "self",
-		Symbol: types.NewPointer(self.Type()),
+		Symbol: s,
 		Parent: f,
+		IsSelf: true,
 	}
+
 	f.Parameters = append(f.Parameters, p)
 	f.Variables[p.Name] = p
-
 }
 
 func NewFunction(fn *types.Function) *Function {

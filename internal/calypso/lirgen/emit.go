@@ -6,18 +6,19 @@ import (
 )
 
 func (b *builder) emitStackAlloc(fn *lir.Function, t types.Type) *lir.Allocate {
-	i := &lir.Allocate{}
-	i.SetType(t)
+	i := &lir.Allocate{
+		TypeOf: t,
+	}
 	fn.Emit(i)
 	return i
 }
 
 func (b *builder) emitHeapAlloc(fn *lir.Function, t types.Type) *lir.Allocate {
 	i := &lir.Allocate{
+		TypeOf: t,
 		OnHeap: true,
 	}
 
-	i.SetType(t)
 	fn.Emit(i)
 	return i
 }

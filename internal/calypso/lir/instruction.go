@@ -48,12 +48,11 @@ const (
 )
 
 type Load struct {
-	yielder
 	Address Value
 }
 
 type Allocate struct {
-	yielder
+	TypeOf types.Type
 	OnHeap bool
 }
 
@@ -236,7 +235,11 @@ var SOpMap = map[token.Token]ICompOp{
 }
 
 // Conformance
-func (c *Call) Yields() types.Type { return c.Target.Signature().Result.Type() }
+func (c *Call) Yields() types.Type     { return c.Target.Signature().Result.Type() }
+func (c *Load) Yields() types.Type     { return types.Dereference(c.Address.Yields()) }
+func (c *Allocate) Yields() types.Type { return types.NewPointer(c.TypeOf) }
+func (c *GEP) Yields() types.Type      { return types.NewPointer(c.Composite.Members[c.Index]) }
+
 func (c *Add) Yields() types.Type  { return c.Left.Yields() }
 func (c *FAdd) Yields() types.Type { return c.Left.Yields() }
 func (c *Sub) Yields() types.Type  { return c.Left.Yields() }
@@ -262,5 +265,4 @@ func (c *LogicalShiftRight) Yields() types.Type    { return c.Left.Yields() }
 func (c *AND) Yields() types.Type                  { return c.Left.Yields() }
 func (c *OR) Yields() types.Type                   { return c.Left.Yields() }
 func (c *PHI) Yields() types.Type                  { return c.Nodes[0].Value.Yields() }
-func (c *GEP) Yields() types.Type                  { return c.Composite.Members[c.Index] }
 func (c *ExtractValue) Yields() types.Type         { return c.Composite.Members[c.Index] }

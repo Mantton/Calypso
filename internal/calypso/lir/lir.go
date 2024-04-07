@@ -23,13 +23,3 @@ type Value interface {
 type Instruction interface {
 	Node
 }
-
-// mix-in embeded by all SSA instructions that yield a value
-type yielder struct {
-	typ types.Type
-}
-
-func (y *yielder) SetType(typ types.Type) { y.typ = typ }
-func (y *yielder) Yields() types.Type {
-	return y.typ
-}

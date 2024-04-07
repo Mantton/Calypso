@@ -150,7 +150,7 @@ func (n *DefinedType) ResolveField(s string) Type {
 	// Access Field
 	switch parent := n.Parent().(type) {
 	case *Struct:
-		target, ok := parent.Fields[s]
+		target, ok := parent.Map[s]
 
 		if ok {
 			return target.Type()

@@ -140,7 +140,7 @@ func (b *builder) createPhi(v *lir.PHI) llvm.Value {
 
 func (b *builder) createLoad(v *lir.Load) llvm.Value {
 	addr := b.getValue(v.Address)
-	typ := b.compiler.getType(v.Address.Yields())
+	typ := b.compiler.getType(v.Yields())
 	val := b.CreateLoad(typ, addr, "")
 	return val
 }

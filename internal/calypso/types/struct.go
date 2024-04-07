@@ -6,7 +6,8 @@ import (
 )
 
 type Struct struct {
-	Fields map[string]*Var
+	Fields []*Var
+	Map    map[string]*Var
 }
 
 func (t *Struct) clyT()        {}
@@ -30,12 +31,14 @@ func (t *Struct) String() string {
 
 func NewStruct(f []*Var) *Struct {
 	s := &Struct{
-		Fields: make(map[string]*Var),
+		Fields: nil,
+		Map:    make(map[string]*Var),
 	}
 
 	for i, e := range f {
 		e.StructIndex = i
-		s.Fields[e.name] = e
+		s.Fields = append(s.Fields, e)
+		s.Map[e.name] = e
 	}
 	return s
 }
@@ -47,7 +50,7 @@ func IsStruct(t Type) bool {
 }
 
 func (s *Struct) FindField(n string) *Var {
-	v, ok := s.Fields[n]
+	v, ok := s.Map[n]
 
 	if ok {
 		return v

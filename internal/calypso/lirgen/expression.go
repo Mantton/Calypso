@@ -10,6 +10,12 @@ import (
 )
 
 func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Value {
+	fmt.Printf(
+		"\tVisiting Expression: %T @ Line %d\n",
+		n,
+		n.Range().Start.Line,
+	)
+
 	switch e := n.(type) {
 	case *ast.BooleanLiteral:
 		return lir.NewConst(e.Value, types.LookUp(types.Bool))
@@ -98,27 +104,14 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 }
 
 func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *lir.Function) lir.Value {
-
-	// Global Constant
-	cons, ok := b.Mod.GlobalConstants[n.Value]
-	if ok {
-		return cons
-	}
-
-	// Function
-	f, ok := b.Mod.Functions[n.Value]
-	if ok {
-		return f
-	}
-
 	// Scoped Variable
 	val, ok := fn.Variables[n.Value]
 
 	if ok {
 		switch val := val.(type) {
 		case *lir.Allocate:
-
-			if types.IsPointer(val.Yields()) || types.IsStruct(val.Yields()) {
+			// Return Pointer to Composites, dereference the rest
+			if types.IsStruct(val.TypeOf.Parent()) {
 				return val
 			}
 
@@ -126,14 +119,36 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 				Address: val,
 			}
 
-			i.SetType(val.Yields())
 			fn.Emit(i)
 			return i
-		case *lir.Constant, *lir.Parameter:
+		case *lir.Constant:
 			return val
+		case *lir.Parameter:
+
+			if !types.IsPointer(val.Yields()) {
+				return val
+			}
+
+			i := &lir.Load{
+				Address: val,
+			}
+
+			fn.Emit(i)
+			return i
 		default:
 			panic(fmt.Sprintf("identifier found invalid type: %T", val))
 		}
+	}
+	// Function
+	f, ok := b.Mod.Functions[n.Value]
+	if ok {
+		return f
+	}
+
+	// Global Constant
+	cons, ok := b.Mod.GlobalConstants[n.Value]
+	if ok {
+		return cons
 	}
 
 	panic("unable to locate identifier")
@@ -191,7 +206,7 @@ func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Func
 
 func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
 	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
-	fmt.Printf("%T", lhs.Yields())
+	fmt.Printf(" %T\n", lhs)
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -363,7 +378,6 @@ func (b *builder) evaluateArithmeticComparison(op token.Token, n *ast.BinaryExpr
 
 func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
 	rhs := b.evaluateExpression(n.Expr, fn)
-
 	typ := rhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -378,7 +392,7 @@ func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Funct
 		}
 	}
 
-	panic(fmt.Sprintf("neagate: unsupported type, %s", typ))
+	panic(fmt.Sprintf("negate: unsupported type, %s", typ))
 }
 
 func (b *builder) evaluateLogicalNot(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
@@ -534,6 +548,13 @@ func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn 
 func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function) lir.Value {
 	switch n := n.(type) {
 	case *ast.IdentifierExpression:
+
+		global, ok := b.Mod.GlobalConstants[n.Value]
+
+		if ok {
+			return global
+		}
+
 		val, ok := fn.Variables[n.Value]
 
 		if ok {
@@ -760,12 +781,5 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	}
 	// Non Function Call
 	panic("unimplemented field access case")
-
-}
-
-func (b *builder) resolveFieldOn(t types.Type, f string, load bool) {
-	// if def == nil {
-	// 	panic(fmt.Sprintf("Type is not a defined type, %T", target.Type))
-	// }
 
 }
