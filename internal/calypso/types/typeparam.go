@@ -16,7 +16,6 @@ func NewTypeParam(n string, cns []*Standard, b Type) *TypeParam {
 
 type TypeParams []*TypeParam
 
-func (t *TypeParam) clyT() {}
 func (t *TypeParam) String() string {
 	if t.Bound != nil {
 		return t.Bound.String()

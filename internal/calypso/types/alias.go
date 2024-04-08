@@ -8,7 +8,6 @@ type Alias struct {
 	RHS            Type
 }
 
-func (t *Alias) clyT()        {}
 func (t *Alias) Parent() Type { return t.RHS.Parent() }
 
 func (t *Alias) String() string {

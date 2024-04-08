@@ -10,7 +10,6 @@ type Struct struct {
 	Map    map[string]*Var
 }
 
-func (t *Struct) clyT()        {}
 func (t *Struct) Parent() Type { return t }
 
 func (t *Struct) String() string {

@@ -44,7 +44,6 @@ type Basic struct {
 	name    string
 }
 
-func (t *Basic) clyT()          {}
 func (t *Basic) Name() string   { return t.name }
 func (t *Basic) String() string { return t.name }
 func (t *Basic) Parent() Type   { return t }

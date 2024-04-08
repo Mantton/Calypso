@@ -13,9 +13,11 @@ type EnumVariant struct {
 
 type EnumVariants []*EnumVariant
 
-func (t *Enum) clyT()          {}
 func (t *Enum) Parent() Type   { return t }
 func (t *Enum) String() string { return t.Name }
+
+func (t *EnumVariant) Parent() Type   { return t }
+func (t *EnumVariant) String() string { return t.Name }
 
 func NewEnum(name string, cases []*EnumVariant) *Enum {
 	return &Enum{

@@ -22,7 +22,6 @@ type FunctionSignature struct {
 	IsMutating     bool
 }
 
-func (t *FunctionSignature) clyT()        {}
 func (t *FunctionSignature) Parent() Type { return t }
 
 func (t *FunctionSignature) String() string {

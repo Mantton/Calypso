@@ -3,19 +3,22 @@ package lirgen
 import (
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lir"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type builder struct {
-	Mod       *lir.Module
-	Functions map[*ast.FunctionExpression]*lir.Function
-	Refs      map[string]*lir.TypeRef
+	Mod           *lir.Module
+	Functions     map[*ast.FunctionExpression]*lir.Function
+	EnumFunctions map[*types.EnumVariant]*lir.Function
+	Refs          map[string]*lir.TypeRef
 }
 
 func build(mod *lir.Module) error {
 	b := &builder{
-		Mod:       mod,
-		Functions: make(map[*ast.FunctionExpression]*lir.Function),
-		Refs:      make(map[string]*lir.TypeRef),
+		Mod:           mod,
+		Functions:     make(map[*ast.FunctionExpression]*lir.Function),
+		EnumFunctions: make(map[*types.EnumVariant]*lir.Function),
+		Refs:          make(map[string]*lir.TypeRef),
 	}
 
 	b.pass()
@@ -36,5 +39,9 @@ func (b *builder) pass() {
 		for _, file := range files {
 			fn(file)
 		}
+	}
+
+	for _, fn := range b.EnumFunctions {
+		b.Mod.Functions[fn.Name()] = fn
 	}
 }

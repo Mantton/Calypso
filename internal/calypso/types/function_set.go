@@ -8,7 +8,6 @@ type FunctionSet struct {
 	Instances FunctionList
 }
 
-func (s *FunctionSet) clyT() {}
 func (s *FunctionSet) String() string {
 	msg := fmt.Sprintf("<FunctionSet> %s\n", s.Name())
 

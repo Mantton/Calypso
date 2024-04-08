@@ -1,6 +1,10 @@
 package lir
 
-import "github.com/mantton/calypso/internal/calypso/types"
+import (
+	"fmt"
+
+	"github.com/mantton/calypso/internal/calypso/types"
+)
 
 // * 2
 type Executable struct {
@@ -11,7 +15,36 @@ type Package struct {
 }
 
 type Composite struct {
-	Members []types.Type
-	Actual  types.Type
-	Name    string
+	Members    []types.Type
+	Actual     types.Type
+	Name       string
+	EnumParent *Composite
+}
+
+func (c *Composite) String() string {
+	members := ""
+
+	for i, m := range c.Members {
+		members += m.String()
+
+		if i != len(c.Members)-1 {
+			members += ", "
+		}
+
+	}
+	base := fmt.Sprintf("%s = { %s }", c.Name, members)
+	return base
+
+}
+
+// New Type For Array Type in LLVM
+type StaticArray struct {
+	OfType types.Type
+	Count  int
+}
+
+func (t *StaticArray) Parent() types.Type { return t }
+
+func (t *StaticArray) String() string {
+	return fmt.Sprintf("[%d x %s]", t.Count, t.OfType)
 }

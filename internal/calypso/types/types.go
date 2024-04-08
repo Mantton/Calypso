@@ -1,7 +1,6 @@
 package types
 
 type Type interface {
-	clyT()
 	String() string
 	Parent() Type
 }

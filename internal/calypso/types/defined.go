@@ -26,7 +26,6 @@ func (s *DefinedType) AddTypeParameter(t *TypeParam) error {
 	return s.scope.Define(t)
 }
 
-func (t *DefinedType) clyT()        {}
 func (t *DefinedType) Parent() Type { return t.wrapped.Parent() }
 
 func (t *DefinedType) Type() Type {

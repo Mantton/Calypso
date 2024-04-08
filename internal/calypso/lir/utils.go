@@ -59,16 +59,20 @@ func sizeOfStruct(t *types.Struct) uint64 {
 }
 
 func sizeOfEnum(t *types.Enum) uint64 {
-	size := uint64(8) // 8 Bytes
+	size := SizeOf(types.LookUp(types.Int8))
 	maxUnionSize := uint64(0)
 	for _, v := range t.Variants {
-		s := uint64(0)
-		for _, f := range v.Fields {
-			s += SizeOf(f.Type())
-		}
-
-		maxUnionSize = max(maxUnionSize, s)
+		maxUnionSize = max(maxUnionSize, sizeOfTaggedVariant(v))
 	}
 
 	return size + maxUnionSize
+}
+
+func sizeOfTaggedVariant(t *types.EnumVariant) uint64 {
+	s := uint64(0)
+	for _, f := range t.Fields {
+		s += SizeOf(f.Type())
+	}
+
+	return s
 }

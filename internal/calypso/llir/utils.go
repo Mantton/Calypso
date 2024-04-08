@@ -104,9 +104,12 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 	case *types.Pointer:
 		pt := c.getType(t.PointerTo)
 		return llvm.PointerType(pt, 0)
+	case *lir.StaticArray:
+		element := c.getType(t.OfType)
+		return llvm.ArrayType(element, int(t.Count))
 	}
 
-	panic(fmt.Sprintf("Unsupported Type: %T", t))
+	panic(fmt.Sprintf("Unsupported Type: %T, %s", t, t))
 }
 
 func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {

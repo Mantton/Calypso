@@ -773,7 +773,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 		// Composites are treated like a function call
 		if en.IsUnion() {
-			panic("composite enum")
+			return b.generateOrReturnFunctionForVariant(variant, en)
 		} else {
 			return lir.NewConst(int64(variant.Discriminant), types.LookUp(types.Int32))
 		}
@@ -782,4 +782,67 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	// Non Function Call
 	panic("unimplemented field access case")
 
+}
+
+func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *types.Enum) *lir.Function {
+	composite := b.Mod.Composites[n]
+
+	// Already Built, return
+	fn, ok := b.EnumFunctions[n]
+
+	if ok {
+		return fn
+	}
+
+	// Tuple Type, Return Function Returning Parent Type
+	sg := types.NewFunctionSignature()
+	for _, p := range n.Fields {
+		sg.AddParameter(p)
+	}
+
+	sg.Result.SetType(types.NewPointer(p))
+	tFn := types.NewFunction(composite.Name, sg)
+	fn = lir.NewFunction(tFn)
+
+	for _, field := range n.Fields {
+		fn.AddParameter(field)
+	}
+
+	// Allocate Base Type
+	addr := &lir.Allocate{
+		TypeOf: p,
+	}
+
+	fn.Emit(addr)
+
+	// GEP & Store of Fields
+	for i := range n.Fields {
+
+		ptr := &lir.GEP{
+			Index:     i + 1, // First Position is always dicriminant
+			Address:   addr,
+			Composite: composite,
+		}
+
+		store := &lir.Store{
+			Address: ptr,
+			Value:   fn.Parameters[i],
+		}
+
+		fn.Emit(store)
+	}
+
+	// emit store of disciminant
+	fn.Emit(&lir.Store{
+		Address: addr,
+		Value:   lir.NewConst(int64(n.Discriminant), types.LookUp(types.Int8)),
+	})
+
+	// emit return of pointer to foo
+	fn.Emit(&lir.Return{
+		Result: addr,
+	})
+
+	b.EnumFunctions[n] = fn
+	return fn
 }

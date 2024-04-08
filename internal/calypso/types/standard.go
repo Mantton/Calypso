@@ -18,7 +18,6 @@ func NewStandard(name string) *Standard {
 	}
 }
 
-func (s *Standard) clyT()        {}
 func (t *Standard) Parent() Type { return t }
 
 func (s *Standard) String() string { return s.Name }
