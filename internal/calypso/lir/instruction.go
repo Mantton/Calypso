@@ -83,6 +83,20 @@ type Branch struct {
 	Block *Block
 }
 
+type Switch struct {
+	Value  Value
+	Blocks []*SwitchValueBlock
+	Done   *Block
+}
+
+type SwitchValueBlock struct {
+	Value    Value
+	Block    *Block
+	EndBlock *Block
+}
+
+// Yielding Instructions
+
 // Addition
 type Add struct {
 	Left  Value
@@ -252,8 +266,9 @@ func (c *FDiv) Yields() types.Type { return c.Left.Yields() }
 func (c *URem) Yields() types.Type { return c.Left.Yields() }
 func (c *SRem) Yields() types.Type { return c.Left.Yields() }
 func (c *FRem) Yields() types.Type { return c.Left.Yields() }
-func (c *ICmp) Yields() types.Type { return c.Left.Yields() }
-func (c *FCmp) Yields() types.Type { return c.Left.Yields() }
+
+func (c *ICmp) Yields() types.Type { return types.LookUp(types.Bool) }
+func (c *FCmp) Yields() types.Type { return types.LookUp(types.Bool) }
 
 func (c *INeg) Yields() types.Type { return c.Right.Yields() }
 func (c *FNeg) Yields() types.Type { return c.Right.Yields() }

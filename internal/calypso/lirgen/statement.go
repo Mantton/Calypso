@@ -175,4 +175,67 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 }
 
 func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function) {
+	cond := b.evaluateExpression(n.Condition, fn)
+
+	instr := &lir.Switch{
+		Value: cond,
+	}
+	fn.Emit(instr)
+
+	var defaultCase *ast.SwitchCaseExpression
+
+	for _, cs := range n.Cases {
+		if cs.IsDefault {
+			defaultCase = cs
+			continue
+		}
+		value := b.evaluateExpression(cs.Condition, fn)
+		block := fn.NewBlock()
+		b.visitBlockStatement(cs.Action, fn)
+
+		pair := &lir.SwitchValueBlock{
+			Value:    value,
+			Block:    block,
+			EndBlock: fn.CurrentBlock,
+		}
+
+		instr.Blocks = append(instr.Blocks, pair)
+	}
+
+	// Declare Final BLock of Default Path & the "Done" Block after the switch
+	var done *lir.Block
+	var defBlock *lir.Block
+
+	// if the default case not nil, set the done block to the default path, note that the "Done" & Switch Default path are mixed here
+	if defaultCase != nil {
+		instr.Done = fn.NewBlock()
+		b.visitBlockStatement(defaultCase.Action, fn)
+		defBlock = fn.CurrentBlock
+	}
+
+	done = fn.NewBlock()
+
+	// No Default Case, set default to next block after switch statement, our "done" block
+	if instr.Done == nil {
+		instr.Done = done
+	}
+
+	// Loop through previous ending blocks and emit a branch to the done block if needed
+	for _, pair := range instr.Blocks {
+		if pair.EndBlock.Complete {
+			continue
+		}
+
+		pair.EndBlock.Emit(&lir.Branch{
+			Block: done,
+		})
+	}
+
+	// if the default endblock is not nil & is not complete, alos emit a branch to the done block
+	if defBlock != nil && !defBlock.Complete {
+		defBlock.Emit(&lir.Branch{
+			Block: done,
+		})
+	}
+
 }

@@ -20,6 +20,8 @@ func (b *builder) visitInstruction(i lir.Instruction) {
 		b.visitConditionalBranchInstruction(i)
 	case *lir.Branch:
 		b.visitBranchInstruction(i)
+	case *lir.Switch:
+		b.visitSwitchInstruction(i)
 	default:
 		msg := fmt.Sprintf("[LLIR] Instruction Not Implemented, %T", i)
 		panic(msg)
@@ -56,4 +58,16 @@ func (b *builder) visitConditionalBranchInstruction(i *lir.ConditionalBranch) {
 func (b *builder) visitBranchInstruction(i *lir.Branch) {
 	x := b.blocks[i.Block]
 	b.CreateBr(x)
+}
+
+func (b *builder) visitSwitchInstruction(i *lir.Switch) {
+	cond := b.getValue(i.Value)
+	done := b.blocks[i.Done]
+	llvmInstr := b.CreateSwitch(cond, done, len(i.Blocks))
+
+	for _, p := range i.Blocks {
+		cond := b.getValue(p.Value)
+		block := b.blocks[p.Block]
+		llvmInstr.AddCase(cond, block)
+	}
 }
