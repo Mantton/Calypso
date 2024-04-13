@@ -111,7 +111,8 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 		switch val := val.(type) {
 		case *lir.Allocate:
 			// Return Pointer to Composites, dereference the rest
-			if types.IsStruct(val.TypeOf.Parent()) {
+			typ := val.TypeOf.Parent()
+			if types.IsStruct(typ) || types.IsUnionEnum(typ) {
 				return val
 			}
 
@@ -136,6 +137,8 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 			fn.Emit(i)
 			return i
 		case *lir.Load:
+			return val
+		case *lir.ExtractValue:
 			return val
 		default:
 			panic(fmt.Sprintf("identifier found invalid type: %T", val))
@@ -852,20 +855,23 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 
 func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Function) (lir.Value, *ast.CallExpression, *types.EnumVariant) {
 
-	c, ok := n.(*ast.CallExpression)
+	var target lir.Value
+	var expr *ast.CallExpression
+	switch n := n.(type) {
+	case *ast.CallExpression:
+		expr = n
+		target = b.evaluateExpression(n.Target, fn)
+	case *ast.FieldAccessExpression:
+		target = b.evaluateExpression(n, fn)
 
-	if !ok {
+	default:
 		return b.evaluateExpression(n, fn), nil, nil
 	}
-
-	target := b.evaluateExpression(c.Target, fn)
 
 	f, ok := target.(*lir.Function)
 
 	if !ok {
-
 		return b.evaluateExpression(n, fn), nil, nil
-
 	}
 
 	en := b.RFunctionEnums[f]
@@ -876,10 +882,10 @@ func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Fu
 	}
 
 	// Composite Enum
-	dis := lir.NewConst(int64(en.Discriminant), types.LookUp(types.Int))
+	dis := lir.NewConst(int64(en.Discriminant), types.LookUp(types.Int8))
 
 	// for each argument create name:value
-	return dis, c, en
+	return dis, expr, en
 }
 
 func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, self lir.Value) {

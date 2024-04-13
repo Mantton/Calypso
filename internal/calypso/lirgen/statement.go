@@ -177,18 +177,26 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function) {
 	cond := b.evaluateExpression(n.Condition, fn)
 
-	fmt.Printf("%s\n", cond.Yields())
-
 	var T lir.Value
-	if en, ok := cond.Yields().Parent().(*types.Enum); ok && en.IsUnion() {
 
-		addr := &lir.ExtractValue{
-			Address:   cond,
-			Index:     0,
-			Composite: b.Mod.Composites[en],
+	typ := cond.Yields().Parent()
+
+	// Is Composite Enum
+	if types.IsPointer(typ) {
+		if en, ok := types.Dereference(typ).Parent().(*types.Enum); ok && en.IsUnion() {
+			addr := &lir.GEP{
+				Address:   cond,
+				Index:     0,
+				Composite: b.Mod.Composites[en],
+			}
+
+			T = &lir.Load{
+				Address: addr,
+			}
+
+		} else {
+			T = cond
 		}
-
-		T = addr
 
 	} else {
 		T = cond
@@ -208,7 +216,6 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 		}
 		value, expr, typ := b.evaluateSwitchConditionExpression(cs.Condition, fn)
 
-		fmt.Printf("%T\n", value)
 		block := fn.NewBlock()
 
 		if expr != nil {

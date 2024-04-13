@@ -53,3 +53,13 @@ func (e *Enum) FindVariant(n string) *EnumVariant {
 
 	return nil
 }
+
+func IsUnionEnum(t Type) bool {
+	x, ok := t.Parent().(*Enum)
+
+	if !ok {
+		return false
+	}
+
+	return x.IsUnion()
+}
