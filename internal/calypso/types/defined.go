@@ -7,6 +7,7 @@ type DefinedType struct {
 	TypeParameters TypeParams
 	scope          *Scope
 	mappings       map[string]Type
+	Instances      map[string]Type
 }
 
 func NewDefinedType(n string, t Type, p TypeParams, scope *Scope) *DefinedType {

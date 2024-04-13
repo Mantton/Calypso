@@ -177,12 +177,16 @@ func Apply(ctx mappings, typ Type) Type {
 
 		copy := NewDefinedType(t.Name(), internal, params, nil) // nil scope, potential problem?
 
+		// Is Parent Instance
+		var parentInstance *DefinedType
 		if t.InstanceOf == nil {
-			copy.InstanceOf = t
+			parentInstance = t
 		} else {
-			copy.InstanceOf = t.InstanceOf
+			// T is not parent, link to parent of T
+			parentInstance = t.InstanceOf
 		}
 
+		copy.InstanceOf = parentInstance
 		return copy
 	case *FunctionSignature:
 		sg := NewFunctionSignature()
