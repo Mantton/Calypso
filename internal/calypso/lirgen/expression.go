@@ -135,6 +135,8 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 
 			fn.Emit(i)
 			return i
+		case *lir.Load:
+			return val
 		default:
 			panic(fmt.Sprintf("identifier found invalid type: %T", val))
 		}
@@ -844,5 +846,75 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 	})
 
 	b.EnumFunctions[n] = fn
+	b.RFunctionEnums[fn] = n
 	return fn
+}
+
+func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Function) (lir.Value, *ast.CallExpression, *types.EnumVariant) {
+
+	c, ok := n.(*ast.CallExpression)
+
+	if !ok {
+		return b.evaluateExpression(n, fn), nil, nil
+	}
+
+	target := b.evaluateExpression(c.Target, fn)
+
+	f, ok := target.(*lir.Function)
+
+	if !ok {
+
+		return b.evaluateExpression(n, fn), nil, nil
+
+	}
+
+	en := b.RFunctionEnums[f]
+
+	if en == nil {
+
+		return b.evaluateExpression(n, fn), nil, nil
+	}
+
+	// Composite Enum
+	dis := lir.NewConst(int64(en.Discriminant), types.LookUp(types.Int))
+
+	// for each argument create name:value
+	return dis, c, en
+}
+
+func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, self lir.Value) {
+	composite := b.Mod.Composites[v]
+
+	// 0 Index is Discriminant
+	x := 1
+
+	// If aligned 1 index is padding
+	if composite.IsAligned {
+		x += 1
+	}
+
+	// iterate through arguments
+	for i, arg := range n.Arguments {
+		idx := i + x
+		ident, ok := arg.Value.(*ast.IdentifierExpression)
+
+		if !ok {
+			panic("expected identifier")
+		}
+
+		addr := &lir.GEP{
+			Address:   self,
+			Index:     idx,
+			Composite: composite,
+		}
+
+		fn.Emit(addr)
+
+		load := &lir.Load{
+			Address: addr,
+		}
+
+		fn.Emit(load)
+		fn.Variables[ident.Value] = load
+	}
 }

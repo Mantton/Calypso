@@ -7,18 +7,20 @@ import (
 )
 
 type builder struct {
-	Mod           *lir.Module
-	Functions     map[*ast.FunctionExpression]*lir.Function
-	EnumFunctions map[*types.EnumVariant]*lir.Function
-	Refs          map[string]*lir.TypeRef
+	Mod            *lir.Module
+	Functions      map[*ast.FunctionExpression]*lir.Function
+	EnumFunctions  map[*types.EnumVariant]*lir.Function
+	RFunctionEnums map[*lir.Function]*types.EnumVariant
+	Refs           map[string]*lir.TypeRef
 }
 
 func build(mod *lir.Module) error {
 	b := &builder{
-		Mod:           mod,
-		Functions:     make(map[*ast.FunctionExpression]*lir.Function),
-		EnumFunctions: make(map[*types.EnumVariant]*lir.Function),
-		Refs:          make(map[string]*lir.TypeRef),
+		Mod:            mod,
+		Functions:      make(map[*ast.FunctionExpression]*lir.Function),
+		EnumFunctions:  make(map[*types.EnumVariant]*lir.Function),
+		RFunctionEnums: make(map[*lir.Function]*types.EnumVariant),
+		Refs:           make(map[string]*lir.TypeRef),
 	}
 
 	b.pass()

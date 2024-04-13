@@ -118,9 +118,10 @@ func (b *builder) genTaggedUnion(n *types.Enum, name string) {
 
 		members = append(members, ts...)
 		composite := &lir.Composite{
-			Actual:  variant,
-			Name:    name + "." + variant.Name,
-			Members: members,
+			Actual:    variant,
+			Name:      name + "." + variant.Name,
+			Members:   members,
+			IsAligned: paddingSize != 0,
 		}
 
 		b.Mod.Composites[variant] = composite

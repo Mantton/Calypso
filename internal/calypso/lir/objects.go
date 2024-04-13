@@ -19,6 +19,7 @@ type Composite struct {
 	Actual     types.Type
 	Name       string
 	EnumParent *Composite
+	IsAligned  bool
 }
 
 func (c *Composite) String() string {

@@ -177,8 +177,25 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function) {
 	cond := b.evaluateExpression(n.Condition, fn)
 
+	fmt.Printf("%s\n", cond.Yields())
+
+	var T lir.Value
+	if en, ok := cond.Yields().Parent().(*types.Enum); ok && en.IsUnion() {
+
+		addr := &lir.ExtractValue{
+			Address:   cond,
+			Index:     0,
+			Composite: b.Mod.Composites[en],
+		}
+
+		T = addr
+
+	} else {
+		T = cond
+	}
+
 	instr := &lir.Switch{
-		Value: cond,
+		Value: T,
 	}
 	fn.Emit(instr)
 
@@ -189,8 +206,15 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 			defaultCase = cs
 			continue
 		}
-		value := b.evaluateExpression(cs.Condition, fn)
+		value, expr, typ := b.evaluateSwitchConditionExpression(cs.Condition, fn)
+
+		fmt.Printf("%T\n", value)
 		block := fn.NewBlock()
+
+		if expr != nil {
+			b.evaluateEnumVariantTuple(fn, expr, typ, cond)
+		}
+
 		b.visitBlockStatement(cs.Action, fn)
 
 		pair := &lir.SwitchValueBlock{
