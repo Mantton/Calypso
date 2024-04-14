@@ -6,7 +6,7 @@ func (b *builder) debugPrint() {
 
 	for k, fn := range b.Mod.Functions {
 
-		fmt.Println("<FUNCTION> ", k)
+		fmt.Println("<FUNCTION> ", k, " | ", fn.Signature())
 
 		for _, blk := range fn.Blocks {
 			fmt.Printf("\tBlock %p\n", blk)

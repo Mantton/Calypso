@@ -46,6 +46,6 @@ func (b *builder) pass() {
 	}
 
 	for _, fn := range b.EnumFunctions {
-		b.Mod.Functions[fn.Name()] = fn
+		b.Mod.Functions[fn.Name] = fn
 	}
 }

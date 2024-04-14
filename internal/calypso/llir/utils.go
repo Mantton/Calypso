@@ -29,6 +29,7 @@ func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 	switch t := n.Yields().Parent().(type) {
 	case *types.Basic:
 		switch t.Literal {
+
 		case types.Int, types.Int64, types.IntegerLiteral, types.UInt, types.UInt64:
 			v := n.Value.(int64)
 			return llvm.ConstInt(c.context.Int64Type(), uint64(v), true)
@@ -52,6 +53,8 @@ func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 			panic("unreachable")
 		case types.Void:
 			return llvm.ConstPointerNull(c.context.Int1Type())
+		case types.Float, types.FloatLiteral:
+			return llvm.ConstFloat(c.context.FloatType(), n.Value.(float64))
 		default:
 			panic("basic type constant type has not been defined yet")
 		}
@@ -85,7 +88,7 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 			return c.context.Int16Type()
 		case types.Int8, types.UInt8:
 			return c.context.Int8Type()
-		case types.Float:
+		case types.Float, types.FloatLiteral:
 			return c.context.FloatType()
 		case types.Double:
 			return c.context.DoubleType()
@@ -113,7 +116,7 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 }
 
 func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {
-	llvmFn := c.module.NamedFunction(fn.Name())
+	llvmFn := c.module.NamedFunction(fn.Name)
 
 	if !llvmFn.IsNil() {
 		return llvmFn, llvmFn.GlobalValueType()
@@ -129,7 +132,7 @@ func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {
 	}
 
 	fnType := llvm.FunctionType(retType, params, false)
-	llvmFn = llvm.AddFunction(c.module, fn.Name(), fnType)
+	llvmFn = llvm.AddFunction(c.module, fn.Name, fnType)
 	return llvmFn, fnType
 
 }

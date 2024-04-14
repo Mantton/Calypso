@@ -12,7 +12,8 @@ type Parameter struct {
 }
 
 type Function struct {
-	Type         *types.Function
+	TFunction    *types.Function
+	sg           *types.FunctionSignature
 	Blocks       []*Block
 	Locals       []*Allocate
 	Variables    map[string]Value
@@ -20,12 +21,22 @@ type Function struct {
 	Owner        *Member
 	CurrentBlock *Block
 	External     bool
+	Name         string
 }
 
-func (f *Function) Signature() *types.FunctionSignature { return f.Type.Sg() }
-func (f *Function) Name() string                        { return f.Type.Name() }
-func (f *Function) Yields() types.Type                  { return f.Signature() }
-func (f *Parameter) Yields() types.Type                 { return f.Symbol }
+func (f *Function) Signature() *types.FunctionSignature {
+	if f.sg != nil {
+		return f.sg
+	} else {
+		return f.TFunction.Sg()
+	}
+}
+
+func (f *Function) SetSignature(sg *types.FunctionSignature) {
+	f.sg = sg
+}
+func (f *Function) Yields() types.Type  { return f.Signature() }
+func (f *Parameter) Yields() types.Type { return f.Symbol }
 
 func (f *Function) Emit(i Instruction) {
 	if f.CurrentBlock == nil {
@@ -87,7 +98,7 @@ func (f *Function) AddSelf() {
 func NewFunction(fn *types.Function) *Function {
 	f := &Function{
 		Variables: make(map[string]Value),
-		Type:      fn,
+		TFunction: fn,
 	}
 	f.NewBlock()
 	return f

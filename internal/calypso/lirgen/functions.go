@@ -51,6 +51,8 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 			name := tFn.SymbolName() + "::" + v.InstanceHash
 			// fmt.Println("Instance", v, "\n", v.InstanceHash)
 			fn := lir.NewFunction(tFn)
+			fn.Name = name
+			fn.SetSignature(v)
 			b.TFunctions[v] = fn
 			b.Mod.Functions[name] = fn
 			fmt.Println("<FUNCTION>", name, sg)
@@ -61,9 +63,10 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	name := n.Identifier.Value
 
 	fn := lir.NewFunction(tFn)
+	fn.Name = tFn.SymbolName()
 	b.Functions[n] = fn
 	b.TFunctions[sg] = fn
-	b.Mod.Functions[tFn.SymbolName()] = fn
+	b.Mod.Functions[fn.Name] = fn
 	fn.External = tFn.Target != nil
 
 	fmt.Println("<FUNCTION>", name, sg)
@@ -102,15 +105,25 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 
 	tFn := b.Mod.TModule.Table.GetFunction(n)
 
-	if types.IsGeneric(tFn.Sg()) {
+	sg := tFn.Sg()
+	if types.IsGeneric(sg) {
+		for _, instance := range sg.Instances {
+			fn := b.TFunctions[instance].(*lir.Function)
+			b.walkFunction(n, fn)
+		}
 		return
 	}
 
+	// Non Generic
 	fn := b.Functions[n]
+	b.walkFunction(n, fn)
+}
 
+func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
 	fn.AddSelf()
 
 	// Parameters
+	fmt.Println(fn.Signature(), fn.TFunction.SymbolName())
 	for _, p := range fn.Signature().Parameters {
 		fn.AddParameter(p)
 	}
@@ -131,4 +144,5 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 	for _, stmt := range stmts {
 		b.visitStatement(stmt, fn)
 	}
+
 }
