@@ -24,20 +24,28 @@ type Checker struct {
 	mode   CheckerMode
 	// scope   *types.Scope
 	// fn      *types.FunctionSignature
-	table *SymbolTable
+	table *types.SymbolTable
 	ctx   *NodeContext
 	// lhsType types.Type
 	file    *ast.File
 	fileSet *ast.FileSet
+
+	module *types.Module
 }
 
 func New(mode CheckerMode, set *ast.FileSet) *Checker {
-	return &Checker{
+	c := &Checker{
 		depth:   0,
 		mode:    mode,
-		table:   NewSymbolTable(),
+		table:   types.NewSymbolTable(),
 		fileSet: set,
 	}
+
+	m := types.NewModule(set.ModuleName, types.NewPackage("local"))
+	m.Table = c.table
+	m.FileSet = c.fileSet
+	c.module = m
+	return c
 }
 
 func (c *Checker) ParentScope() *types.Scope {

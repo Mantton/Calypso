@@ -74,7 +74,12 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 }
 
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
-	val := b.evaluateExpression(n.Target, fn)
+	tFn, ok := b.Mod.TypeTable().Calls[n]
+	if !ok {
+		panic("unable to locate function")
+	}
+
+	val := b.TFunctions[tFn]
 
 	var f *lir.Function
 	var args []lir.Value
@@ -144,11 +149,6 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 			panic(fmt.Sprintf("identifier found invalid type: %T", val))
 		}
 	}
-	// Function
-	f, ok := b.Mod.Functions[n.Value]
-	if ok {
-		return f
-	}
 
 	// Global Constant
 	cons, ok := b.Mod.GlobalConstants[n.Value]
@@ -156,7 +156,7 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 		return cons
 	}
 
-	panic("unable to locate identifier")
+	panic(fmt.Sprintf("unable to locate identifier, %s", n.Value))
 
 }
 
@@ -806,7 +806,7 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 	}
 
 	sg.Result.SetType(types.NewPointer(p))
-	tFn := types.NewFunction(composite.Name, sg)
+	tFn := types.NewFunction(composite.Name, sg, b.Mod.TModule)
 	fn = lir.NewFunction(tFn)
 
 	for _, field := range n.Fields {

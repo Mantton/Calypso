@@ -352,7 +352,10 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, ctx *NodeContext) {
 	// Fetch Alias
 	var alias *types.Alias
 	for alias == nil {
-		if v, ok := c.table.tNodes[n]; ok {
+
+		v := c.table.GetNodeType(n)
+
+		if v != nil {
 			alias = types.AsAlias(v)
 		} else {
 			c.defineAlias(n, ctx)

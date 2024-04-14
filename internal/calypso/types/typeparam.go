@@ -1,14 +1,17 @@
 package types
 
 type TypeParam struct {
-	name        string      // the name of the type parameter, e.g T, V
+	symbol
 	Constraints []*Standard // standards, this param is constrained to
 	Bound       Type        // the type this param is bound to after initialization
 }
 
-func NewTypeParam(n string, cns []*Standard, b Type) *TypeParam {
+func NewTypeParam(n string, cns []*Standard, b Type, mod *Module) *TypeParam {
 	return &TypeParam{
-		name:        n,
+		symbol: symbol{
+			name: n,
+			mod:  mod,
+		},
 		Constraints: cns,
 		Bound:       b,
 	}

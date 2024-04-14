@@ -5,6 +5,7 @@ import (
 
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lir"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 // Register All Functions
@@ -42,14 +43,30 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	if tFn == nil {
 		panic("function node not type checked")
 	}
+
+	sg := tFn.Sg()
+	if types.IsGeneric(sg) {
+		instances := sg.Instances
+		for _, v := range instances {
+			name := tFn.SymbolName() + "::" + v.InstanceHash
+			// fmt.Println("Instance", v, "\n", v.InstanceHash)
+			fn := lir.NewFunction(tFn)
+			b.TFunctions[v] = fn
+			b.Mod.Functions[name] = fn
+			fmt.Println("<FUNCTION>", name, sg)
+		}
+		return
+	}
+
 	name := n.Identifier.Value
 
 	fn := lir.NewFunction(tFn)
 	b.Functions[n] = fn
-	b.Mod.Functions[name] = fn
+	b.TFunctions[sg] = fn
+	b.Mod.Functions[tFn.SymbolName()] = fn
 	fn.External = tFn.Target != nil
 
-	fmt.Println("<FUNCTION>", name, tFn.Sg())
+	fmt.Println("<FUNCTION>", name, sg)
 }
 
 // Populate Bodies?
@@ -82,6 +99,13 @@ func (b *builder) pass3(f *ast.File) {
 }
 
 func (b *builder) visitFunction(n *ast.FunctionExpression) {
+
+	tFn := b.Mod.TModule.Table.GetFunction(n)
+
+	if types.IsGeneric(tFn.Sg()) {
+		return
+	}
+
 	fn := b.Functions[n]
 
 	fn.AddSelf()

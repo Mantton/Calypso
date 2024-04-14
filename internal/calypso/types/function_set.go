@@ -4,7 +4,7 @@ import "fmt"
 
 type FunctionList []*Function
 type FunctionSet struct {
-	name      string
+	symbol
 	Instances FunctionList
 }
 
@@ -30,7 +30,10 @@ func (s *FunctionSet) Parent() Type {
 
 func NewFunctionSet(fn *Function) *FunctionSet {
 	return &FunctionSet{
-		name:      fn.name,
+		symbol: symbol{
+			name: fn.name,
+			mod:  fn.Module(),
+		},
 		Instances: FunctionList{fn},
 	}
 }

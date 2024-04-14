@@ -2,10 +2,10 @@ package lirgen
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lir"
-	"github.com/mantton/calypso/internal/calypso/typechecker"
+	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func Generate(mod *typechecker.Module) (*lir.Module, error) {
+func Generate(mod *types.Module) (*lir.Module, error) {
 	m := lir.NewModule(mod)
 	err := build(m)
 

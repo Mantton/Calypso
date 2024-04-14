@@ -51,8 +51,9 @@ type Nodes struct {
 }
 
 type FileSet struct {
-	ModuleName string
-	Files      []*File
+	ModuleName  string
+	PackageName string
+	Files       []*File
 }
 
 // * Declarations

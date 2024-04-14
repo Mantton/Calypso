@@ -8,16 +8,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-type Package struct {
-	Name string
-}
-type Module struct {
-	Table   *SymbolTable
-	FileSet *ast.FileSet
-	Package *Package
-}
-
-func (c *Checker) Check() (*Module, error) {
+func (c *Checker) Check() (*types.Module, error) {
 
 	main := types.NewScope(types.GlobalScope, "MAIN_SCOPE")
 	main.Parent = types.GlobalScope
@@ -35,10 +26,7 @@ func (c *Checker) Check() (*Module, error) {
 		return nil, errors.New(c.Errors.String())
 	}
 
-	return &Module{
-		Table:   c.table,
-		FileSet: c.fileSet,
-	}, nil
+	return c.module, nil
 }
 
 /*
@@ -82,7 +70,7 @@ func (c *Checker) pass0(f *ast.File) {
 		}
 		if d.GenericParams != nil {
 			for _, p := range d.GenericParams.Parameters {
-				d := types.NewTypeParam(p.Identifier.Value, nil, nil)
+				d := types.NewTypeParam(p.Identifier.Value, nil, nil, c.module)
 				alias.AddTypeParameter(d)
 			}
 		}

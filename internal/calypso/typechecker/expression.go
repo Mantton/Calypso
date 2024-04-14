@@ -184,6 +184,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 					c.addError(err.Error(), arg.Range())
 				}
 			}
+			c.table.Calls[expr] = fn
+
 			return fn.Result.Type()
 		}
 
@@ -206,6 +208,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		fmt.Println("\nInstantiated Function:", t)
 		fmt.Println("Original:", fn)
 		fmt.Println()
+
+		c.table.Calls[expr] = t.(*types.FunctionSignature)
 		return t.(*types.FunctionSignature).Result.Type()
 
 	case *types.FunctionSet:
@@ -240,6 +244,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		// check is there is an exact match
 		if single, ok := options.GetAsSingle(); ok {
 			fmt.Println("\t[OVERLOAD] Exact match", single.Sg())
+			c.table.Calls[expr] = single.Sg()
+
 			return single.Sg().Result.Type()
 		}
 
@@ -327,7 +333,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 	}
 
 	if rhs == types.LookUp(types.NilLiteral) {
-		c.table.tNodes[e.Right] = lhs
+		c.table.SetNodeType(e.Right, lhs)
 	}
 
 	switch op {
@@ -689,9 +695,9 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 
 func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression) types.Type {
 
-	fn, ok := c.table.fns[e]
+	fn := c.table.GetFunction(e)
 
-	if !ok {
+	if fn == nil {
 		panic("passes missed function")
 	}
 

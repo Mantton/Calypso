@@ -12,6 +12,7 @@ type builder struct {
 	EnumFunctions  map[*types.EnumVariant]*lir.Function
 	RFunctionEnums map[*lir.Function]*types.EnumVariant
 	Refs           map[string]*lir.TypeRef
+	TFunctions     map[*types.FunctionSignature]lir.Value
 }
 
 func build(mod *lir.Module) error {
@@ -21,6 +22,7 @@ func build(mod *lir.Module) error {
 		EnumFunctions:  make(map[*types.EnumVariant]*lir.Function),
 		RFunctionEnums: make(map[*lir.Function]*types.EnumVariant),
 		Refs:           make(map[string]*lir.TypeRef),
+		TFunctions:     make(map[*types.FunctionSignature]lir.Value),
 	}
 
 	b.pass()

@@ -8,7 +8,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func MustCompile(input string, t *testing.T) *SymbolTable {
+func MustCompile(input string, t *testing.T) *types.SymbolTable {
 	file, errs := parser.ParseString(input)
 
 	if len(errs) != 0 {

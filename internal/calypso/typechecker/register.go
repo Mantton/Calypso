@@ -11,7 +11,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	// Create new function
 
 	sg := types.NewFunctionSignature()
-	def := types.NewFunction(e.Identifier.Value, sg)
+	def := types.NewFunction(e.Identifier.Value, sg, c.module)
 	c.table.DefineFunction(e, def)
 
 	// Enter Function Scope
@@ -23,7 +23,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
 		for _, p := range e.GenericParams.Parameters {
-			d := types.NewTypeParam(p.Identifier.Value, nil, nil)
+			d := types.NewTypeParam(p.Identifier.Value, nil, nil, c.module)
 			err := sg.AddTypeParameter(d)
 
 			if err != nil {
@@ -128,7 +128,7 @@ func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *typ
 		return nil
 	}
 
-	c.table.tNodes[core] = def
+	c.table.SetNodeType(core, def)
 	return def
 }
 
@@ -144,14 +144,18 @@ func (c *Checker) defineAlias(n *ast.TypeStatement, ctx *NodeContext) *types.Ali
 		)
 		return nil
 	}
-	c.table.tNodes[n] = alias
+	c.table.SetNodeType(n, alias)
 	return alias
 }
 
 func (c *Checker) resolve(n *ast.IdentifierExpression, core ast.Node, scope *types.Scope) *types.DefinedType {
-	if def, ok := c.table.tNodes[core]; ok {
+
+	def := c.table.GetNodeType(core)
+
+	if def != nil {
 		return types.AsDefined(def)
 	}
+
 	return c.define(n, core, scope)
 }
 
@@ -161,7 +165,7 @@ func (c *Checker) registerTypeParameters(g *ast.GenericParametersClause, t *type
 	}
 
 	for _, p := range g.Parameters {
-		d := types.NewTypeParam(p.Identifier.Value, nil, nil)
+		d := types.NewTypeParam(p.Identifier.Value, nil, nil, c.module)
 		err := t.AddTypeParameter(d)
 
 		if err != nil {
@@ -172,9 +176,9 @@ func (c *Checker) registerTypeParameters(g *ast.GenericParametersClause, t *type
 
 func (c *Checker) registerFunctionSignatures(e *ast.FunctionExpression) *types.FunctionSignature {
 
-	fn, ok := c.table.fns[e]
+	fn := c.table.GetFunction(e)
 
-	if !ok {
+	if fn == nil {
 		panic("passes missed function")
 	}
 

@@ -4,6 +4,16 @@ import "fmt"
 
 type mappings = map[string]Type
 
+func HashValue(m mappings, l TypeParams) string {
+	str := ""
+
+	for _, x := range l {
+		str += m[x.Name()].String()
+	}
+
+	return str
+}
+
 func Instantiate(t Type, args []Type, ctx mappings) Type {
 
 	if !IsGeneric(t) {
@@ -123,12 +133,12 @@ func Apply(ctx mappings, typ Type) Type {
 			switch aT := arg.(type) {
 			case *TypeParam:
 				if aT.Bound != nil {
-					params = append(params, NewTypeParam(aT.Name(), nil, arg))
+					params = append(params, NewTypeParam(aT.Name(), nil, arg, p.Module()))
 				} else {
-					params = append(params, NewTypeParam(aT.Name(), aT.Constraints, nil))
+					params = append(params, NewTypeParam(aT.Name(), aT.Constraints, nil, p.Module()))
 				}
 			default:
-				params = append(params, NewTypeParam(p.Name(), nil, arg))
+				params = append(params, NewTypeParam(p.Name(), nil, arg, p.Module()))
 			}
 		}
 
@@ -201,7 +211,7 @@ func Apply(ctx mappings, typ Type) Type {
 		// return
 		res := t.Result.Type()
 		sg.Result.SetType(Apply(ctx, res))
-
+		t.AddInstance(sg, ctx)
 		return sg
 	case *Alias:
 		params := TypeParams{}
@@ -216,12 +226,12 @@ func Apply(ctx mappings, typ Type) Type {
 			switch aT := arg.(type) {
 			case *TypeParam:
 				if aT.Bound != nil {
-					params = append(params, NewTypeParam(aT.Name(), nil, arg))
+					params = append(params, NewTypeParam(aT.Name(), nil, arg, p.Module()))
 				} else {
-					params = append(params, NewTypeParam(aT.Name(), aT.Constraints, nil))
+					params = append(params, NewTypeParam(aT.Name(), aT.Constraints, nil, p.Module()))
 				}
 			default:
-				params = append(params, NewTypeParam(p.Name(), nil, arg))
+				params = append(params, NewTypeParam(p.Name(), nil, arg, p.Module()))
 			}
 		}
 		alias := NewAlias(t.Name(), nil)

@@ -28,8 +28,6 @@ func CompileFileSet(set *utils.FileSet, mode typechecker.CheckerMode) error {
 		return err
 	}
 
-	return nil
-
 	fmt.Println()
 	fmt.Println("----------  LIRGEN ----------")
 	lirMod, err := lirgen.Generate(mod)
