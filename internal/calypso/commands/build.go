@@ -1,19 +1,16 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/mantton/calypso/internal/calypso/builder"
-	"github.com/mantton/calypso/internal/calypso/commands/utils"
+	"github.com/mantton/calypso/internal/calypso/compile"
+	"github.com/mantton/calypso/internal/calypso/fs"
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
-
-const CONFIG_FILE = "config.toml"
 
 func build(paths []string) error {
 
@@ -51,7 +48,7 @@ func buildFromPath(path string) error {
 }
 
 func buildFromFile(pth string) error {
-	set := &utils.FileSet{FilesPaths: []string{pth}}
+	set := &fs.FileSet{FilesPaths: []string{pth}}
 	return builder.CompileFileSet(set, typechecker.USER)
 }
 
@@ -63,7 +60,7 @@ RULES:
 - All Files must belong to the same module
 */
 func buildFromFileList(paths []string) error {
-	set := &utils.FileSet{}
+	set := &fs.FileSet{}
 
 	// Satisfy Rule 1
 
@@ -98,24 +95,14 @@ func buildFromFileList(paths []string) error {
 	return builder.CompileFileSet(set, typechecker.USER)
 }
 
-func buildFromDirectory(dir string) error {
-	// 1 - Read Config File
-	_, err := os.ReadFile(path.Join(dir, CONFIG_FILE))
+func buildFromDirectory(path string) error {
+	// collect file paths & group into modules and submodules
+	pkg, err := fs.CollectPackage(path, true)
 
 	if err != nil {
 		return err
 	}
 
-	// 2 - Read src folder
-	srcDir, err := os.Stat(path.Join(dir, "src"))
-
-	if err != nil {
-		return err
-	}
-
-	if !srcDir.IsDir() {
-		return errors.New("\"src\" is not a directory")
-	}
-
-	return nil
+	// compile
+	return compile.CompilePackage(pkg)
 }

@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
 
@@ -31,13 +30,6 @@ type Declaration interface {
 	declarationNode()
 }
 
-type File struct {
-	ModuleName string
-	Nodes      *Nodes
-	Errors     lexer.ErrorList
-	LexerFile  *lexer.File
-}
-
 type Nodes struct {
 	Constants         []*ConstantDeclaration
 	Functions         []*FunctionDeclaration
@@ -48,12 +40,6 @@ type Nodes struct {
 	Extensions        []*ExtensionDeclaration
 	Conformances      []*ConformanceDeclaration
 	ExternalFunctions []*ExternDeclaration
-}
-
-type FileSet struct {
-	ModuleName  string
-	PackageName string
-	Files       []*File
 }
 
 // * Declarations

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/commands/utils"
+	"github.com/mantton/calypso/internal/calypso/fs"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/token"
 )
@@ -136,7 +136,7 @@ func (p *Parser) handleError(err error, node NodeType) {
 	p.errors.Add(err)
 }
 
-func ParseFileSet(set *utils.FileSet) (*ast.FileSet, error) {
+func ParseFileSet(set *fs.FileSet) (*ast.FileSet, error) {
 
 	// Lex all Files
 
@@ -171,4 +171,34 @@ func ParseFileSet(set *utils.FileSet) (*ast.FileSet, error) {
 	}
 
 	return files, nil
+}
+
+func ParseModule(mod *fs.Module) (*ast.Module, error) {
+
+	out := &ast.Module{}
+	// Fileset
+	set, err := ParseFileSet(mod.Set)
+
+	if err != nil {
+		return nil, err
+	}
+
+	out.Set = set
+
+	// Submodules
+	for _, sub := range mod.SubModules {
+		sMod, err := ParseModule(sub)
+		if err != nil {
+			return nil, err
+		}
+
+		if out.SubModules == nil {
+			out.SubModules = make(map[string]*ast.Module)
+		}
+
+		out.SubModules[sMod.Name()] = sMod
+		sMod.ParentModule = out
+	}
+
+	return out, nil
 }

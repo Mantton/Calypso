@@ -3,7 +3,7 @@ package builder
 import (
 	"fmt"
 
-	"github.com/mantton/calypso/internal/calypso/commands/utils"
+	"github.com/mantton/calypso/internal/calypso/fs"
 	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/lirgen"
 	"github.com/mantton/calypso/internal/calypso/llir"
@@ -11,7 +11,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
-func CompileFileSet(set *utils.FileSet, mode typechecker.CheckerMode) error {
+func CompileFileSet(set *fs.FileSet, mode typechecker.CheckerMode) error {
 
 	astSet, err := parser.ParseFileSet(set)
 
