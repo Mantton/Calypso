@@ -40,10 +40,19 @@ type Nodes struct {
 	Extensions        []*ExtensionDeclaration
 	Conformances      []*ConformanceDeclaration
 	ExternalFunctions []*ExternDeclaration
+	Imports           []*ImportDeclaration
 }
 
 // * Declarations
 // - Imports, Modules, Structs, Types
+
+type ImportDeclaration struct {
+	KeyWPos   token.TokenPosition
+	Path      *StringLiteral
+	AsKeywPos token.TokenPosition
+	Alias     *IdentifierExpression
+}
+
 type ConstantDeclaration struct {
 	Stmt *VariableStatement
 	// Type  Expression

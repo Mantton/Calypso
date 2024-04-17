@@ -378,6 +378,20 @@ func (e *ExternDeclaration) Range() token.SyntaxRange {
 	}
 }
 
+func (e *ImportDeclaration) Range() token.SyntaxRange {
+
+	if e.Alias != nil {
+		return token.SyntaxRange{
+			Start: e.KeyWPos,
+			End:   e.Alias.Pos,
+		}
+	}
+	return token.SyntaxRange{
+		Start: e.KeyWPos,
+		End:   e.Path.Pos,
+	}
+}
+
 func (d *ConstantDeclaration) declarationNode()    {}
 func (d *StatementDeclaration) declarationNode()   {}
 func (d *FunctionDeclaration) declarationNode()    {}
@@ -385,6 +399,7 @@ func (d *StandardDeclaration) declarationNode()    {}
 func (d *ExtensionDeclaration) declarationNode()   {}
 func (d *ConformanceDeclaration) declarationNode() {}
 func (d *ExternDeclaration) declarationNode()      {}
+func (d *ImportDeclaration) declarationNode()      {}
 
 // * Types
 func (e *IdentifierTypeExpression) Range() token.SyntaxRange {

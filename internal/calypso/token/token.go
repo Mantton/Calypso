@@ -97,6 +97,7 @@ const (
 
 	//* KEYWORDS
 	kw_b // Keywords Begin
+	IMPORT
 	FUNC
 	CONST
 	LET
@@ -127,6 +128,7 @@ const (
 	STATIC
 	MUTATING
 	PUB
+	AS
 	kw_e // Keywords End
 )
 
@@ -136,6 +138,8 @@ func (t ScannedToken) String() string {
 }
 
 var keywords = map[string]Token{
+
+	"import":    IMPORT,
 	"fn":        FUNC,
 	"let":       LET,
 	"const":     CONST,
@@ -165,6 +169,7 @@ var keywords = map[string]Token{
 	"static":    STATIC,
 	"mutating":  MUTATING,
 	"async":     ASYNC,
+	"as":        AS,
 }
 
 func LookupIdent(ident string) Token {
@@ -176,7 +181,7 @@ func LookupIdent(ident string) Token {
 
 func IsDeclaration(t Token) bool {
 	switch t {
-	case FUNC, CONST, MODULE, STANDARD, EXTENSION, CONFORM, EXTERN:
+	case FUNC, CONST, MODULE, STANDARD, EXTENSION, CONFORM, EXTERN, IMPORT:
 		return true
 	}
 	return false
@@ -260,6 +265,7 @@ var tokens = map[Token]string{
 	COLON:     ":",
 	R_ARROW:   "->",
 
+	IMPORT:    "import",
 	CONST:     "const",
 	FUNC:      "fn",
 	LET:       "let",
@@ -284,6 +290,8 @@ var tokens = map[Token]string{
 	ASYNC:    "async",
 
 	IDENTIFIER: "IDENTIFIER",
+	STRING:     "STRING",
+	AS:         "as",
 }
 
 var ModifierPrecedent = map[Token]int{

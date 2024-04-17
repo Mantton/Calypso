@@ -110,6 +110,8 @@ func (p *Parser) addNode(d ast.Declaration, n *ast.Nodes) {
 		n.Extensions = append(n.Extensions, d)
 	case *ast.ExternDeclaration:
 		n.ExternalFunctions = append(n.ExternalFunctions, d)
+	case *ast.ImportDeclaration:
+		n.Imports = append(n.Imports, d)
 	default:
 		msg := fmt.Sprintf("node addition not implemented, %T", d)
 		panic(msg)

@@ -50,6 +50,8 @@ func (p *Parser) parseDeclaration() (ast.Declaration, error) {
 		return p.parseConformanceDeclaration()
 	case token.EXTERN:
 		return p.parseExternDeclaration()
+	case token.IMPORT:
+		return p.parseImportDeclaration()
 	default:
 		return p.parseStatementDeclaration()
 	}
@@ -343,4 +345,66 @@ func (p *Parser) parseExternDeclaration() (*ast.ExternDeclaration, error) {
 		Target:     lit,
 	}, nil
 
+}
+
+func (p *Parser) parseImportDeclaration() (*ast.ImportDeclaration, error) {
+
+	decl := &ast.ImportDeclaration{}
+
+	// KW
+	kw, err := p.expect(token.IMPORT)
+
+	if err != nil {
+		return nil, err
+	}
+
+	decl.KeyWPos = kw.Pos
+
+	// Path
+	pathTok, err := p.expect(token.STRING)
+
+	if err != nil {
+		return nil, err
+	}
+
+	path := &ast.StringLiteral{
+		Value: pathTok.Lit,
+		Pos:   pathTok.Pos,
+	}
+
+	decl.Path = path
+
+	if !p.currentMatches(token.AS) {
+		_, err := p.expect(token.SEMICOLON)
+		if err != nil {
+			return nil, err
+		}
+
+		return decl, nil
+	}
+
+	// as Keyword
+	asKW, err := p.expect(token.AS)
+	if err != nil {
+		return nil, err
+	}
+
+	decl.AsKeywPos = asKW.Pos
+
+	// Alias
+	alias, err := p.parseIdentifierWithoutAnnotation()
+
+	if err != nil {
+		return nil, err
+	}
+
+	decl.Alias = alias
+
+	// Semicolon
+	_, err = p.expect(token.SEMICOLON)
+	if err != nil {
+		return nil, err
+	}
+
+	return decl, nil
 }
