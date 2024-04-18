@@ -85,13 +85,13 @@ func CheckParsedData(p *resolver.ResolvedData) error {
 		x.Modules[mod.AST.FSMod.Path] = mod
 	}
 
-	fmt.Println(len(x.Modules))
 	for _, mod := range x.Modules {
-		fmt.Println(mod.Name(), "\n", mod.Table.Main)
+		fmt.Println(mod.Name())
+		mod.Table.DebugPrintScopes()
+		fmt.Print("\n\n")
 	}
 
 	return nil
 }
 
-// TODO: Check Import Statements
 // TODO: Check cyclic function usage

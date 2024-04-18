@@ -625,9 +625,14 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 		if f != nil {
 			return f
 		}
+	case *types.Module:
+		f := a.Table.Main.ResolveInCurrent(field)
+		if f != nil {
+			return f.Type()
+		}
 	}
 
-	c.addError(fmt.Sprintf("unknown method or field: \"%s\" on type \"%s\"", field, a), n.Range())
+	c.addError(fmt.Sprintf("unknown function, type or field: \"%s\" on type \"%s\"", field, a), n.Range())
 	return unresolved
 }
 
