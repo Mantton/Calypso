@@ -51,3 +51,11 @@ func IsGeneric(t Type) bool {
 		return false
 	}
 }
+
+func IsAssignable(t Type) bool {
+	if _, ok := t.(*Module); ok {
+		return false
+	}
+
+	return true
+}

@@ -37,6 +37,10 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 	}
 
 	expected = types.ResolveLiteral(expected)
+
+	if !types.IsAssignable(expected) {
+		return fmt.Errorf("%s, cannot assign", expected)
+	}
 	variable.SetType(expected)
 
 	if expected != unresolved {
