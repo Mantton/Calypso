@@ -7,7 +7,7 @@ import (
 type Visibility byte
 
 const (
-	INTERNAL Visibility = iota
+	PRIVATE Visibility = iota
 	PUBLIC
 )
 

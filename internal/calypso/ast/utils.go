@@ -23,6 +23,7 @@ type Module struct {
 	ParentModule *Module
 	FSMod        *fs.Module
 	Package      *Package
+	Visibility   Visibility
 }
 
 type Package struct {

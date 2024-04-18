@@ -7,7 +7,12 @@ import (
 
 type Function struct {
 	symbol
-	Target *FunctionTarget
+	Target   *FunctionTarget
+	IsPublic bool
+}
+
+func (t *Function) String() string {
+	return t.name
 }
 
 type FunctionTarget struct {
@@ -159,4 +164,13 @@ func (tg *FunctionSignature) AddInstance(t *FunctionSignature, m mappings) {
 
 	t.ParentInstance = sg
 	t.InstanceHash = key
+}
+
+func (fn *Function) IsVisible(from *Module) bool {
+	// Is Public or being accessed from current module
+	if fn.IsPublic || from == fn.mod {
+		return true
+	}
+
+	return false
 }

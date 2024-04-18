@@ -13,9 +13,10 @@ type Package struct {
 }
 
 type Module struct {
-	Table *SymbolTable
-	pkg   *Package
-	AST   *ast.Module
+	Table        *SymbolTable
+	pkg          *Package
+	AST          *ast.Module
+	ParentModule *Module
 }
 
 func NewPackageMap() *PackageMap {
@@ -69,4 +70,15 @@ func (m *Module) SymbolName() string {
 
 func (m *Module) String() string {
 	return m.Name()
+}
+
+func (m *Module) IsVisible(from *Module) bool {
+	switch m.AST.Visibility {
+	case ast.PRIVATE:
+		return true // TODO: Private Modules
+	case ast.PUBLIC:
+		return true
+	}
+
+	return false
 }

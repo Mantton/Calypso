@@ -126,6 +126,13 @@ func (c *Checker) evaluateIdentifierExpression(expr *ast.IdentifierExpression, c
 		return unresolved
 	}
 
+	if !s.IsVisible(c.module) {
+		c.addError(
+			fmt.Sprintf("`%s` is not accessible in this context", expr.Value),
+			expr.Range(),
+		)
+	}
+
 	return s.Type()
 }
 
@@ -404,7 +411,7 @@ func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssig
 func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeContext) types.Type {
 
 	// 1 - Find Defined Type
-
+	// target := c.evaluateTypeExpression(n.Target, nil, ctx)
 	target := c.evaluateExpression(n.Target, ctx)
 	base := types.AsDefined(target)
 
@@ -610,6 +617,11 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 	case *ast.IdentifierExpression:
 		field = p.Value
 	default:
+		if a, ok := a.(*types.Module); ok {
+			sc := a.Table.Main
+			return c.evaluateExpression(p, NewContext(sc, ctx.sg, nil))
+		}
+
 		c.addError("invalid property key", n.Range())
 		return unresolved
 	}
@@ -627,6 +639,12 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 		}
 	case *types.Module:
 		f := a.Table.Main.ResolveInCurrent(field)
+		if !f.IsVisible(c.module) {
+			c.addError(
+				fmt.Sprintf("`%s` is not accessible in this context", f),
+				n.Range(),
+			)
+		}
 		if f != nil {
 			return f.Type()
 		}

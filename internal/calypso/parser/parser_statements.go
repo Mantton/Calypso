@@ -309,7 +309,7 @@ func (p *Parser) parseStructStatement() (*ast.StructStatement, error) {
 	properties := []*ast.StructField{}
 
 	for p.current() != token.RBRACE {
-		vis := ast.INTERNAL
+		vis := ast.PRIVATE
 
 		if p.match(token.PUB) {
 			vis = ast.PUBLIC

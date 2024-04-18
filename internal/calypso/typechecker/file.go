@@ -67,6 +67,18 @@ func (c *Checker) passN(f *ast.File) {
 		key := d.PopulatedImportKey
 
 		mod := c.mp.Modules[key]
+
+		// trying to import same module being checked
+		if mod == c.module {
+			msg := fmt.Sprintf("importing current module, %s", mod)
+			c.addError(msg, d.Range())
+			continue
+		} else if !mod.IsVisible(c.module) && mod.ParentModule != c.module { // trying to import a private module from outside it's source module
+			msg := fmt.Sprintf("cannot import private module, %s", mod)
+			c.addError(msg, d.Range())
+			continue
+		}
+
 		c.table.Main.Define(mod)
 	}
 }

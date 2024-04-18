@@ -72,7 +72,7 @@ func (p *Parser) consumeModifiers() *modifiers {
 }
 
 func (p *Parser) resolveNonFuncMods() (ast.Visibility, error) {
-	vis := ast.INTERNAL
+	vis := ast.PRIVATE
 	if len(p.modifiers) != 0 {
 		mods := p.consumeModifiers()
 
