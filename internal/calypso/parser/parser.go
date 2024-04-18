@@ -177,7 +177,9 @@ func ParseFileSet(set *fs.FileSet) (*ast.FileSet, error) {
 
 func ParseModule(mod *fs.Module) (*ast.Module, error) {
 
-	out := &ast.Module{}
+	out := &ast.Module{
+		FSMod: mod,
+	}
 	// Fileset
 	set, err := ParseFileSet(mod.Set)
 

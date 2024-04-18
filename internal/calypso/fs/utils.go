@@ -28,26 +28,7 @@ func ParseConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func CollectPackage(path string, isProject bool) (*Package, error) {
-
-	// Building a project
-	if isProject {
-		return buildPackage(path)
-	}
-
-	// Building a file or two
-	src, err := buildModule(path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &Package{
-		Source: src,
-	}, nil
-}
-
-func buildPackage(dir string) (*Package, error) {
+func CreateLitePackage(dir string, isProject bool) (*LitePackage, error) {
 	// 1 - Read Config File
 
 	cfgPath := path.Join(dir, CONFIG_FILE)
@@ -75,23 +56,14 @@ func buildPackage(dir string) (*Package, error) {
 		return nil, errors.New("\"src\" is not a directory")
 	}
 
-	// Collect Modules & SubModules
-
-	module, err := buildModule(srcPath)
-
-	if err != nil {
-		return nil, err
-	}
-
-	pkg := &Package{
-		Source: module,
+	return &LitePackage{
+		Path:   dir,
 		Config: cfg,
-	}
+	}, nil
 
-	return pkg, nil
 }
 
-func buildModule(path string) (*Module, error) {
+func CollectModule(path string, subs bool) (*Module, error) {
 
 	// read entries
 	entries, err := os.ReadDir(path)
@@ -107,7 +79,7 @@ func buildModule(path string) (*Module, error) {
 	mod := &Module{
 		Set:        set,
 		SubModules: submodules,
-		FolderName: path,
+		Path:       path,
 	}
 
 	for _, entry := range entries {
@@ -115,7 +87,10 @@ func buildModule(path string) (*Module, error) {
 
 		// Is SubModule/Directory
 		if entry.IsDir() {
-			sub, err := buildModule(p)
+			if subs {
+				continue
+			}
+			sub, err := CollectModule(p, true)
 
 			if err != nil {
 				return nil, err

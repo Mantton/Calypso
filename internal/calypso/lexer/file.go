@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -21,7 +20,6 @@ func NewFile(path string) (*File, error) {
 	// Read File
 	data, err := os.ReadFile(path)
 
-	fmt.Println(path)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/mantton/calypso/internal/calypso/lexer"
+import (
+	"github.com/mantton/calypso/internal/calypso/fs"
+	"github.com/mantton/calypso/internal/calypso/lexer"
+)
 
 type File struct {
 	ModuleName string
@@ -18,12 +21,19 @@ type Module struct {
 	Set          *FileSet
 	SubModules   map[string]*Module
 	ParentModule *Module
+	FSMod        *fs.Module
+	Package      *Package
 }
 
 type Package struct {
-	Source *Module
+	Modules   map[string]*Module
+	FSPackage *fs.LitePackage
 }
 
 func (m *Module) Name() string {
 	return m.Set.ModuleName
+}
+
+func (p *Package) Name() string {
+	return p.FSPackage.Config.Package.Name
 }

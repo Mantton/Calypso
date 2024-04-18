@@ -3,46 +3,29 @@ package compile
 import (
 	"fmt"
 
-	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/fs"
-	"github.com/mantton/calypso/internal/calypso/parser"
+	"github.com/mantton/calypso/internal/calypso/resolver"
 )
 
 type compiler struct {
-	pkg *fs.Package
+	pkg *fs.LitePackage
 }
 
-func newCompiler(p *fs.Package) *compiler {
+func newCompiler(p *fs.LitePackage) *compiler {
 	return &compiler{
 		pkg: p,
 	}
 }
 
-func CompilePackage(pkg *fs.Package) error {
+func CompilePackage(pkg *fs.LitePackage) error {
 
-	c := newCompiler(pkg)
-
-	// Scan & Parse Package
-	astPkg, err := c.parsePackage()
-
+	// Resolve Imports
+	data, err := resolver.ParseAndResolve(pkg)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(astPkg)
-
+	fmt.Println("Packages", data.Packages)
+	fmt.Println("Module Order", data.ModuleOrder)
 	return nil
-}
-
-func (c *compiler) parsePackage() (*ast.Package, error) {
-	mod := c.pkg.Source
-
-	src, err := parser.ParseModule(mod)
-
-	if err != nil {
-		return nil, err
-	}
-	return &ast.Package{
-		Source: src,
-	}, nil
 }

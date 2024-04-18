@@ -97,7 +97,7 @@ func buildFromFileList(paths []string) error {
 
 func buildFromDirectory(path string) error {
 	// collect file paths & group into modules and submodules
-	pkg, err := fs.CollectPackage(path, true)
+	pkg, err := fs.CreateLitePackage(path, true)
 
 	if err != nil {
 		return err

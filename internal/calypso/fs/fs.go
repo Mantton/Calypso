@@ -7,14 +7,20 @@ type FileSet struct {
 }
 
 type Module struct {
-	FolderName   string
+	Path         string
 	Set          *FileSet
 	SubModules   map[string]*Module
 	ParentModule *Module
 }
 
 type Package struct {
-	Source *Module
+	Modules  []*Module
+	Config   *Config
+	BasePath string
+}
+
+type LitePackage struct {
+	Path   string
 	Config *Config
 }
 
@@ -30,6 +36,7 @@ type ConfigDependency struct {
 	Name    string
 	Path    string
 	Version string
+	Alias   string
 }
 
 func (m *Module) AddSubmodule(s *Module) {
@@ -37,6 +44,29 @@ func (m *Module) AddSubmodule(s *Module) {
 		m.SubModules = make(map[string]*Module)
 	}
 
-	m.SubModules[s.FolderName] = s
+	m.SubModules[s.Path] = s
 	s.ParentModule = m
+}
+
+func (c *Config) FindDependency(n string) *ConfigDependency {
+
+	if dep, ok := c.Dependencies[n]; ok {
+		return dep
+	}
+
+	for _, dep := range c.Dependencies {
+		if dep.Alias == n {
+			return dep
+		}
+	}
+
+	return nil
+}
+
+func (c *ConfigDependency) FilePath() string {
+	if len(c.Path) != 0 {
+		return c.Path
+	}
+
+	panic("TODO: downloaded package")
 }
