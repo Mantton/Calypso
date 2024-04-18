@@ -45,6 +45,8 @@ Passes 5-8
 */
 func (c *Checker) pass() {
 	passes := []func(*ast.File){
+		// Set 0
+		c.passN,
 		// Set 1 - White
 		c.pass0, c.pass1, c.pass2, c.pass3, c.pass4,
 		// Set 2
@@ -52,10 +54,20 @@ func (c *Checker) pass() {
 	}
 
 	for _, pass := range passes {
-		for _, file := range c.fileSet.Files {
+		for _, file := range c.module.AST.Set.Files {
 			c.file = file
 			pass(file)
 		}
+	}
+}
+
+func (c *Checker) passN(f *ast.File) {
+
+	for _, d := range f.Nodes.Imports {
+		key := d.PopulatedImportKey
+
+		mod := c.mp.Modules[key]
+		c.table.Main.Define(mod)
 	}
 }
 

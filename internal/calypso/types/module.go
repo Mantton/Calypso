@@ -2,27 +2,41 @@ package types
 
 import "github.com/mantton/calypso/internal/calypso/ast"
 
+type PackageMap struct {
+	Packages map[string]*Package
+	Modules  map[string]*Module
+}
+
 type Package struct {
-	name string
+	AST     *ast.Package
+	modules map[string]*Module
 }
 
 type Module struct {
-	Table   *SymbolTable
-	FileSet *ast.FileSet
-	pkg     *Package
-	name    string
+	Table *SymbolTable
+	pkg   *Package
+	AST   *ast.Module
 }
 
-func NewPackage(name string) *Package {
+func NewPackageMap() *PackageMap {
+	return &PackageMap{
+		Packages: make(map[string]*Package),
+		Modules:  make(map[string]*Module),
+	}
+}
+func NewPackage(p *ast.Package) *Package {
 	return &Package{
-		name: name,
+		AST: p,
 	}
 }
 
-func NewModule(name string, pkg *Package) *Module {
+func (p *Package) AddModule(m *Module) {
+	p.modules[m.Name()] = m
+}
+
+func NewModule(m *ast.Module) *Module {
 	return &Module{
-		name: name,
-		pkg:  pkg,
+		AST: m,
 	}
 }
 
@@ -31,9 +45,28 @@ func (m *Module) Package() *Package {
 }
 
 func (m *Module) Name() string {
-	return m.name
+	return m.AST.Name()
 }
 
 func (m *Package) Name() string {
-	return m.name
+	return m.AST.Name()
+}
+
+func (m *Module) Type() Type {
+	return m
+}
+
+func (m *Module) Parent() Type {
+	return m
+}
+func (m *Module) Module() *Module {
+	return m
+}
+
+func (m *Module) SymbolName() string {
+	return "wut"
+}
+
+func (m *Module) String() string {
+	return m.Name()
 }

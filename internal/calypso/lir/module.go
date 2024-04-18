@@ -22,7 +22,7 @@ func NewModule(mod *types.Module) *Module {
 }
 
 func (m *Module) Name() string {
-	return m.TModule.FileSet.ModuleName
+	return m.TModule.Name()
 }
 
 func (m *Module) TypeTable() *types.SymbolTable {
@@ -30,5 +30,5 @@ func (m *Module) TypeTable() *types.SymbolTable {
 }
 
 func (m *Module) FileSet() *ast.FileSet {
-	return m.TModule.FileSet
+	return m.TModule.AST.Set
 }

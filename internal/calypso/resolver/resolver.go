@@ -27,8 +27,8 @@ type resolver struct {
 }
 
 type ResolvedData struct {
-	Packages    map[string]*ast.Package
-	ModuleOrder []*ast.Module
+	Packages       map[string]*ast.Package
+	OrderedModules []*ast.Module
 }
 
 func ParseAndResolve(pkg *fs.LitePackage) (*ResolvedData, error) {
@@ -95,8 +95,8 @@ func ParseAndResolve(pkg *fs.LitePackage) (*ResolvedData, error) {
 	}
 
 	return &ResolvedData{
-		ModuleOrder: l,
-		Packages:    packages,
+		OrderedModules: l,
+		Packages:       packages,
 	}, nil
 }
 
@@ -191,7 +191,7 @@ func (r *resolver) resolveDependencies(m *ast.Module, pkg *fs.LitePackage) error
 	for _, file := range m.Set.Files {
 		for _, decl := range file.Nodes.Imports {
 
-			dep, err := r.findDependency(decl.Path.Value, pkg)
+			dep, err := r.findDependency(decl, pkg)
 
 			if err != nil {
 				return err
@@ -210,8 +210,9 @@ func (r *resolver) resolveDependencies(m *ast.Module, pkg *fs.LitePackage) error
 
 }
 
-func (r *resolver) findDependency(importPath string, pkg *fs.LitePackage) (string, error) {
+func (r *resolver) findDependency(decl *ast.ImportDeclaration, pkg *fs.LitePackage) (string, error) {
 
+	importPath := decl.Path.Value
 	if len(importPath) == 0 {
 		return "", fmt.Errorf("unable to resolve dependency")
 	}
@@ -226,13 +227,24 @@ func (r *resolver) findDependency(importPath string, pkg *fs.LitePackage) (strin
 
 	p := splitPath[0]
 
+	var path string
+	var err error
 	if p == pkg.Config.Package.Name {
 		// resolving local module
-		return r.findLocalDependency(splitPath[1:], pkg) // without package name
+		path, err = r.findLocalDependency(splitPath[1:], pkg) // without package name
+
 	} else {
 		// resolving external dependency
-		return r.findExternalDependency(splitPath, pkg)
+		path, err = r.findExternalDependency(splitPath, pkg)
 	}
+
+	if err != nil {
+		return path, err
+	}
+
+	// Map Node
+	decl.PopulatedImportKey = path
+	return path, err
 }
 
 func (r *resolver) findLocalDependency(paths []string, pkg *fs.LitePackage) (string, error) {

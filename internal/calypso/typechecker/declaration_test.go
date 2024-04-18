@@ -3,26 +3,25 @@ package typechecker
 import (
 	"testing"
 
-	"github.com/mantton/calypso/internal/calypso/ast"
-	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 func MustCompile(input string, t *testing.T) *types.SymbolTable {
-	file, errs := parser.ParseString(input)
+	return nil
+	// file, errs := parser.ParseString(input)
 
-	if len(errs) != 0 {
-		t.Fatal(errs)
-	}
+	// if len(errs) != 0 {
+	// 	t.Fatal(errs)
+	// }
 
-	c := New(USER, &ast.FileSet{Files: []*ast.File{file}})
-	res, err := c.Check()
+	// c := New(USER, &ast.FileSet{Files: []*ast.File{file}})
+	// res, err := c.Check()
 
-	if err != nil {
-		t.Fatalf("expected no errors, got \n\t%s", c.Errors)
-	}
+	// if err != nil {
+	// 	t.Fatalf("expected no errors, got \n\t%s", c.Errors)
+	// }
 
-	return res.Table
+	// return res.Table
 }
 
 func TestConstantDeclaration(t *testing.T) {

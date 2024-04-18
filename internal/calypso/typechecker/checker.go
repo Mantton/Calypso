@@ -1,8 +1,11 @@
 package typechecker
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
@@ -27,23 +30,24 @@ type Checker struct {
 	table *types.SymbolTable
 	ctx   *NodeContext
 	// lhsType types.Type
-	file    *ast.File
-	fileSet *ast.FileSet
+	file      *ast.File
+	astModule *ast.Module
 
 	module *types.Module
+	mp     *types.PackageMap
 }
 
-func New(mode CheckerMode, set *ast.FileSet) *Checker {
+func New(mod *ast.Module, mp *types.PackageMap) *Checker {
 	c := &Checker{
-		depth:   0,
-		mode:    mode,
-		table:   types.NewSymbolTable(),
-		fileSet: set,
+		depth:     0,
+		mode:      USER,
+		table:     types.NewSymbolTable(),
+		astModule: mod,
+		mp:        mp,
 	}
 
-	m := types.NewModule(set.ModuleName, types.NewPackage("local"))
+	m := types.NewModule(mod)
 	m.Table = c.table
-	m.FileSet = c.fileSet
 	c.module = m
 	return c
 }
@@ -65,3 +69,29 @@ func (c *Checker) GlobalDefine(s types.Symbol) error {
 func (c *Checker) GlobalFind(n string) (types.Symbol, bool) {
 	return c.ParentScope().Resolve(n, c.ParentScope())
 }
+
+func CheckParsedData(p *resolver.ResolvedData) error {
+
+	x := types.NewPackageMap()
+
+	for _, m := range p.OrderedModules {
+		c := New(m, x)
+		mod, err := c.Check()
+
+		if err != nil {
+			return err
+		}
+
+		x.Modules[mod.AST.FSMod.Path] = mod
+	}
+
+	fmt.Println(len(x.Modules))
+	for _, mod := range x.Modules {
+		fmt.Println(mod.Name(), "\n", mod.Table.Main)
+	}
+
+	return nil
+}
+
+// TODO: Check Import Statements
+// TODO: Check cyclic function usage

@@ -47,10 +47,11 @@ type Nodes struct {
 // - Imports, Modules, Structs, Types
 
 type ImportDeclaration struct {
-	KeyWPos   token.TokenPosition
-	Path      *StringLiteral
-	AsKeywPos token.TokenPosition
-	Alias     *IdentifierExpression
+	KeyWPos            token.TokenPosition
+	Path               *StringLiteral
+	AsKeywPos          token.TokenPosition
+	Alias              *IdentifierExpression
+	PopulatedImportKey string
 }
 
 type ConstantDeclaration struct {
