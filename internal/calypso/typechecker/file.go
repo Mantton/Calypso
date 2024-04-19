@@ -79,7 +79,16 @@ func (c *Checker) passN(f *ast.File) {
 			continue
 		}
 
-		c.table.Main.Define(mod)
+		// Define in scope
+		name := mod.Name()
+		if d.Alias != nil {
+			name = d.Alias.Value
+		}
+
+		err := c.table.Main.CustomDefine(mod, name)
+		if err != nil {
+			c.addError(err.Error(), d.Range())
+		}
 	}
 }
 

@@ -23,15 +23,22 @@ func (s *Scope) Define(e Symbol) error {
 
 	switch typ := e.(type) {
 	case *Function:
-		return s.defineFnSymbol(typ)
+		return s.defineFnSymbol(typ, typ.Name())
 	default:
-		return s.defineNonFnSymbol(e)
+		return s.defineNonFnSymbol(e, e.Name())
 	}
 }
 
-func (s *Scope) defineNonFnSymbol(e Symbol) error {
-	k := e.Name()
+func (s *Scope) CustomDefine(e Symbol, name string) error {
+	switch typ := e.(type) {
+	case *Function:
+		return s.defineFnSymbol(typ, name)
+	default:
+		return s.defineNonFnSymbol(e, name)
+	}
+}
 
+func (s *Scope) defineNonFnSymbol(e Symbol, k string) error {
 	_, ok := s.symbols[k]
 
 	// if already defined in scope, return false
@@ -43,9 +50,8 @@ func (s *Scope) defineNonFnSymbol(e Symbol) error {
 	return nil
 }
 
-func (s *Scope) defineFnSymbol(fn *Function) error {
+func (s *Scope) defineFnSymbol(fn *Function, k string) error {
 
-	k := fn.Name()
 	sym, ok := s.symbols[k]
 
 	// no definitions found, create new
