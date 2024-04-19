@@ -87,6 +87,32 @@ func (p *Parser) Parse() *ast.File {
 	return file
 }
 
+func (p *Parser) TestParse() (*ast.File, error) {
+	moduleName := "test"
+
+	file := &ast.File{
+		ModuleName: moduleName,
+		Nodes:      &ast.Nodes{},
+		LexerFile:  p.file,
+	}
+
+	for p.current() != token.EOF {
+		decl, err := p.parseDeclaration()
+		if err != nil {
+			p.handleError(err, DECL)
+			continue
+		}
+
+		p.addNode(decl, file.Nodes)
+	}
+
+	if len(p.errors) != 0 {
+		fmt.Println(p.errors)
+		return nil, errors.New(file.Errors.String())
+	}
+	return file, nil
+}
+
 func (p *Parser) addNode(d ast.Declaration, n *ast.Nodes) {
 	switch d := d.(type) {
 	case *ast.ConstantDeclaration:

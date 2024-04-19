@@ -99,8 +99,8 @@ func (c *Checker) evaluateExpression(expr ast.Expression, ctx *NodeContext) type
 		return c.evaluateCompositeLiteral(expr, ctx)
 	case *ast.FieldAccessExpression:
 		return c.evaluateFieldAccessExpression(expr, ctx)
-	case *ast.GenericSpecializationExpression:
-		return c.evaluateGenericSpecializationExpression(expr, ctx)
+	case *ast.SpecializationExpression:
+		return c.evaluateSpecializationExpression(expr, ctx)
 	case *ast.ArrayLiteral:
 		return c.evaluateArrayLiteral(expr, ctx)
 	case *ast.MapLiteral:
@@ -654,38 +654,42 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 	return unresolved
 }
 
-func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpecializationExpression, ctx *NodeContext) types.Type {
+func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpression, ctx *NodeContext) types.Type {
+
 	// 1- Find Target
-	sym, ok := ctx.scope.Resolve(e.Identifier.Value, c.ParentScope())
-	if !ok {
-		msg := fmt.Sprintf("could not find `%s` in scope", e.Identifier.Value)
-		c.addError(msg, e.Range())
+	target := c.evaluateExpression(e.Expression, ctx)
+
+	if target == unresolved {
 		return unresolved
+	}
+
+	if !types.IsGeneric(target) {
+		panic("non generic type")
 	}
 
 	// 2 - Collect Type Parameters
 
-	args := []types.Type{}
 	params := []*types.TypeParam{}
 
-	switch sym := sym.(type) {
-	case *types.Function:
-		sg := sym.Sg()
-		params = sg.TypeParameters
+	switch target := target.(type) {
+	case *types.FunctionSignature:
+		params = target.TypeParameters
 	case *types.DefinedType:
-		params = sym.TypeParameters
+		params = target.TypeParameters
 	}
 
-	// 3 - Ensure Type is generic
-	if len(params) == 0 {
-		msg := fmt.Sprintf("`%s` cannot be specialized", e.Identifier.Value)
-		c.addError(msg, e.Identifier.Range())
-		return unresolved
-	}
+	args := []types.Type{}
 
 	// 4 - Collect Args
 	for _, t := range e.Clause.Arguments {
 		args = append(args, c.evaluateTypeExpression(t, nil, ctx))
+	}
+
+	// 3 - Ensure Type is generic
+	if len(params) == 0 {
+		msg := fmt.Sprintf("`%s` cannot be specialized", e.Expression)
+		c.addError(msg, e.Expression.Range())
+		return unresolved
 	}
 
 	// 5 - Ensure Length match
@@ -712,7 +716,7 @@ func (c *Checker) evaluateGenericSpecializationExpression(e *ast.GenericSpeciali
 	}
 
 	// 7 - Return instance of type
-	instance := types.Instantiate(sym.Type(), args, nil)
+	instance := types.Instantiate(target, args, nil)
 	return instance
 }
 

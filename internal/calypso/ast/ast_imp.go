@@ -1,6 +1,10 @@
 package ast
 
-import "github.com/mantton/calypso/internal/calypso/token"
+import (
+	"fmt"
+
+	"github.com/mantton/calypso/internal/calypso/token"
+)
 
 // * Base Literals
 
@@ -58,15 +62,6 @@ func (e *CompositeLiteral) Range() token.SyntaxRange {
 	}
 }
 
-func (e *IntegerLiteral) expressionNode()   {}
-func (e *FloatLiteral) expressionNode()     {}
-func (e *StringLiteral) expressionNode()    {}
-func (e *CharLiteral) expressionNode()      {}
-func (e *BooleanLiteral) expressionNode()   {}
-func (e *NilLiteral) expressionNode()       {}
-func (e *VoidLiteral) expressionNode()      {}
-func (e *CompositeLiteral) expressionNode() {}
-
 // * Generic Literals
 func (e *ArrayLiteral) Range() token.SyntaxRange {
 	return token.SyntaxRange{
@@ -81,8 +76,6 @@ func (e *MapLiteral) Range() token.SyntaxRange {
 		End:   e.RBracePos,
 	}
 }
-func (e *ArrayLiteral) expressionNode() {}
-func (e *MapLiteral) expressionNode()   {}
 
 // * Literal Expressions
 func (e *IdentifierExpression) Range() token.SyntaxRange {
@@ -98,8 +91,6 @@ func (e *FunctionExpression) Range() token.SyntaxRange {
 		End:   e.RParenPos,
 	}
 }
-func (e *IdentifierExpression) expressionNode() {}
-func (e *FunctionExpression) expressionNode()   {}
 
 // Expressions
 
@@ -190,9 +181,9 @@ func (e *GenericParametersClause) Range() token.SyntaxRange {
 	}
 }
 
-func (e *GenericSpecializationExpression) Range() token.SyntaxRange {
+func (e *SpecializationExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
-		Start: e.Identifier.Range().Start,
+		Start: e.Expression.Range().Start,
 		End:   e.Clause.Range().End,
 	}
 }
@@ -216,21 +207,6 @@ func (e *FunctionParameter) Range() token.SyntaxRange {
 		End:   e.Type.Range().End,
 	}
 }
-
-func (e *GroupedExpression) expressionNode()               {}
-func (e *CallExpression) expressionNode()                  {}
-func (e *CallArgument) expressionNode()                    {}
-func (e *UnaryExpression) expressionNode()                 {}
-func (e *BinaryExpression) expressionNode()                {}
-func (e *AssignmentExpression) expressionNode()            {}
-func (e *ShorthandAssignmentExpression) expressionNode()   {}
-func (e *IndexExpression) expressionNode()                 {}
-func (e *FieldAccessExpression) expressionNode()           {}
-func (e *KeyValueExpression) expressionNode()              {}
-func (e *CompositeLiteralField) expressionNode()           {}
-func (e *GenericParametersClause) expressionNode()         {}
-func (e *GenericSpecializationExpression) expressionNode() {}
-func (e *FunctionParameter) expressionNode()               {}
 
 // * Statements
 func (e *IfStatement) Range() token.SyntaxRange {
@@ -402,9 +378,6 @@ func (d *ExternDeclaration) declarationNode()      {}
 func (d *ImportDeclaration) declarationNode()      {}
 
 // * Types
-func (e *IdentifierTypeExpression) Range() token.SyntaxRange {
-	return e.Identifier.Range()
-}
 
 func (e *ArrayTypeExpression) Range() token.SyntaxRange {
 	return token.SyntaxRange{
@@ -434,10 +407,19 @@ func (e *PointerTypeExpression) Range() token.SyntaxRange {
 	}
 }
 
-func (e *IdentifierTypeExpression) typeNode() {}
-func (e *ArrayTypeExpression) typeNode()      {}
-func (e *MapTypeExpression) typeNode()        {}
-func (e *PointerTypeExpression) typeNode()    {}
+func IsTypeNode(n Node) bool {
+	switch n.(type) {
+	case *IdentifierExpression,
+		*SpecializationExpression,
+		*ArrayTypeExpression,
+		*MapTypeExpression,
+		*PointerTypeExpression,
+		*FieldAccessExpression:
+		return true
+	}
+
+	return false
+}
 
 func (e *CallArgument) GetLabel() string {
 	if e.Label != nil {
@@ -445,4 +427,177 @@ func (e *CallArgument) GetLabel() string {
 	} else {
 		return ""
 	}
+}
+
+func (n *IntegerLiteral) String() string {
+	return fmt.Sprintf("%d", n.Value)
+}
+func (n *FloatLiteral) String() string {
+	return fmt.Sprintf("%f", n.Value)
+}
+func (n *StringLiteral) String() string {
+	return fmt.Sprintf("\"%s\"", n.Value)
+}
+func (n *CharLiteral) String() string {
+	return fmt.Sprintf("'%c'", n.Value)
+}
+func (n *BooleanLiteral) String() string {
+	if n.Value {
+		return "true"
+	}
+
+	return "false"
+}
+func (n *NilLiteral) String() string {
+	return "nil"
+}
+func (n *VoidLiteral) String() string {
+	return "void"
+}
+func (n *CompositeLiteral) String() string {
+	return fmt.Sprintf("_composite::%s::{ %s }", n.Target, n.Body)
+}
+func (n *ArrayLiteral) String() string {
+	return ""
+}
+func (n *MapLiteral) String() string {
+	return ""
+}
+func (n *IdentifierExpression) String() string {
+	return "_ident" + "::" + n.Value
+}
+func (n *FunctionExpression) String() string {
+	return ""
+}
+func (n *GroupedExpression) String() string {
+	return ""
+}
+func (n *CallExpression) String() string {
+	return ""
+}
+func (n *CallArgument) String() string {
+	return ""
+}
+func (n *UnaryExpression) String() string {
+	return ""
+}
+func (n *BinaryExpression) String() string {
+	return ""
+}
+func (n *AssignmentExpression) String() string {
+	return ""
+}
+func (n *ShorthandAssignmentExpression) String() string {
+	return ""
+}
+func (n *IndexExpression) String() string {
+	return ""
+}
+func (n *FieldAccessExpression) String() string {
+	return fmt.Sprintf("%s:accessing:%s", n.Target, n.Field)
+}
+func (n *KeyValueExpression) String() string {
+	return ""
+}
+func (n *CompositeLiteralField) String() string {
+	return ""
+}
+func (n *GenericParametersClause) String() string {
+	o := "_TParams::"
+	for _, p := range n.Parameters {
+		o += p.String()
+	}
+	return o
+}
+func (n *SpecializationExpression) String() string {
+	return fmt.Sprintf("_concrete::%s::<%s>", n.Expression, n.Clause)
+}
+func (n *SwitchCaseExpression) String() string {
+	return ""
+}
+func (n *FunctionParameter) String() string {
+	return ""
+}
+func (n *IfStatement) String() string {
+	return ""
+}
+func (n *BlockStatement) String() string {
+	return ""
+}
+func (n *ExpressionStatement) String() string {
+	return ""
+}
+func (n *WhileStatement) String() string {
+	return ""
+}
+func (n *ReturnStatement) String() string {
+	return ""
+}
+func (n *VariableStatement) String() string {
+	return ""
+}
+func (n *FunctionStatement) String() string {
+	return ""
+}
+func (n *StructStatement) String() string {
+	return ""
+}
+func (n *EnumStatement) String() string {
+	return ""
+}
+func (n *SwitchStatement) String() string {
+	return ""
+}
+func (n *BreakStatement) String() string {
+	return ""
+}
+func (n *ConstantDeclaration) String() string {
+	return ""
+}
+func (n *FunctionDeclaration) String() string {
+	return ""
+}
+func (n *StatementDeclaration) String() string {
+	return ""
+}
+func (n *StandardDeclaration) String() string {
+	return ""
+}
+func (n *TypeStatement) String() string {
+	return ""
+}
+func (n *ExtensionDeclaration) String() string {
+	return ""
+}
+func (n *ConformanceDeclaration) String() string {
+	return ""
+}
+func (n *ExternDeclaration) String() string {
+	return ""
+}
+func (n *ImportDeclaration) String() string {
+	return ""
+}
+func (n *ArrayTypeExpression) String() string {
+	return ""
+}
+func (n *MapTypeExpression) String() string {
+	return ""
+}
+func (n *GenericArgumentsClause) String() string {
+	o := "_TArgs::"
+	for _, p := range n.Arguments {
+		o += p.String() + ","
+	}
+	return o
+}
+func (n *PointerTypeExpression) String() string {
+	return ""
+}
+
+func (n *CompositeLiteralBody) String() string {
+	return ""
+}
+func (n *GenericParameterExpression) String() string {
+	return n.Identifier.String()
 }

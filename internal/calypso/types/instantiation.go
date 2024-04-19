@@ -7,8 +7,15 @@ type mappings = map[string]Type
 func HashValue(m mappings, l TypeParams) string {
 	str := ""
 
+	if m == nil {
+		panic("how!")
+	}
 	for _, x := range l {
-		str += m[x.Name()].String()
+		p, ok := m[x.name]
+		if !ok {
+			panic(fmt.Sprintf("%s not found in %s", x.name, m))
+		}
+		str += p.String()
 	}
 
 	return str
@@ -205,6 +212,7 @@ func Apply(ctx mappings, typ Type) Type {
 		for _, param := range t.Parameters {
 			p := NewVar(param.Name(), LookUp(Unresolved))
 			p.SetType(Apply(ctx, param.Type()))
+			p.ParamLabel = param.ParamLabel
 			sg.AddParameter(p)
 		}
 

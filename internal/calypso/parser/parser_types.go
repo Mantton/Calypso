@@ -16,7 +16,7 @@ func (p *Parser) parseTypeExpression() (ast.TypeExpression, error) {
 			return nil, err
 		}
 	case token.IDENTIFIER:
-		typ, err = p.parseIdentifierTypeExpression()
+		typ, err = p.parseIdentifierWithoutAnnotation()
 		if err != nil {
 			return nil, err
 		}
@@ -36,11 +36,40 @@ func (p *Parser) parseTypeExpression() (ast.TypeExpression, error) {
 			return nil, err
 		}
 
-		return &ast.ArrayTypeExpression{
+		typ = &ast.ArrayTypeExpression{
 			LBracketPos: lBrackPos,
 			RBracketPos: rBrack.Pos,
 			Element:     typ,
+		}
+	}
+
+	// specialization
+	var args *ast.GenericArgumentsClause
+	if p.currentMatches(token.L_CHEVRON) {
+		args, err = p.parseGenericArgumentsClause()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if args != nil {
+		return &ast.SpecializationExpression{
+			Expression: typ,
+			Clause:     args,
 		}, nil
+	}
+
+	// Is field access
+	if p.match(token.PERIOD) {
+		f, err := p.parseTypeExpression()
+		if err != nil {
+			return nil, err
+		}
+
+		typ = &ast.FieldAccessExpression{
+			Target: typ,
+			Field:  f,
+		}
 	}
 
 	return typ, nil
@@ -78,30 +107,6 @@ func (p *Parser) parseMapTypeExpression() (ast.TypeExpression, error) {
 		LBracketPos: start.Pos,
 		RBracketPos: end.Pos,
 	}, nil
-}
-
-func (p *Parser) parseIdentifierTypeExpression() (ast.TypeExpression, error) {
-
-	// 1 - Identifier
-	ident, err := p.parseIdentifierWithoutAnnotation()
-	if err != nil {
-		return nil, err
-	}
-
-	// 2 - Type Parameters
-	var args *ast.GenericArgumentsClause
-	if p.currentMatches(token.L_CHEVRON) {
-		args, err = p.parseGenericArgumentsClause()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &ast.IdentifierTypeExpression{
-		Identifier: ident,
-		Arguments:  args,
-	}, nil
-
 }
 
 /*

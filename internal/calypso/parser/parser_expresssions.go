@@ -353,7 +353,7 @@ func (p *Parser) parseUnaryExpression() (ast.Expression, error) {
 }
 
 func (p *Parser) parseFunctionCallExpression() (ast.Expression, error) {
-	expr, err := p.parsePropertyExpression()
+	expr, err := p.parseCompositeLiteral()
 
 	if err != nil {
 		return nil, err
@@ -451,7 +451,62 @@ func (p *Parser) parseCallArgument() (*ast.CallArgument, error) {
 
 }
 
-func (p *Parser) parsePropertyExpression() (ast.Expression, error) {
+func (p *Parser) parseCompositeLiteral() (ast.Expression, error) {
+	expr, err := p.parseSpecializationExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if this is possibly a struct initialization
+	if ast.IsTypeNode(expr) {
+		anchor := p.cursor
+		// Parse Body
+		body, err := p.parseCompositeLiteralBody()
+
+		// error, return to anchor
+		if err != nil {
+			// failed to parse, simply go back
+			p.cursor = anchor
+			return expr, nil
+		}
+
+		composite := &ast.CompositeLiteral{
+			Target: expr,
+			Body:   body,
+		}
+
+		return composite, nil
+
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
+	preAnchor := p.cursor
+	expr, err := p.parseFieldAccessExpression()
+	if err != nil {
+		return nil, err
+	}
+	postAnchor := p.cursor
+
+	if p.currentMatches(token.L_CHEVRON) {
+		// return to anchor
+		p.cursor = preAnchor
+		typExpr, err := p.parseTypeExpression()
+		// err not nil, not a valid type expression could be comparison, return to anchor
+		if err != nil {
+			p.cursor = postAnchor
+			return expr, nil
+		}
+
+		// Error is nil, valid type expression
+		return typExpr, nil
+	}
+	return expr, err
+}
+
+func (p *Parser) parseFieldAccessExpression() (ast.Expression, error) {
 	expr, err := p.parseIndexExpression()
 
 	if err != nil {
@@ -478,7 +533,7 @@ func (p *Parser) parsePropertyExpression() (ast.Expression, error) {
 }
 
 func (p *Parser) parseIndexExpression() (ast.Expression, error) {
-	expr, err := p.parseSpecializationExpression()
+	expr, err := p.parsePrimaryExpression()
 
 	if err != nil {
 		return nil, err
@@ -504,45 +559,6 @@ func (p *Parser) parseIndexExpression() (ast.Expression, error) {
 			LBracketPos: lbrackPos,
 			RBracketPos: rbrack.Pos,
 		}
-	}
-
-	return expr, nil
-}
-
-func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
-	expr, err := p.parsePrimaryExpression()
-	if err != nil {
-		return nil, err
-	}
-	pos := p.cursor
-
-	if ident, ok := expr.(*ast.IdentifierExpression); ok && p.currentMatches(token.L_CHEVRON) {
-		c, err := p.parseGenericArgumentsClause()
-
-		if err != nil {
-			// Not a Foo<Bar> specialization but perhaps a Foo < Bar Comparison
-			// Reset to anchor position
-			p.cursor = pos
-			return expr, nil
-		}
-		expr = &ast.GenericSpecializationExpression{
-			Identifier: ident,
-			Clause:     c,
-		}
-
-		// check if is composite initializer
-		if p.currentMatches(token.LBRACE) {
-			body, err := p.parseCompositeLiteralBody()
-			if err != nil {
-				return nil, err
-			}
-			expr = &ast.CompositeLiteral{
-				Target: expr,
-				Body:   body,
-			}
-
-		}
-
 	}
 
 	return expr, nil
@@ -624,30 +640,7 @@ func (p *Parser) parsePrimaryExpression() (ast.Expression, error) {
 		p.next()
 
 	case token.IDENTIFIER:
-		ident, err := p.parseIdentifierWithoutAnnotation()
-
-		if err != nil {
-			return nil, err
-		}
-
-		// is identifier, but next token is `{`, could possibly be a composite literal
-		anchor := p.cursor
-		if p.currentMatches(token.LBRACE) {
-
-			body, err := p.parseCompositeLiteralBody()
-			if err != nil {
-				p.cursor = anchor
-				return ident, nil
-			}
-
-			expr = &ast.CompositeLiteral{
-				Target: ident,
-				Body:   body,
-			}
-
-		} else {
-			return ident, nil
-		}
+		return p.parseIdentifierWithoutAnnotation()
 
 	case token.LPAREN:
 		start, err := p.expect(token.LPAREN)
@@ -1108,8 +1101,12 @@ func (p *Parser) parseCompositeLiteralBody() (*ast.CompositeLiteralBody, error) 
 	if err != nil {
 		return nil, err
 	}
-
 	pairs := []*ast.CompositeLiteralField{}
+
+	if p.currentMatches(token.RBRACE) {
+		goto exit
+	}
+
 	// Loop until match with RBRACE
 	for !p.match(token.RBRACE) {
 
@@ -1154,7 +1151,7 @@ func (p *Parser) parseCompositeLiteralBody() (*ast.CompositeLiteralBody, error) 
 		}
 
 	}
-
+exit:
 	// parse kv expression
 	rBrace, err := p.expect(token.RBRACE)
 

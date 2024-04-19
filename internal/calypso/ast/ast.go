@@ -13,11 +13,12 @@ const (
 
 type Node interface {
 	Range() token.SyntaxRange
+	String() string
 }
 
 type Expression interface {
 	Node
-	expressionNode()
+	// expressionNode()
 }
 
 type Statement interface {
@@ -267,8 +268,8 @@ type IndexExpression struct {
 }
 
 type FieldAccessExpression struct {
-	Target Expression
-	Field  Expression
+	Target Node
+	Field  Node
 	DotPos token.TokenPosition
 }
 
@@ -276,11 +277,6 @@ type KeyValueExpression struct {
 	Key      Expression
 	Value    Expression
 	ColonPos token.TokenPosition
-}
-
-type GenericSpecializationExpression struct {
-	Identifier *IdentifierExpression
-	Clause     *GenericArgumentsClause
 }
 
 type ExpressionList struct {
@@ -371,7 +367,7 @@ type MapLiteral struct {
 }
 
 type CompositeLiteral struct {
-	Target Expression
+	Target TypeExpression
 	Body   *CompositeLiteralBody
 }
 
@@ -391,18 +387,13 @@ type CompositeLiteralField struct {
 
 type TypeExpression interface {
 	Node
-	typeNode()
 }
 
-type IdentifierTypeExpression struct {
-	Identifier *IdentifierExpression
-	Arguments  *GenericArgumentsClause
-}
+//*  Note: identifier expression conforms to typeexpression interface
 
-type GenericArgumentsClause struct {
-	Arguments   []TypeExpression
-	LChevronPos token.TokenPosition
-	RChevronPos token.TokenPosition
+type SpecializationExpression struct {
+	Expression Expression
+	Clause     *GenericArgumentsClause
 }
 
 type ArrayTypeExpression struct {
@@ -441,4 +432,10 @@ type GenericParametersClause struct {
 type GenericParameterExpression struct {
 	Identifier *IdentifierExpression
 	Standards  []*IdentifierExpression
+}
+
+type GenericArgumentsClause struct {
+	Arguments   []TypeExpression
+	LChevronPos token.TokenPosition
+	RChevronPos token.TokenPosition
 }

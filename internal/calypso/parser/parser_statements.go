@@ -143,12 +143,21 @@ func (p *Parser) parseIfStatement() (ast.Statement, error) {
 	}
 	// Condition
 
+	_, err = p.expect(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
 	condition, err := p.parseExpression()
 	if err != nil {
 		return nil, err
 	}
 
 	stmt.Condition = condition
+
+	_, err = p.expect(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
 
 	// Action Block
 	block, err := p.parseBlockStatement()

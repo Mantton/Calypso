@@ -9,7 +9,7 @@ import (
 
 func (c *Checker) evaluateTypeExpression(e ast.TypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 	switch expr := e.(type) {
-	case *ast.IdentifierTypeExpression:
+	case *ast.IdentifierExpression:
 		return c.evaluateIdentifierTypeExpression(expr, tPs, ctx)
 	case *ast.PointerTypeExpression:
 		return c.evaluatePointerTypeExpression(expr, tPs, ctx)
@@ -17,15 +17,19 @@ func (c *Checker) evaluateTypeExpression(e ast.TypeExpression, tPs []*types.Type
 		return c.evaluateArrayTypeExpression(expr, tPs, ctx)
 	case *ast.MapTypeExpression:
 		return c.evaluateMapTypeExpression(expr, tPs, ctx)
+	case *ast.SpecializationExpression:
+		return c.evaluateTypeSpecializationExpression(expr, tPs, ctx)
+	case *ast.FieldAccessExpression:
+		return c.evaluateTypeFieldAccessExpression(expr, tPs, ctx)
 	default:
 		msg := fmt.Sprintf("type expression check not implemented, %T", e)
 		panic(msg)
 	}
 }
 
-func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
+func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
 
-	n := expr.Identifier.Value
+	n := expr.Value
 
 	def, ok := ctx.scope.Resolve(n, c.ParentScope())
 
@@ -49,52 +53,7 @@ func (c *Checker) evaluateIdentifierTypeExpression(expr *ast.IdentifierTypeExpre
 		return unresolved
 	}
 
-	var eArgs []types.Type
-	var tParams types.TypeParams
-
-	if expr.Arguments != nil {
-		for _, n := range expr.Arguments.Arguments {
-			eArgs = append(eArgs, c.evaluateTypeExpression(n, tPs, ctx))
-		}
-	}
-
-	tParams = types.GetTypeParams(typ)
-
-	if len(eArgs) != len(tParams) {
-		msg := fmt.Sprintf("expected %d type parameter(s), provided %d", len(tParams), len(eArgs))
-		c.addError(msg, expr.Range())
-		return unresolved
-	}
-
-	// not a generic instance
-	if len(tParams) == 0 {
-		return typ
-	}
-
-	hasErrors := false
-	// ensure conformance of LHS Arguments into RHS Parameters
-	for i, arg := range eArgs {
-		p := tParams[i]
-
-		err := types.Conforms(p.Constraints, arg)
-
-		if err != nil {
-			hasErrors = true
-			c.addError(err.Error(), expr.Range())
-			continue
-		}
-
-	}
-
-	if hasErrors {
-		return unresolved
-	}
-
-	o := types.Instantiate(typ, eArgs, nil)
-	fmt.Println("Instantiated:", o, "from", typ)
-	fmt.Println()
-	return o
-
+	return typ
 }
 
 func (c *Checker) evaluatePointerTypeExpression(expr *ast.PointerTypeExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
@@ -165,4 +124,75 @@ func (c *Checker) evaluateMapTypeExpression(expr *ast.MapTypeExpression, tPs []*
 	inst := types.Instantiate(typ, []types.Type{key, value}, nil)
 
 	return inst
+}
+
+func (c *Checker) evaluateTypeSpecializationExpression(expr *ast.SpecializationExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
+
+	typ := c.evaluateTypeExpression(expr.Expression, tPs, ctx)
+
+	if typ == unresolved {
+		return unresolved
+	}
+
+	var eArgs []types.Type
+	var tParams types.TypeParams
+
+	for _, n := range expr.Clause.Arguments {
+		eArgs = append(eArgs, c.evaluateTypeExpression(n, tPs, ctx))
+	}
+
+	tParams = types.GetTypeParams(typ)
+
+	if len(eArgs) != len(tParams) {
+		msg := fmt.Sprintf("expected %d type parameter(s), provided %d", len(tParams), len(eArgs))
+		c.addError(msg, expr.Range())
+		return unresolved
+	}
+
+	// not a generic instance
+	if len(tParams) == 0 {
+		return typ
+	}
+
+	hasErrors := false
+	// ensure conformance of LHS Arguments into RHS Parameters
+	for i, arg := range eArgs {
+		p := tParams[i]
+
+		err := types.Conforms(p.Constraints, arg)
+
+		if err != nil {
+			hasErrors = true
+			c.addError(err.Error(), expr.Range())
+			continue
+		}
+
+	}
+
+	if hasErrors {
+		return unresolved
+	}
+
+	o := types.Instantiate(typ, eArgs, nil)
+	fmt.Println("Instantiated:", o, "from", typ)
+	fmt.Println()
+	return o
+
+}
+
+func (c *Checker) evaluateTypeFieldAccessExpression(expr *ast.FieldAccessExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {
+
+	t := c.evaluateTypeExpression(expr.Target, tPs, ctx)
+
+	switch t := t.(type) {
+
+	case *types.Module:
+		nCtx := NewContext(t.Table.Main, ctx.sg, ctx.lhs)
+		f := c.evaluateTypeExpression(expr.Field, tPs, nCtx)
+		return f
+
+	default:
+		panic("unimplemented type field access expression")
+	}
+
 }
