@@ -143,7 +143,7 @@ func (c *Checker) evaluateGroupedExpression(expr *ast.GroupedExpression, ctx *No
 func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeContext) types.Type {
 	typ := c.evaluateExpression(expr.Target, ctx)
 	// already reported error
-	if typ == unresolved {
+	if types.IsUnresolved(typ) {
 		return typ
 	}
 
@@ -211,6 +211,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			}
 		}
 
+		fmt.Println(specializations)
 		t, err := c.instantiateWithSpecialization(fn, specializations)
 		if err != nil {
 			c.addError(err.Error(), expr.Target.Range())
@@ -327,7 +328,7 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 	lhs := c.evaluateExpression(e.Left, ctx)
 	rhs := c.evaluateExpression(e.Right, ctx)
 
-	if lhs == unresolved || rhs == unresolved {
+	if types.IsUnresolved(lhs) || types.IsUnresolved(rhs) {
 		return unresolved
 	}
 
@@ -410,21 +411,18 @@ func (c *Checker) evaluateShorthandAssignmentExpression(expr *ast.ShorthandAssig
 
 func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeContext) types.Type {
 
-	// 1 - Find Defined Type
-	// target := c.evaluateTypeExpression(n.Target, nil, ctx)
+	// 1 - Find Type
 	target := c.evaluateExpression(n.Target, ctx)
-	base := types.AsDefined(target)
 
-	if base == nil {
-		c.addError(
-			fmt.Sprintf("`%s` is not a type", target),
-			n.Target.Range(),
-		)
+	if types.IsUnresolved(target) {
 		return unresolved
 	}
+	base := target
+
+	sg, ok := base.Parent().(*types.Struct)
 
 	// 2 - Ensure Defined Type is Struct
-	if !types.IsStruct(base.Parent()) {
+	if !ok {
 		c.addError(
 			fmt.Sprintf("`%s` is not a struct", target),
 			n.Target.Range(),
@@ -432,12 +430,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeCon
 		return unresolved
 	}
 
-	// 3 - check for annotated specialization
-
-	// 4 - Get Struct Signature of Defined Type
-
-	sg := base.Parent().(*types.Struct)
-
+	// 3 - Get Struct Signature of Defined Type
 	seen := make(map[string]ast.Expression)
 	hasError := false
 
@@ -501,11 +494,12 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeCon
 		return unresolved
 	}
 
-	if len(base.TypeParameters) == 0 {
+	tparams := types.GetTypeParams(target)
+	if len(tparams) == 0 {
 		return base
 	}
 
-	for _, param := range base.TypeParameters {
+	for _, param := range tparams {
 		_, ok := specializations[param]
 		if !ok {
 			panic(fmt.Errorf("failed to resolve generic parameter: %s in %s", param, specializations))
@@ -526,82 +520,70 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations typ
 	vT := c.evaluateExpression(v, ctx)
 
 	fmt.Println("\n", "\t[Resolver] Variable Name", f.Name(), "\n", "\t[Resolver] Variable Type", f.Type(), "\n", "\t[Resolver] Provided Type", vT)
-	if vT == unresolved {
+	if types.IsUnresolved(vT) {
 		return fmt.Errorf("unresolved type assigned for `%s`", f.Name())
 	}
 
 	// check constraints & specialize
 	// can either be a type param or generic struct or a generic function
 	fT := types.ResolveAliases(f.Type())
+
+	if !types.IsGeneric(fT) {
+		// resolve non generic types
+		err := c.validateAssignment(f, vT, v, false)
+		return err
+	}
+
+	fmt.Println("\t[Resolver] Specializing", fT, "with", vT)
 	switch fT := fT.(type) {
 	case *types.TypeParam:
 		return c.specialize(specializations, fT, vT, v)
-	case *types.FunctionSignature:
-		if !types.IsGeneric(fT) {
-			break
-		}
-		panic("not implemented")
-	case *types.DefinedType:
 
-		// Not Generic , nothing to do, use typical validation
-		if !types.IsGeneric(fT) {
-			break
-		}
-		// Convert to Defined type
-		prev := vT
-		vT := types.AsDefined(vT)
-		if vT == nil {
-			panic(fmt.Errorf("type is not a defined type : %T (%s)", prev, prev))
-		}
-
-		// validate vT can be passed to fT
+	case *types.Pointer:
 		_, err := c.validate(fT, vT)
-
 		if err != nil {
-			fmt.Println("[DEBUG]", err)
 			return err
 		}
 
-		// Now sides are of the same type & should be of the same parameter length
-		// guard in situation where not
-		if len(fT.TypeParameters) != len(vT.TypeParameters) {
-			return fmt.Errorf("expected %d type parameter(s), got %d instead", len(fT.TypeParameters), len((vT.TypeParameters)))
-		}
-
-		// There for, Foo<T> == Foo<V>, we can infer T == V
-		for i, fTParam := range fT.TypeParameters {
-			vTParam := vT.TypeParameters[i]
-			return c.specialize(specializations, fTParam, vTParam, v)
-		}
-		return nil
-	case *types.Alias:
-		panic("fT should be resolved, bad path")
-
-	case *types.Pointer:
-
-		// non generic pointer type
-		if !types.IsGeneric(fT) {
-			break
-		}
 		base := types.AsTypeParam(fT.PointerTo)
 
 		if base == nil {
 			panic("expected type parameter")
 		}
-
 		// vT must be an instantiated struct of type fT
 		iT, ok := vT.(*types.Pointer)
-
 		if !ok {
 			return fmt.Errorf("expected pointer to type %s, received %s", fT, vT)
 		}
 
 		return c.specialize(specializations, base, iT, v)
+	case *types.SpecializedType:
+		// field type is a specialized instance of a type
+		_, err := c.validate(fT, vT)
+
+		if err != nil {
+			return err
+		}
+
+		svT := vT.(*types.SpecializedType)
+
+		for i, b := range fT.Bounds {
+
+			tfT := types.AsTypeParam(b)
+
+			if tfT == nil {
+				continue
+			}
+
+			err := c.specialize(specializations, tfT, svT.Bounds[i], v)
+
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	// resolve non generic types
-	err := c.validateAssignment(f, vT, v, false)
-	return err
+	return nil
 }
 
 func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ctx *NodeContext) types.Type {
@@ -609,7 +591,7 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 	a := c.evaluateExpression(n.Target, ctx)
 	c.table.SetNodeType(n.Target, a)
 
-	if a == unresolved {
+	if types.IsUnresolved(a) {
 		return unresolved
 	}
 
@@ -624,31 +606,18 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 			return c.evaluateExpression(p, NewContext(sc, ctx.sg, nil))
 		}
 
-		c.addError("invalid property key", n.Range())
+		c.addError("invalid field key", n.Range())
 		return unresolved
 	}
 
-	switch a := a.(type) {
-	case *types.DefinedType:
-		f := a.ResolveField(field)
-		if f != nil {
-			return f
-		}
-	case *types.Module:
-		f := a.Table.Main.ResolveInCurrent(field)
-		if !f.IsVisible(c.module) {
-			c.addError(
-				fmt.Sprintf("`%s` is not accessible in this context", f),
-				n.Range(),
-			)
-		}
-		if f != nil {
-			return f.Type()
-		}
+	f, err := types.ResolveField(a, field, c.module)
+
+	if err != nil {
+		c.addError(err.Error(), n.Field.Range())
+		return unresolved
 	}
 
-	c.addError(fmt.Sprintf("unknown function, type or field: \"%s\" on type \"%s\"", field, a), n.Range())
-	return unresolved
+	return f
 }
 
 func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpression, ctx *NodeContext) types.Type {
@@ -656,7 +625,7 @@ func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpressi
 	// 1- Find Target
 	target := c.evaluateExpression(e.Expression, ctx)
 
-	if target == unresolved {
+	if types.IsUnresolved(target) {
 		return unresolved
 	}
 

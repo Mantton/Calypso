@@ -12,7 +12,7 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 	// if LHS has not been assigned a value
 	expected := variable.Type()
 
-	if expected == unresolved {
+	if types.IsUnresolved(expected) {
 		switch {
 		case provided == types.LookUp(types.NilLiteral):
 			return fmt.Errorf("use of unspecialized nil in assignment")

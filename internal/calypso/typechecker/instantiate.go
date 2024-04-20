@@ -14,15 +14,7 @@ func (c *Checker) instantiateWithArguments(t types.Type, args types.TypeList, ex
 	}
 
 	spec := make(types.Specialization)
-	var tparams types.TypeParams
-	switch t := t.(type) {
-	case *types.DefinedType:
-		tparams = t.TypeParameters
-	case *types.FunctionSignature:
-		tparams = t.TypeParameters
-	default:
-		return nil, fmt.Errorf("unable to get type parameters from, %s", t)
-	}
+	tparams := types.GetTypeParams(t)
 
 	x := len(tparams)
 	y := len(args)
@@ -42,7 +34,7 @@ func (c *Checker) instantiateWithArguments(t types.Type, args types.TypeList, ex
 	}
 
 	instantiation := types.Instantiate(t, spec)
-	if instantiation == unresolved {
+	if types.IsUnresolved(instantiation) {
 		return nil, fmt.Errorf("failed to instantiate type")
 	}
 	fmt.Printf("Instantiated %s, from %s\n", instantiation, t)
@@ -56,7 +48,7 @@ func (c *Checker) instantiateWithSpecialization(t types.Type, s types.Specializa
 
 	}
 	instantiation := types.Instantiate(t, s)
-	if instantiation == unresolved {
+	if types.IsUnresolved(instantiation) {
 		return nil, fmt.Errorf("failed to instantiate type")
 	}
 	fmt.Printf("Instantiated %s, from %s\n", instantiation, t)

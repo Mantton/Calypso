@@ -91,15 +91,11 @@ func ResolveTypeParameters(t Type) TypeParams {
 
 func (n *DefinedType) ResolveMethod(s string) Type {
 
-	if n.scope == nil {
-		return n.instantiateMethod(s)
-	}
-
 	symbol := n.scope.ResolveInCurrent(s)
 
 	// Not found in current, find & specialize from instance
 	if symbol == nil {
-		return n.instantiateMethod(s)
+		return nil
 	}
 
 	// match function types
@@ -114,16 +110,11 @@ func (n *DefinedType) ResolveMethod(s string) Type {
 }
 
 func (n *DefinedType) ResolveType(s string) Type {
-
-	if n.scope == nil {
-		return n.instantiateType(s)
-	}
-
 	symbol := n.scope.ResolveInCurrent(s)
 
 	// Not found in current, find & specialize from instance
 	if symbol == nil {
-		return n.instantiateType(s)
+		return nil
 	}
 
 	typ, ok := symbol.(Type)
@@ -179,64 +170,6 @@ func (n *DefinedType) ResolveField(s string) Type {
 
 }
 
-func (n *DefinedType) initializeMappings() {
-	// if n.mappings == nil {
-	// 	n.mappings = make(map[string]Type)
-	// }
-
-	// for _, t := range n.TypeParameters {
-	// 	n.mappings[t.name] = t.Unwrapped()
-	// }
-	panic("???")
-}
-
 func (n *DefinedType) GetScope() *Scope {
 	return n.scope
-}
-
-func (n *DefinedType) instantiateType(sym string) Type {
-	// no instance of, is parent with none found
-	// if n.InstanceOf == nil {
-	// 	return nil
-	// }
-
-	// symbol := n.InstanceOf.ResolveType(sym)
-
-	// // checked parent, not found
-	// if symbol == nil {
-	// 	return nil
-	// }
-
-	// if IsGeneric(symbol) {
-	// 	n.initializeMappings()
-
-	// 	return Apply(n.mappings, symbol)
-	// }
-
-	// return symbol
-
-	panic("not ready!")
-}
-
-func (n *DefinedType) instantiateMethod(sym string) Type {
-	// no instance of, is parent with none found
-	// if n.InstanceOf == nil {
-	// 	return nil
-	// }
-
-	// symbol := n.InstanceOf.ResolveMethod(sym)
-
-	// // checked parent, not found
-	// if symbol == nil {
-	// 	return nil
-	// }
-
-	// if IsGeneric(symbol) {
-	// 	n.initializeMappings()
-
-	// 	return Apply(n.mappings, symbol).(*FunctionSignature)
-	// }
-
-	// return symbol
-	panic("wut!")
 }

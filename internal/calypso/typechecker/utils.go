@@ -42,6 +42,7 @@ func (c *Checker) specialize(m types.Specialization, tParam *types.TypeParam, pr
 	if err != nil {
 		return err
 	}
+	fmt.Printf("\t[Resolver] Specialization Exist, Assignment Validated %s as %s\n", tParam, provided)
 
 	return nil
 

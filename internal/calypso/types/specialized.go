@@ -3,8 +3,6 @@ package types
 type SpecializedType struct {
 	Bounds     TypeList
 	InstanceOf *DefinedType
-
-	wrapped Type
 }
 
 type SpecializedFunction struct {
@@ -34,5 +32,35 @@ func (t *SpecializedType) String() string {
 }
 
 func (t *SpecializedType) Parent() Type {
-	return t.wrapped
+	return cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization())
+}
+
+func (t *SpecializedType) ResolveField(f string) Type {
+
+	field := t.InstanceOf.ResolveField(f)
+
+	if field == nil {
+		return nil
+	}
+
+	return Instantiate(field, t.Specialization())
+}
+
+func (t *SpecializedType) ResolveMethod(f string) Type {
+
+	field := t.InstanceOf.ResolveMethod(f)
+
+	if field == nil {
+		return nil
+	}
+
+	return Instantiate(field, t.Specialization())
+}
+
+func (t *SpecializedType) Specialization() Specialization {
+	spec := make(Specialization)
+	for i, p := range t.Bounds {
+		spec[t.InstanceOf.TypeParameters[i]] = p
+	}
+	return spec
 }

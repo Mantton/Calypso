@@ -42,26 +42,14 @@ func Validate(expected Type, provided Type) (Type, error) {
 }
 
 func validateDefinedType(expected *DefinedType, provided Type) (Type, error) {
-
 	switch provided := provided.(type) {
 	case *DefinedType:
-
 		if p, ok := expected.Parent().(*Basic); ok {
 			return validateBasicTypes(p, provided.Parent(), expected)
 		}
 
 		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
-	case *SpecializedType:
-		if provided.InstanceOf != expected {
-			return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
-		}
-		panic("check conformances!")
-	case *Basic:
-		panic("???")
 	default:
-
-		fmt.Println(fmt.Sprintf("%T", provided))
-
 		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 	}
 
@@ -71,10 +59,6 @@ func validateBasicTypes(expected *Basic, p Type, e Type) (Type, error) {
 
 	if !ok {
 		return nil, fmt.Errorf("expected `%s`, received `%s`. Type %T, %T", expected, p, expected, p)
-	}
-
-	if expected == LookUp(Any) {
-		return e, nil
 	}
 
 	// either side
@@ -206,25 +190,21 @@ func Conforms(constraints []*Standard, x Type) error {
 		return nil
 	}
 
-	provided := AsDefined(x)
-	if provided == nil {
-		return fmt.Errorf("%s is not a conforming type, %T", x, x)
-	}
-
-	if provided == LookUp(IntegerLiteral) {
-		provided = AsDefined(LookUp(Int))
-	}
+	provided := ResolveLiteral(x)
 
 	action := func(s *Standard) error {
 
 		for _, expectedMethod := range s.Signature {
-			providedMethod := provided.ResolveMethod(expectedMethod.Name())
+			providedMethod, err := ResolveMethod(provided, expectedMethod.Name())
 
+			if err != nil {
+				return err
+			}
 			if providedMethod == nil {
 				return fmt.Errorf("%s does does not conform to standard: `%s`", x, s)
 			}
 
-			_, err := Validate(expectedMethod.Type(), providedMethod)
+			_, err = Validate(expectedMethod.Type(), providedMethod)
 
 			if err != nil {
 				return err

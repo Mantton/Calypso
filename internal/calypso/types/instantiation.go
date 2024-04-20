@@ -44,7 +44,7 @@ func Instantiate(t Type, ctx Specialization) Type {
 
 		// Should always be specialized otherwise there is a problem elsewhere
 		if !ok {
-			panic("should be specialized no?")
+			panic("should be specialized")
 		}
 
 		// return specialized type
@@ -65,8 +65,14 @@ func Instantiate(t Type, ctx Specialization) Type {
 		}
 		// Specialize underlying type
 		typ := NewSpecializedType(t, bounds)
-		typ.wrapped = cloneWithSpecialization(t.wrapped, ctx)
 		return typ
+	case *SpecializedType:
+		bounds := TypeList{}
+		for _, bound := range t.Bounds {
+			bounds = append(bounds, Instantiate(bound, ctx))
+		}
+
+		return NewSpecializedType(t.InstanceOf, bounds)
 	case *FunctionSignature:
 		sg := NewFunctionSignature()
 
@@ -83,7 +89,7 @@ func Instantiate(t Type, ctx Specialization) Type {
 		sg.Result.SetType(Instantiate(res, ctx))
 		return sg
 	case *Alias:
-		panic("not implemented")
+		return Instantiate(t.RHS, ctx)
 	case *Pointer:
 		cT := t.PointerTo          // Type Pointing To
 		uT := Instantiate(cT, ctx) // Instantiate Type with Specialization Map

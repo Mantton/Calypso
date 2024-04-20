@@ -140,7 +140,7 @@ func (c *Checker) evaluateTypeSpecializationExpression(expr *ast.SpecializationE
 
 	typ := c.evaluateTypeExpression(expr.Expression, tPs, ctx)
 
-	if typ == unresolved {
+	if types.IsUnresolved(typ) {
 		return unresolved
 	}
 
