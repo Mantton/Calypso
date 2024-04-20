@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 type BasicType byte
 
 const (
@@ -152,43 +154,15 @@ func ResolveLiteral(t Type) Type {
 		if len(t.TypeParameters) == 0 {
 			return t
 		}
-
-		for _, p := range t.TypeParameters {
-			// Unbounded
-			if p.Bound == nil {
-				continue
-			}
-
-			// Has Bounded Grouped Literal
-			if IsGroupLiteral(p.Bound) {
-				//
-				return resolveDefined(t)
-			} else {
-				continue
-			}
-
-		}
-
 	case *Pointer:
 		ptr := ResolveLiteral(t.PointerTo)
 		return NewPointer(ptr)
+	case *SpecializedType:
+		fmt.Println("TODO: ")
+		return t
 	}
 
 	return t
-}
-
-func resolveDefined(t *DefinedType) Type {
-	// Recreate mapping
-	ctx := make(mappings)
-	for _, p := range t.TypeParameters {
-		ctx[p.Name()] = ResolveLiteral(p.Unwrapped())
-	}
-
-	if t.InstanceOf == nil {
-		return Apply(ctx, t)
-	} else {
-		return Apply(ctx, t.InstanceOf)
-	}
 }
 
 func IsBoolean(t Type) bool {

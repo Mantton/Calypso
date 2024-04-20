@@ -104,8 +104,13 @@ func (c *Checker) evaluateArrayTypeExpression(expr *ast.ArrayTypeExpression, tPs
 		c.addError("unable to find array type", expr.Range())
 		return unresolved
 	}
-	typ := types.AsDefined(sym.Type())
-	inst := types.Instantiate(typ, []types.Type{element}, nil)
+
+	inst, err := c.instantiateWithArguments(sym.Type(), types.TypeList{element}, expr)
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+		return unresolved
+	}
+
 	return inst
 }
 
@@ -114,14 +119,19 @@ func (c *Checker) evaluateMapTypeExpression(expr *ast.MapTypeExpression, tPs []*
 	key := c.evaluateTypeExpression(expr.Key, tPs, ctx)
 	value := c.evaluateTypeExpression(expr.Value, tPs, ctx)
 
+	// TODO: This should use the std/map module
 	sym, ok := ctx.scope.Resolve("Map", c.ParentScope())
 
 	if !ok {
 		c.addError("unable to find map type", expr.Range())
 		return unresolved
 	}
-	typ := types.AsDefined(sym.Type())
-	inst := types.Instantiate(typ, []types.Type{key, value}, nil)
+	inst, err := c.instantiateWithArguments(sym.Type(), types.TypeList{key, value}, expr)
+
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+		return unresolved
+	}
 
 	return inst
 }
@@ -135,49 +145,18 @@ func (c *Checker) evaluateTypeSpecializationExpression(expr *ast.SpecializationE
 	}
 
 	var eArgs []types.Type
-	var tParams types.TypeParams
-
 	for _, n := range expr.Clause.Arguments {
 		eArgs = append(eArgs, c.evaluateTypeExpression(n, tPs, ctx))
 	}
 
-	tParams = types.GetTypeParams(typ)
+	inst, err := c.instantiateWithArguments(typ, eArgs, expr.Clause)
 
-	if len(eArgs) != len(tParams) {
-		msg := fmt.Sprintf("expected %d type parameter(s), provided %d", len(tParams), len(eArgs))
-		c.addError(msg, expr.Range())
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
 		return unresolved
 	}
 
-	// not a generic instance
-	if len(tParams) == 0 {
-		return typ
-	}
-
-	hasErrors := false
-	// ensure conformance of LHS Arguments into RHS Parameters
-	for i, arg := range eArgs {
-		p := tParams[i]
-
-		err := types.Conforms(p.Constraints, arg)
-
-		if err != nil {
-			hasErrors = true
-			c.addError(err.Error(), expr.Range())
-			continue
-		}
-
-	}
-
-	if hasErrors {
-		return unresolved
-	}
-
-	o := types.Instantiate(typ, eArgs, nil)
-	fmt.Println("Instantiated:", o, "from", typ)
-	fmt.Println()
-	return o
-
+	return inst
 }
 
 func (c *Checker) evaluateTypeFieldAccessExpression(expr *ast.FieldAccessExpression, tPs []*types.TypeParam, ctx *NodeContext) types.Type {

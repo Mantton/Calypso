@@ -19,8 +19,6 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 		case types.IsGeneric(provided):
 			if allowGeneric {
 				expected = provided
-			} else if param := types.AsTypeParam(provided); param != nil && param.Bound != nil {
-				expected = param.Bound
 			} else {
 				err := fmt.Errorf("unable to infer specialization of generic type `%s`", provided)
 				return err
@@ -29,6 +27,7 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 			expected = provided
 		}
 	} else {
+
 		updated, err := c.validate(expected, provided)
 		if err != nil {
 			return err

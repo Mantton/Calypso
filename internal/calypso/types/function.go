@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Function struct {
@@ -148,23 +147,23 @@ func (sg *FunctionSignature) ResolveParent() *FunctionSignature {
 	return sg.ParentInstance
 }
 
-func (tg *FunctionSignature) AddInstance(t *FunctionSignature, m mappings) {
+// func (tg *FunctionSignature) AddInstance(t *FunctionSignature, m mappings) {
 
-	sg := tg.ResolveParent()
-	if sg.Instances == nil {
-		sg.Instances = make(map[string]*FunctionSignature)
-	}
+// 	sg := tg.ResolveParent()
+// 	if sg.Instances == nil {
+// 		sg.Instances = make(map[string]*FunctionSignature)
+// 	}
 
-	str := HashValue(m, sg.TypeParameters)
+// 	str := HashValue(m, sg.TypeParameters)
 
-	key := strings.ReplaceAll(str, " ", "-")
-	fmt.Println("HashValue:", key)
+// 	key := strings.ReplaceAll(str, " ", "-")
+// 	fmt.Println("HashValue:", key)
 
-	sg.Instances[key] = t
+// 	sg.Instances[key] = t
 
-	t.ParentInstance = sg
-	t.InstanceHash = key
-}
+// 	t.ParentInstance = sg
+// 	t.InstanceHash = key
+// }
 
 func (fn *Function) IsVisible(from *Module) bool {
 	// Is Public or being accessed from current module

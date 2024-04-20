@@ -17,19 +17,8 @@ func (c *Checker) addError(msg string, pos token.SyntaxRange) {
 	})
 }
 
-type Specializations map[string]types.Type
-
-func NewSpecializations() Specializations {
-	return make(Specializations)
-}
-
-func (s Specializations) specialize(tParam *types.TypeParam, provided types.Type, c *Checker, expr ast.Expression) error {
-	currentSpec, ok := s[tParam.Name()]
-
-	// Unwrap bounded params
-	if tT := types.AsTypeParam(provided); tT != nil {
-		provided = tT.Unwrapped()
-	}
+func (c *Checker) specialize(m types.Specialization, tParam *types.TypeParam, provided types.Type, expr ast.Expression) error {
+	currentSpec, ok := m[tParam]
 
 	// No Specialization
 	if !ok {
@@ -40,7 +29,7 @@ func (s Specializations) specialize(tParam *types.TypeParam, provided types.Type
 			return err
 		}
 
-		s[tParam.Name()] = provided
+		m[tParam] = provided
 		fmt.Printf("\t[Resolver] Specialized %s as %s\n", tParam, provided)
 		return nil
 	}

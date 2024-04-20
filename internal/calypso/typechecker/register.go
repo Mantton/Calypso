@@ -24,7 +24,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
 		for _, p := range e.GenericParams.Parameters {
-			d := types.NewTypeParam(p.Identifier.Value, nil, nil, c.module)
+			d := types.NewTypeParam(p.Identifier.Value, nil)
 			err := sg.AddTypeParameter(d)
 
 			if err != nil {
@@ -118,7 +118,7 @@ func (c *Checker) registerConformance(d *ast.ConformanceDeclaration) {
 func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *types.Scope) *types.DefinedType {
 	scope := types.NewScope(parent, n.Value)
 	c.table.AddScope(core, scope)
-	def := types.NewDefinedType(n.Value, unresolved, nil, scope)
+	def := types.NewBaseDefinedType(n.Value, unresolved, nil, scope)
 	err := parent.Define(def)
 
 	if err != nil {
@@ -166,7 +166,7 @@ func (c *Checker) registerTypeParameters(g *ast.GenericParametersClause, t *type
 	}
 
 	for _, p := range g.Parameters {
-		d := types.NewTypeParam(p.Identifier.Value, nil, nil, c.module)
+		d := types.NewTypeParam(p.Identifier.Value, nil)
 		err := t.AddTypeParameter(d)
 
 		if err != nil {

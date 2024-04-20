@@ -103,7 +103,7 @@ func (c *Checker) pass0(f *ast.File) {
 		}
 		if d.GenericParams != nil {
 			for _, p := range d.GenericParams.Parameters {
-				d := types.NewTypeParam(p.Identifier.Value, nil, nil, c.module)
+				d := types.NewTypeParam(p.Identifier.Value, nil)
 				alias.AddTypeParameter(d)
 			}
 		}

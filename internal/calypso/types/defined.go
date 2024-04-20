@@ -3,23 +3,19 @@ package types
 type DefinedType struct {
 	symbol
 	wrapped        Type
-	InstanceOf     *DefinedType
 	TypeParameters TypeParams
 	scope          *Scope
-	mappings       map[string]Type
-	Instances      map[string]Type
 }
 
-func NewDefinedType(n string, t Type, p TypeParams, scope *Scope) *DefinedType {
-	typ := &DefinedType{
+func NewBaseDefinedType(name string, wrapped Type, params TypeParams, scope *Scope) *DefinedType {
+	return &DefinedType{
 		symbol: symbol{
-			name: n,
+			name: name,
 		},
-		TypeParameters: p,
-		wrapped:        t,
+		TypeParameters: params,
+		wrapped:        wrapped,
 		scope:          scope,
 	}
-	return typ
 }
 
 func (s *DefinedType) AddTypeParameter(t *TypeParam) error {
@@ -32,6 +28,7 @@ func (t *DefinedType) Parent() Type { return t.wrapped.Parent() }
 func (t *DefinedType) Type() Type {
 	return t
 }
+
 func (t *DefinedType) String() string {
 	if len(t.TypeParameters) == 0 {
 		return t.Name()
@@ -183,13 +180,14 @@ func (n *DefinedType) ResolveField(s string) Type {
 }
 
 func (n *DefinedType) initializeMappings() {
-	if n.mappings == nil {
-		n.mappings = make(map[string]Type)
-	}
+	// if n.mappings == nil {
+	// 	n.mappings = make(map[string]Type)
+	// }
 
-	for _, t := range n.TypeParameters {
-		n.mappings[t.name] = t.Unwrapped()
-	}
+	// for _, t := range n.TypeParameters {
+	// 	n.mappings[t.name] = t.Unwrapped()
+	// }
+	panic("???")
 }
 
 func (n *DefinedType) GetScope() *Scope {
@@ -198,44 +196,47 @@ func (n *DefinedType) GetScope() *Scope {
 
 func (n *DefinedType) instantiateType(sym string) Type {
 	// no instance of, is parent with none found
-	if n.InstanceOf == nil {
-		return nil
-	}
+	// if n.InstanceOf == nil {
+	// 	return nil
+	// }
 
-	symbol := n.InstanceOf.ResolveType(sym)
+	// symbol := n.InstanceOf.ResolveType(sym)
 
-	// checked parent, not found
-	if symbol == nil {
-		return nil
-	}
+	// // checked parent, not found
+	// if symbol == nil {
+	// 	return nil
+	// }
 
-	if IsGeneric(symbol) {
-		n.initializeMappings()
+	// if IsGeneric(symbol) {
+	// 	n.initializeMappings()
 
-		return Apply(n.mappings, symbol)
-	}
+	// 	return Apply(n.mappings, symbol)
+	// }
 
-	return symbol
+	// return symbol
+
+	panic("not ready!")
 }
 
 func (n *DefinedType) instantiateMethod(sym string) Type {
 	// no instance of, is parent with none found
-	if n.InstanceOf == nil {
-		return nil
-	}
+	// if n.InstanceOf == nil {
+	// 	return nil
+	// }
 
-	symbol := n.InstanceOf.ResolveMethod(sym)
+	// symbol := n.InstanceOf.ResolveMethod(sym)
 
-	// checked parent, not found
-	if symbol == nil {
-		return nil
-	}
+	// // checked parent, not found
+	// if symbol == nil {
+	// 	return nil
+	// }
 
-	if IsGeneric(symbol) {
-		n.initializeMappings()
+	// if IsGeneric(symbol) {
+	// 	n.initializeMappings()
 
-		return Apply(n.mappings, symbol).(*FunctionSignature)
-	}
+	// 	return Apply(n.mappings, symbol).(*FunctionSignature)
+	// }
 
-	return symbol
+	// return symbol
+	panic("wut!")
 }

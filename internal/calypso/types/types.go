@@ -5,6 +5,8 @@ type Type interface {
 	Parent() Type
 }
 
+type TypeList []Type
+
 type TParam interface {
 	TypeParameters() TypeParams
 }
@@ -18,19 +20,7 @@ func IsGeneric(t Type) bool {
 		return true
 	case *DefinedType:
 		// No Type Parameters
-		if len(t.TypeParameters) == 0 {
-			return false
-		}
-
-		// All Type Parameters are bounded
-		for _, param := range t.TypeParameters {
-			if param.Bound == nil {
-				return true
-			}
-		}
-
-		return false
-
+		return len(t.TypeParameters) > 0
 	case *FunctionSignature:
 		if len(t.TypeParameters) != 0 {
 			return true
@@ -46,6 +36,8 @@ func IsGeneric(t Type) bool {
 			return true
 		}
 
+		return false
+	case *SpecializedType:
 		return false
 	default:
 		return false

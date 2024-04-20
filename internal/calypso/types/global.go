@@ -51,7 +51,7 @@ func init() {
 	// Define Global Types
 	for _, t := range globalTypes {
 		s := NewScope(GlobalScope, "__cly_type__"+t.Name())
-		d := NewDefinedType(t.name, t, nil, s)
+		d := NewBaseDefinedType(t.name, t, nil, s)
 		err := GlobalScope.Define(d)
 
 		if err != nil {

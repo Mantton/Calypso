@@ -16,12 +16,8 @@ func SizeOf(t types.Type) uint64 {
 	case *types.Enum:
 		return sizeOfEnum(t)
 	case *types.TypeParam:
-		if t.Bound == nil {
-			panic("unbound type parameter")
-		}
-		return SizeOf(t.Bound)
+		panic("unbound type")
 	}
-
 	return 0
 }
 

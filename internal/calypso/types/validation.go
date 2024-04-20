@@ -1,9 +1,15 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func Validate(expected Type, provided Type) (Type, error) {
 	fmt.Printf("\t[VALIDATOR] Validating `%s`(provided) || `%s`(expected)\n", provided, expected)
+
+	if expected == provided {
+		return expected, nil
+	}
 
 	if provided == LookUp(Unresolved) {
 		// should have already been reported
@@ -12,9 +18,6 @@ func Validate(expected Type, provided Type) (Type, error) {
 
 	expected = ResolveAliases(expected)
 	provided = ResolveAliases(provided)
-
-	expected = UnwrapBounded(expected)
-	provided = UnwrapBounded(provided)
 
 	// Instance?
 	if expected == LookUp(Placeholder) {
@@ -28,109 +31,42 @@ func Validate(expected Type, provided Type) (Type, error) {
 	case *FunctionSignature:
 		return validateFunctionTypes(expected, provided)
 	case *TypeParam:
-
-		if prov := AsTypeParam(provided); prov != nil {
-			if expected == prov {
-				return expected, nil
-			} else if prov.Bound != nil {
-				err := Conforms(expected.Constraints, prov.Bound)
-
-				if err != nil {
-					return nil, err
-				}
-
-				return expected, nil
-			} else {
-				return nil, fmt.Errorf("params not matching")
-
-			}
-		} else {
-			err := Conforms(expected.Constraints, provided)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return expected, nil
-		}
-
-	case *Basic:
-		panic("bad path")
+		return validateTypeParameter(expected, provided)
+	case *DefinedType:
+		return validateDefinedType(expected, provided)
+	case *SpecializedType:
+		return validateSpecializedType(expected, provided)
+	default:
+		panic(fmt.Errorf("unhanled validation case: %T", expected))
 	}
-
-	var standard error = fmt.Errorf("expected `%s`, received `%s`", expected, provided)
-
-	defExpected := AsDefined(expected)
-	defProvided := AsDefined(provided)
-
-	if defExpected == nil {
-		fmt.Printf("%T\n", expected)
-		panic("bad path")
-	}
-
-	// resolve basic
-	if typ, ok := defExpected.Parent().(*Basic); ok {
-
-		res, err := validateBasicTypes(typ, provided.Parent())
-
-		if err != nil {
-			return nil, err
-		}
-
-		if typ == res {
-			return defExpected, nil
-		} else {
-			return defProvided, nil
-		}
-	}
-
-	if defProvided == nil {
-		fmt.Printf("[VALIDATOR] %s is not a DefinedType: %T\n", provided, provided)
-		return nil, standard
-	}
-
-	// TODO: this needs some serious work...
-	if defExpected.InstanceOf == nil && defProvided.InstanceOf == nil {
-		if defExpected == defProvided {
-			return expected, nil
-		}
-	} else if defExpected.InstanceOf != nil && defProvided.InstanceOf == nil {
-		if defExpected.InstanceOf == defProvided {
-			return defExpected, nil
-		}
-	} else if defExpected.InstanceOf == nil && defProvided.InstanceOf != nil {
-		if defProvided.InstanceOf == defExpected {
-			return defExpected, nil
-		}
-	} else {
-		// Both Instances are Non nil
-		if defExpected.InstanceOf == defProvided.InstanceOf {
-			// same instance, rather than compare each field, compare type arguments instead
-			// safety check, theoretically not possible
-			if len(defExpected.TypeParameters) != len(defProvided.TypeParameters) {
-				err := fmt.Errorf("expected %d type arguments got %d instead", len(defExpected.TypeParameters), len(defProvided.TypeParameters))
-				return nil, err
-			}
-
-			for idx, pEx := range defExpected.TypeParameters {
-				pProv := defProvided.TypeParameters[idx]
-
-				_, err := Validate(pEx.Unwrapped(), pProv.Unwrapped())
-
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			return expected, nil
-		}
-	}
-
-	fmt.Printf("\t[VALIDATOR] Failed: `%s`(provided) || `%s`(expected)\n", provided, expected)
-	return nil, standard
 }
 
-func validateBasicTypes(expected *Basic, p Type) (Type, error) {
+func validateDefinedType(expected *DefinedType, provided Type) (Type, error) {
+
+	switch provided := provided.(type) {
+	case *DefinedType:
+
+		if p, ok := expected.Parent().(*Basic); ok {
+			return validateBasicTypes(p, provided.Parent(), expected)
+		}
+
+		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+	case *SpecializedType:
+		if provided.InstanceOf != expected {
+			return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+		}
+		panic("check conformances!")
+	case *Basic:
+		panic("???")
+	default:
+
+		fmt.Println(fmt.Sprintf("%T", provided))
+
+		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+	}
+
+}
+func validateBasicTypes(expected *Basic, p Type, e Type) (Type, error) {
 	provided, ok := p.Parent().(*Basic)
 
 	if !ok {
@@ -138,16 +74,16 @@ func validateBasicTypes(expected *Basic, p Type) (Type, error) {
 	}
 
 	if expected == LookUp(Any) {
-		return expected, nil
+		return e, nil
 	}
 
 	// either side
 	if IsGroupLiteral(provided) {
 		switch {
 		case provided.Literal == IntegerLiteral && IsNumeric(expected):
-			return expected, nil
+			return e, nil
 		case provided.Literal == FloatLiteral && IsFloatingPoint(expected):
-			return expected, nil
+			return e, nil
 		}
 	} else if IsGroupLiteral(expected) {
 		switch {
@@ -163,7 +99,7 @@ func validateBasicTypes(expected *Basic, p Type) (Type, error) {
 		return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 	}
 
-	return expected, nil
+	return e, nil
 }
 
 func validatePointerTypes(expected *Pointer, provided Type) (Type, error) {
@@ -217,6 +153,41 @@ func validateFunctionTypes(expected *FunctionSignature, p Type) (Type, error) {
 	return expected, nil
 }
 
+func validateTypeParameter(expected *TypeParam, provided Type) (Type, error) {
+	err := Conforms(expected.Constraints, provided)
+	if err != nil {
+		return nil, err
+	}
+	return expected, nil
+}
+
+func validateSpecializedType(expected *SpecializedType, provided Type) (Type, error) {
+	switch provided := provided.(type) {
+	case *SpecializedType:
+		// Is of same instance, check bounds match
+		if expected.InstanceOf == provided.InstanceOf {
+			for i, eB := range expected.Bounds {
+				pB := provided.Bounds[i]
+
+				_, err := Validate(eB, pB)
+
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			// bounds match, return expected
+			return expected, nil
+		}
+
+	case *DefinedType:
+		// is instance of value, should have already validated instance so just pass
+		if expected.InstanceOf == provided {
+			return expected, nil
+		}
+	}
+	return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
+}
 func Conforms(constraints []*Standard, x Type) error {
 	if provided, ok := x.(*TypeParam); ok {
 		seen := make(map[*Standard]bool)

@@ -59,15 +59,6 @@ func ResolveAliases(t Type) Type {
 	}
 }
 
-func UnwrapBounded(t Type) Type {
-	switch t := t.(type) {
-	case *TypeParam:
-		return t.Unwrapped()
-	default:
-		return t
-	}
-}
-
 func AsAlias(t Type) *Alias {
 
 	if t == nil {

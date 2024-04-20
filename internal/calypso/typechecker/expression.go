@@ -176,7 +176,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		}
 
 		// if not generic, simply check arguments & return correct function type regardless of error
-		specializations := make(map[string]types.Type)
+		specializations := make(types.Specialization)
 		if !isGeneric {
 			for i, arg := range expr.Arguments {
 				expected := fn.Parameters[i]
@@ -211,10 +211,11 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			}
 		}
 
-		t := types.Apply(specializations, fn)
-		fmt.Println("\nInstantiated Function:", t)
-		fmt.Println("Original:", fn)
-		fmt.Println()
+		t, err := c.instantiateWithSpecialization(fn, specializations)
+		if err != nil {
+			c.addError(err.Error(), expr.Target.Range())
+			return unresolved
+		}
 
 		c.table.Calls[expr] = t.(*types.FunctionSignature)
 		return t.(*types.FunctionSignature).Result.Type()
@@ -333,7 +334,6 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 	op := e.Op
 
 	typ, err := c.validate(lhs, rhs)
-
 	if err != nil {
 		c.addError(err.Error(), e.Range())
 		return unresolved
@@ -484,7 +484,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeCon
 		return unresolved
 	}
 
-	specializations := make(map[string]types.Type)
+	specializations := make(types.Specialization)
 
 	for k, v := range seen {
 
@@ -506,21 +506,23 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeCon
 	}
 
 	for _, param := range base.TypeParameters {
-		if param.Bound != nil {
-			continue
-		}
-
-		_, ok := specializations[param.Name()]
-
+		_, ok := specializations[param]
 		if !ok {
 			panic(fmt.Errorf("failed to resolve generic parameter: %s in %s", param, specializations))
 		}
 	}
 
-	return types.Apply(specializations, base)
+	inst, err := c.instantiateWithSpecialization(base, specializations)
+
+	if err != nil {
+		c.addError(err.Error(), n.Range())
+		return unresolved
+	}
+
+	return inst
 }
 
-func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Specializations, ctx *NodeContext) error {
+func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations types.Specialization, ctx *NodeContext) error {
 	vT := c.evaluateExpression(v, ctx)
 
 	fmt.Println("\n", "\t[Resolver] Variable Name", f.Name(), "\n", "\t[Resolver] Variable Type", f.Type(), "\n", "\t[Resolver] Provided Type", vT)
@@ -533,7 +535,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Spe
 	fT := types.ResolveAliases(f.Type())
 	switch fT := fT.(type) {
 	case *types.TypeParam:
-		return specializations.specialize(fT, vT, c, v)
+		return c.specialize(specializations, fT, vT, v)
 	case *types.FunctionSignature:
 		if !types.IsGeneric(fT) {
 			break
@@ -569,7 +571,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Spe
 		// There for, Foo<T> == Foo<V>, we can infer T == V
 		for i, fTParam := range fT.TypeParameters {
 			vTParam := vT.TypeParameters[i]
-			return specializations.specialize(fTParam, vTParam, c, v)
+			return c.specialize(specializations, fTParam, vTParam, v)
 		}
 		return nil
 	case *types.Alias:
@@ -594,7 +596,7 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations Spe
 			return fmt.Errorf("expected pointer to type %s, received %s", fT, vT)
 		}
 
-		return specializations.specialize(base, iT, c, v)
+		return c.specialize(specializations, base, iT, v)
 	}
 
 	// resolve non generic types
@@ -632,11 +634,6 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 		if f != nil {
 			return f
 		}
-	case *types.TypeParam:
-		f := a.ResolveField(field)
-		if f != nil {
-			return f
-		}
 	case *types.Module:
 		f := a.Table.Main.ResolveInCurrent(field)
 		if !f.IsVisible(c.module) {
@@ -663,60 +660,20 @@ func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpressi
 		return unresolved
 	}
 
-	if !types.IsGeneric(target) {
-		panic("non generic type")
-	}
-
 	// 2 - Collect Type Parameters
-
-	params := []*types.TypeParam{}
-
-	switch target := target.(type) {
-	case *types.FunctionSignature:
-		params = target.TypeParameters
-	case *types.DefinedType:
-		params = target.TypeParameters
-	}
-
 	args := []types.Type{}
-
 	// 4 - Collect Args
 	for _, t := range e.Clause.Arguments {
 		args = append(args, c.evaluateTypeExpression(t, nil, ctx))
 	}
 
-	// 3 - Ensure Type is generic
-	if len(params) == 0 {
-		msg := fmt.Sprintf("`%s` cannot be specialized", e.Expression)
-		c.addError(msg, e.Expression.Range())
-		return unresolved
-	}
-
-	// 5 - Ensure Length match
-	if len(params) != len(args) {
-		c.addError(fmt.Sprintf("expected %d arguments provided %d", len(params), len(args)), e.Range())
-		return unresolved
-	}
-
-	// 6 - Ensure Conformance For Each Argument
-	hasError := false
-	for i, arg := range args {
-		param := params[i]
-
-		err := types.Conforms(param.Constraints, arg)
-
-		if err != nil {
-			c.addError(err.Error(), e.Clause.Arguments[i].Range())
-			hasError = true
-		}
-	}
-
-	if hasError {
-		return unresolved
-	}
-
 	// 7 - Return instance of type
-	instance := types.Instantiate(target, args, nil)
+	instance, err := c.instantiateWithArguments(target, args, e.Clause)
+
+	if err != nil {
+		c.addError(err.Error(), e.Clause.Range())
+		return unresolved
+	}
 	return instance
 }
 
@@ -777,9 +734,14 @@ func (c *Checker) evaluateArrayLiteral(n *ast.ArrayLiteral, ctx *NodeContext) ty
 		c.addError("unable to find array type", n.Range())
 		return unresolved
 	}
-	typ := types.AsDefined(sym.Type())
-	instantiated := types.Instantiate(typ, []types.Type{element}, nil)
-	return instantiated
+
+	instance, err := c.instantiateWithArguments(sym.Type(), types.TypeList{element}, n)
+
+	if err != nil {
+		c.addError(err.Error(), n.Range())
+		return unresolved
+	}
+	return instance
 }
 func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral, ctx *NodeContext) types.Type {
 
@@ -829,9 +791,13 @@ func (c *Checker) evaluateMapLiteral(n *ast.MapLiteral, ctx *NodeContext) types.
 		c.addError("unable to find map type", n.Range())
 		return unresolved
 	}
-	typ := types.AsDefined(sym.Type())
-	instantiated := types.Instantiate(typ, []types.Type{key, value}, nil)
-	return instantiated
+	instance, err := c.instantiateWithArguments(sym.Type(), types.TypeList{key, value}, n)
+
+	if err != nil {
+		c.addError(err.Error(), n.Range())
+		return unresolved
+	}
+	return instance
 }
 
 func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeContext) types.Type {
@@ -929,13 +895,20 @@ func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSign
 		return unresolved
 	}
 
-	specializations := make(map[string]types.Type)
+	specializations := make(types.Specialization)
 
 	for _, p := range lhsTyp.TypeParameters {
-		specializations[p.Name()] = p
+		specializations[p] = p
 	}
 
-	sg := types.Apply(specializations, fn).(*types.FunctionSignature)
+	instance, err := c.instantiateWithSpecialization(fn, specializations)
+
+	if err != nil {
+		c.addError(err.Error(), expr.Range())
+		return unresolved
+	}
+
+	sg := instance.(*types.FunctionSignature)
 
 	fmt.Println("Instantiated: ", sg)
 
