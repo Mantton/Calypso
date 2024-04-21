@@ -70,14 +70,14 @@ func (f *Function) AddParameter(t *types.Var) {
 }
 
 func (f *Function) AddSelf() {
-	self := f.Signature().Self
-	if self == nil || f.Signature().IsStatic {
+	self := f.TFunction.Self
+	if self == nil || f.TFunction.IsStatic {
 		return
 	}
 
 	var s types.Type
 	// Mutable Self || Composite
-	if f.Signature().IsMutating || types.IsStruct(self.Type().Parent()) {
+	if f.TFunction.IsMutating || types.IsStruct(self.Type().Parent()) {
 		// Mutating pass self as pointer
 		s = types.NewPointer(self.Type())
 	} else {

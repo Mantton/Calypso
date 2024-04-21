@@ -729,9 +729,9 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 	// Is Function Call
 	if function != nil {
-		astTarget := b.Mod.TypeTable().GetRevFunction(function)
+		astTarget := b.Mod.TypeTable().GetSymbol(function).(*ast.FunctionExpression)
 		lirTarget := b.Functions[astTarget]
-		if lirTarget.Signature().IsStatic {
+		if lirTarget.TFunction.IsStatic {
 			return lirTarget
 		}
 		return &lir.Method{

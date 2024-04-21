@@ -38,16 +38,14 @@ func (b *builder) pass2(f *ast.File) {
 }
 
 func (b *builder) registerFunction(n *ast.FunctionExpression) {
-	tFn := b.Mod.TModule.Table.GetFunction(n)
+	sg := b.Mod.TModule.Table.Nodes[n].(*types.FunctionSignature)
+	tFn := sg.Function
 
 	if tFn == nil {
 		panic("function node not type checked")
 	}
-
-	sg := tFn.Sg()
 	if types.IsGeneric(sg) {
 		panic("not implemented")
-		return
 	}
 
 	name := n.Identifier.Value
@@ -93,9 +91,7 @@ func (b *builder) pass3(f *ast.File) {
 
 func (b *builder) visitFunction(n *ast.FunctionExpression) {
 
-	tFn := b.Mod.TModule.Table.GetFunction(n)
-
-	sg := tFn.Sg()
+	sg := b.Mod.TModule.Table.Nodes[n].(*types.FunctionSignature)
 	if types.IsGeneric(sg) {
 		panic("not implemented")
 	}
