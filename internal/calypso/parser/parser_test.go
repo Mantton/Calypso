@@ -59,3 +59,23 @@ func TestStructInitialization(t *testing.T) {
 		}
 	}
 }
+
+func TestEnumSpecializtion(t *testing.T) {
+
+	input := `
+		enum Op<T> {
+			None,
+			Some(T),
+		}
+
+
+		const A = Op<int>.None;
+	`
+
+	p := scan(input)
+	_, err := p.TestParse()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
