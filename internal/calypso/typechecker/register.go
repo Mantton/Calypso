@@ -13,13 +13,11 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg, c.module)
 	def.IsPublic = e.Visibility == ast.PUBLIC
-	c.table.DefineFunction(e, def)
+	c.table.SetSymbol(def, e)
+	c.table.SetNodeType(e, def.Sg())
 
 	// Enter Function Scope
 	def.Scope = types.NewScope(scope, e.Identifier.Value)
-	c.table.AddScope(e, def.Scope)
-
-	// ctx := NewContext(sg.Scope, sg, nil)
 
 	// Type/Generic Parameters
 	if e.GenericParams != nil {
@@ -117,7 +115,6 @@ func (c *Checker) registerConformance(d *ast.ConformanceDeclaration) {
 
 func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *types.Scope) *types.DefinedType {
 	scope := types.NewScope(parent, n.Value)
-	c.table.AddScope(core, scope)
 	def := types.NewBaseDefinedType(n.Value, unresolved, nil, scope)
 	err := parent.Define(def)
 
@@ -130,6 +127,7 @@ func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *typ
 	}
 
 	c.table.SetNodeType(core, def)
+	c.table.SetSymbol(def, core)
 	return def
 }
 
@@ -177,17 +175,19 @@ func (c *Checker) registerTypeParameters(g *ast.GenericParametersClause, t *type
 
 func (c *Checker) registerFunctionSignatures(e *ast.FunctionExpression) *types.FunctionSignature {
 
-	fn := c.table.GetFunction(e)
+	typ := c.table.GetNodeType(e)
 
-	if fn == nil {
+	if typ == nil {
+		panic("unregistered node")
+	}
+
+	sg, ok := typ.(*types.FunctionSignature)
+
+	if !ok {
 		panic("passes missed function")
 	}
 
-	sg := fn.Sg()
-
-	if sg == nil {
-		return nil
-	}
+	fn := sg.Function
 
 	ctx := NewContext(fn.Scope, sg, nil)
 	//  Generic Params

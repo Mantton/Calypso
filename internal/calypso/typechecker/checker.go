@@ -1,8 +1,6 @@
 package typechecker
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/resolver"
@@ -83,12 +81,6 @@ func CheckParsedData(p *resolver.ResolvedData) error {
 		}
 
 		x.Modules[mod.AST.FSMod.Path] = mod
-	}
-
-	for _, mod := range x.Modules {
-		fmt.Println(mod.Name())
-		mod.Table.DebugPrintScopes()
-		fmt.Print("\n\n")
 	}
 
 	return nil

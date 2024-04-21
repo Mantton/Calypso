@@ -288,13 +288,6 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement, ctx *NodeContext)
 	for _, cs := range n.Cases {
 
 		scope := types.NewScope(ctx.scope, "")
-		// Scope
-		defer func() {
-			if !scope.IsEmpty() {
-				c.table.AddScope(cs, scope)
-			}
-		}()
-
 		// Default Case
 		if cs.IsDefault {
 			// 1 - Check default has already been seen
@@ -338,11 +331,6 @@ func (c *Checker) checkWhileStatement(n *ast.WhileStatement, ctx *NodeContext) {
 	}
 
 	scope := types.NewScope(ctx.scope, fmt.Sprintf("__if_Block__%v", n))
-	defer func() {
-		if !scope.IsEmpty() {
-			c.table.AddScope(n, scope)
-		}
-	}()
 	newCtx := NewContext(scope, ctx.sg, ctx.lhs)
 	c.checkBlockStatement(n.Action, newCtx)
 }

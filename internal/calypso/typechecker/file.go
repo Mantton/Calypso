@@ -18,10 +18,6 @@ func (c *Checker) Check() (*types.Module, error) {
 	// Run Passes
 	c.pass()
 
-	if DEBUG {
-		c.table.DebugPrintScopes()
-	}
-
 	if len(c.Errors) != 0 {
 		return nil, errors.New(c.Errors.String())
 	}
