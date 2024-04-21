@@ -452,7 +452,7 @@ func (p *Parser) parseCallArgument() (*ast.CallArgument, error) {
 }
 
 func (p *Parser) parseCompositeLiteral() (ast.Expression, error) {
-	expr, err := p.parseFieldAccessExpression()
+	expr, err := p.parseSpecializationExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -482,28 +482,35 @@ func (p *Parser) parseCompositeLiteral() (ast.Expression, error) {
 	return expr, nil
 }
 
-func (p *Parser) parseFieldAccessExpression() (ast.Expression, error) {
-	expr, err := p.parseIndexExpression()
-
+func (p *Parser) parseSpecializationExpression() (ast.Expression, error) {
+	preAnchor := p.cursor
+	expr, err := p.parseFieldAccessExpression()
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: This is hacky
 	postAnchor := p.cursor
+
 	if p.currentMatches(token.L_CHEVRON) {
-
-		args, err := p.parseGenericArgumentsClause()
-
+		// return to anchor
+		p.cursor = preAnchor
+		typExpr, err := p.parseTypeExpression()
+		// err not nil, not a valid type expression could be comparison, return to anchor
 		if err != nil {
 			p.cursor = postAnchor
 			return expr, nil
 		}
 
-		expr = &ast.SpecializationExpression{
-			Expression: expr,
-			Clause:     args,
-		}
+		// Error is nil, valid type expression
+		return typExpr, nil
+	}
+	return expr, err
+}
+
+func (p *Parser) parseFieldAccessExpression() (ast.Expression, error) {
+	expr, err := p.parseIndexExpression()
+
+	if err != nil {
+		return nil, err
 	}
 
 	for p.match(token.PERIOD) {
