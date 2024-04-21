@@ -109,9 +109,14 @@ func validatePointerTypes(expected *Pointer, provided Type) (Type, error) {
 }
 
 func validateFunctionTypes(expected *FunctionSignature, p Type) (Type, error) {
-	provided, ok := p.(*FunctionSignature)
+	var provided *FunctionSignature
 
-	if !ok {
+	switch p := p.(type) {
+	case *FunctionSignature:
+		provided = p
+	case *SpecializedFunctionSignature:
+		provided = p.Sg()
+	default:
 		return nil, fmt.Errorf("expected function signature of %s got %s instead", expected, p)
 	}
 
@@ -170,6 +175,7 @@ func validateSpecializedType(expected *SpecializedType, provided Type) (Type, er
 			return expected, nil
 		}
 	}
+
 	return nil, fmt.Errorf("expected `%s`, received `%s`", expected, provided)
 }
 func Conforms(constraints []*Standard, x Type) error {

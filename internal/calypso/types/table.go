@@ -14,7 +14,6 @@ type SymbolTable struct {
 	fns    map[*ast.FunctionExpression]*Function
 	revFns map[*Function]*ast.FunctionExpression
 	tNodes map[ast.Node]Type
-	Calls  map[*ast.CallExpression]*FunctionSignature
 }
 
 func NewSymbolTable() *SymbolTable {
@@ -23,7 +22,6 @@ func NewSymbolTable() *SymbolTable {
 		fns:    make(map[*ast.FunctionExpression]*Function),
 		revFns: make(map[*Function]*ast.FunctionExpression),
 		tNodes: make(map[ast.Node]Type),
-		Calls:  make(map[*ast.CallExpression]*FunctionSignature),
 	}
 }
 

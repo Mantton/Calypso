@@ -46,17 +46,7 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 
 	sg := tFn.Sg()
 	if types.IsGeneric(sg) {
-		instances := sg.Instances
-		for _, v := range instances {
-			name := tFn.SymbolName() + "::" + v.InstanceHash
-			// fmt.Println("Instance", v, "\n", v.InstanceHash)
-			fn := lir.NewFunction(tFn)
-			fn.Name = name
-			fn.SetSignature(v)
-			b.TFunctions[v] = fn
-			b.Mod.Functions[name] = fn
-			fmt.Println("<FUNCTION>", name, sg)
-		}
+		panic("not implemented")
 		return
 	}
 
@@ -107,11 +97,7 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 
 	sg := tFn.Sg()
 	if types.IsGeneric(sg) {
-		for _, instance := range sg.Instances {
-			fn := b.TFunctions[instance].(*lir.Function)
-			b.walkFunction(n, fn)
-		}
-		return
+		panic("not implemented")
 	}
 
 	// Non Generic

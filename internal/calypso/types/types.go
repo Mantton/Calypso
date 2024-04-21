@@ -106,6 +106,24 @@ func ResolveMethod(t Type, n string) (Type, error) {
 
 }
 
+func ResolveType(t Type, n string) Type {
+	switch a := t.(type) {
+	case *DefinedType:
+		field := a.ResolveType(n)
+		if field != nil {
+			return field
+		}
+
+	case *SpecializedType:
+		field := a.ResolveType(n)
+		if field != nil {
+			return field
+		}
+	}
+
+	return nil
+}
+
 func IsUnresolved(t Type) bool {
 	return ResolveAliases(t) == LookUp(Unresolved)
 }

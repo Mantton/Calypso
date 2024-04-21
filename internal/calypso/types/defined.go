@@ -159,6 +159,7 @@ func (n *DefinedType) ResolveField(s string) Type {
 				}
 
 				sg.Result.SetType(n)
+				sg.TypeParameters = n.TypeParameters
 				return sg
 			}
 		}
@@ -172,4 +173,10 @@ func (n *DefinedType) ResolveField(s string) Type {
 
 func (n *DefinedType) GetScope() *Scope {
 	return n.scope
+}
+
+type HType interface {
+	ResolveField(string) Type
+	ResolveType(string) Type
+	ResolveMethod(string) Type
 }

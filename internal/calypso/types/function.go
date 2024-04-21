@@ -6,8 +6,15 @@ import (
 
 type Function struct {
 	symbol
-	Target   *FunctionTarget
+	Target *FunctionTarget
+	Self   *Var
+	Scope  *Scope
+
 	IsPublic bool
+
+	IsAsync    bool
+	IsStatic   bool
+	IsMutating bool
 }
 
 func (t *Function) String() string {
@@ -19,25 +26,17 @@ type FunctionTarget struct {
 }
 
 type FunctionSignature struct {
-	Scope          *Scope
 	TypeParameters TypeParams
 	Parameters     []*Var
 	Result         *Var
-	Self           *Var
-	IsAsync        bool
-	IsStatic       bool
-	IsMutating     bool
-	Instances      map[string]*FunctionSignature
-	ParentInstance *FunctionSignature
 	Function       *Function
-	InstanceHash   string
 }
 
 func (t *FunctionSignature) Parent() Type { return t }
 
 func (t *FunctionSignature) String() string {
 
-	f := "fn "
+	f := ""
 
 	if len(t.TypeParameters) != 0 {
 		f += "<"
@@ -100,7 +99,7 @@ func (n *Function) SetSignature(sg *FunctionSignature) {
 
 func (sg *FunctionSignature) AddTypeParameter(t *TypeParam) error {
 	sg.TypeParameters = append(sg.TypeParameters, t)
-	return sg.Scope.Define(t)
+	return sg.Function.Scope.Define(t)
 
 }
 
@@ -139,31 +138,6 @@ func IsFunctionSignature(t Type) bool {
 	_, ok := t.(*FunctionSignature)
 	return ok
 }
-
-func (sg *FunctionSignature) ResolveParent() *FunctionSignature {
-	if sg.ParentInstance == nil {
-		return sg
-	}
-	return sg.ParentInstance
-}
-
-// func (tg *FunctionSignature) AddInstance(t *FunctionSignature, m mappings) {
-
-// 	sg := tg.ResolveParent()
-// 	if sg.Instances == nil {
-// 		sg.Instances = make(map[string]*FunctionSignature)
-// 	}
-
-// 	str := HashValue(m, sg.TypeParameters)
-
-// 	key := strings.ReplaceAll(str, " ", "-")
-// 	fmt.Println("HashValue:", key)
-
-// 	sg.Instances[key] = t
-
-// 	t.ParentInstance = sg
-// 	t.InstanceHash = key
-// }
 
 func (fn *Function) IsVisible(from *Module) bool {
 	// Is Public or being accessed from current module

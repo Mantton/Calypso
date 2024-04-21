@@ -1,6 +1,8 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Specialization = map[Type]Type
 
@@ -34,7 +36,7 @@ func Instantiate(t Type, ctx Specialization) Type {
 		ctx = make(Specialization)
 	}
 
-	fmt.Printf("\tSubstituting %s with %s\n", t, ctx)
+	fmt.Printf("\n\tSubstituting %s with %s\n", t, ctx)
 
 	switch t := t.(type) {
 
@@ -48,46 +50,23 @@ func Instantiate(t Type, ctx Specialization) Type {
 		}
 
 		// return specialized type
+		fmt.Printf("\tSpecialized as %s\n", typ)
+
 		return typ
 	case *DefinedType:
-		// declare bound list
-		bounds := TypeList{}
-
-		// Collect Bounded Types
-		for _, p := range t.TypeParameters {
-			arg, ok := ctx[p]
-
-			if !ok {
-				panic("should be specialized")
-			}
-
-			bounds = append(bounds, arg)
-		}
 		// Specialize underlying type
-		typ := NewSpecializedType(t, bounds)
+		typ := NewSpecializedType(t, ctx)
+		fmt.Printf("\tSpecialized as %s\n", typ)
+
 		return typ
 	case *SpecializedType:
-		bounds := TypeList{}
-		for _, bound := range t.Bounds {
-			bounds = append(bounds, Instantiate(bound, ctx))
-		}
-
-		return NewSpecializedType(t.InstanceOf, bounds)
+		typ := NewSpecializedType(t.InstanceOf, apply(t.Spec, ctx))
+		fmt.Printf("\tSpecialized as %s\n", typ)
+		return typ
 	case *FunctionSignature:
-		sg := NewFunctionSignature()
-
-		// Parameters
-		for _, param := range t.Parameters {
-			p := NewVar(param.Name(), LookUp(Unresolved))
-			p.SetType(Instantiate(param.Type(), ctx))
-			p.ParamLabel = param.ParamLabel
-			sg.AddParameter(p)
-		}
-
-		// return
-		res := t.Result.Type()
-		sg.Result.SetType(Instantiate(res, ctx))
-		return sg
+		typ := NewSpecializedFunctionSignature(t, ctx)
+		fmt.Printf("\tSpecialized as %s\n", typ)
+		return typ
 	case *Alias:
 		return Instantiate(t.RHS, ctx)
 	case *Pointer:
@@ -100,77 +79,6 @@ func Instantiate(t Type, ctx Specialization) Type {
 		panic(fmt.Sprintf("cannot instantiate type %s", t))
 	}
 }
-
-// func apply(ctx Specialization, typ Type) Type {
-
-// 	fmt.Printf("\tSubstituting %s with %s\n", typ, ctx)
-// 	if !IsGeneric(typ) {
-// 		fmt.Println("\tSkipping Non Generic", typ)
-// 		return typ
-// 	}
-// 	switch t := typ.(type) {
-
-// 	case *TypeParam:
-// 		sp, ok := ctx[t.Name()]
-// 		if !ok {
-// 			return LookUp(Unresolved)
-// 		}
-
-// 		return sp
-// 	case *DefinedType:
-
-// 	case *FunctionSignature:
-// 		sg := NewFunctionSignature()
-
-// 		// Parameters
-// 		for _, param := range t.Parameters {
-// 			p := NewVar(param.Name(), LookUp(Unresolved))
-// 			p.SetType(Apply(ctx, param.Type()))
-// 			p.ParamLabel = param.ParamLabel
-// 			sg.AddParameter(p)
-// 		}
-
-// 		// return
-// 		res := t.Result.Type()
-// 		sg.Result.SetType(Apply(ctx, res))
-// 		t.AddInstance(sg, ctx)
-// 		return sg
-// 	case *Alias:
-// 		params := TypeParams{}
-// 		for _, p := range t.TypeParameters {
-
-// 			arg, ok := ctx[p.Name()]
-
-// 			if !ok {
-// 				return LookUp(Unresolved)
-// 			}
-
-// 			switch aT := arg.(type) {
-// 			case *TypeParam:
-// 				if aT.Bound != nil {
-// 					params = append(params, NewTypeParam(aT.Name(), nil, arg, p.Module()))
-// 				} else {
-// 					params = append(params, NewTypeParam(aT.Name(), aT.Constraints, nil, p.Module()))
-// 				}
-// 			default:
-// 				params = append(params, NewTypeParam(p.Name(), nil, arg, p.Module()))
-// 			}
-// 		}
-// 		alias := NewAlias(t.Name(), nil)
-
-// 		rhs := Apply(ctx, t.RHS)
-// 		alias.SetType(rhs)
-// 		alias.TypeParameters = params
-// 		return alias
-// 	case *Pointer:
-// 		cT := t.PointerTo
-// 		uT := Apply(ctx, cT)
-// 		ptr := NewPointer(uT)
-// 		return ptr
-// 	default:
-// 		panic(fmt.Sprintf("cannot instantiate type %s", t))
-// 	}
-// }
 
 // TODO: Find better way
 func cloneWithSpecialization(t Type, ctx Specialization) Type {
@@ -212,4 +120,23 @@ func cloneWithSpecialization(t Type, ctx Specialization) Type {
 		panic(fmt.Sprintf("unhandled case %T", parent))
 	}
 
+}
+
+func apply(s1, s2 Specialization) Specialization {
+	s3 := make(Specialization)
+	for k, v := range s1 {
+		v2, ok := s2[v]
+		if !ok {
+			s3[k] = v
+		} else {
+			s3[k] = v2
+		}
+	}
+
+	for k, v := range s2 {
+		if _, ok := s3[k]; !ok {
+			s3[k] = v // Add substitution from s2 if not already defined in s3
+		}
+	}
+	return s3
 }

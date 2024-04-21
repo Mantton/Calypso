@@ -16,8 +16,8 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	c.table.DefineFunction(e, def)
 
 	// Enter Function Scope
-	sg.Scope = types.NewScope(scope, e.Identifier.Value)
-	c.table.AddScope(e, sg.Scope)
+	def.Scope = types.NewScope(scope, e.Identifier.Value)
+	c.table.AddScope(e, def.Scope)
 
 	// ctx := NewContext(sg.Scope, sg, nil)
 
@@ -50,7 +50,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 		if p.Name.Value == "_" {
 			continue
 		}
-		err := sg.Scope.Define(v)
+		err := def.Scope.Define(v)
 
 		if err != nil {
 			c.addError(err.Error(), p.Range())
@@ -189,7 +189,7 @@ func (c *Checker) registerFunctionSignatures(e *ast.FunctionExpression) *types.F
 		return nil
 	}
 
-	ctx := NewContext(sg.Scope, sg, nil)
+	ctx := NewContext(fn.Scope, sg, nil)
 	//  Generic Params
 	if e.GenericParams != nil {
 		for i, p := range e.GenericParams.Parameters {
@@ -220,9 +220,9 @@ func (c *Checker) registerFunctionSignatures(e *ast.FunctionExpression) *types.F
 		}
 	}
 
-	sg.IsAsync = e.IsAsync
-	sg.IsMutating = e.IsMutating
-	sg.IsStatic = e.IsStatic
+	fn.IsAsync = e.IsAsync
+	fn.IsMutating = e.IsMutating
+	fn.IsStatic = e.IsStatic
 
 	return sg
 }

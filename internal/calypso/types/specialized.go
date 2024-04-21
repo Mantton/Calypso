@@ -1,20 +1,32 @@
 package types
 
+import "fmt"
+
 type SpecializedType struct {
 	Bounds     TypeList
+	Spec       Specialization
 	InstanceOf *DefinedType
 }
 
-type SpecializedFunction struct {
-	Fn     *Function
-	Bounds TypeList
-}
-
-func NewSpecializedType(def *DefinedType, bounds TypeList) *SpecializedType {
-	return &SpecializedType{
-		Bounds:     bounds,
+func NewSpecializedType(def *DefinedType, sub Specialization) *SpecializedType {
+	spec := &SpecializedType{
+		Spec:       sub,
 		InstanceOf: def,
 	}
+
+	for _, p := range def.TypeParameters {
+		arg, ok := sub[p]
+
+		if !ok {
+			fmt.Println("DEBUG - Unspecialized TypeParameter", p)
+			return nil
+		}
+
+		spec.Bounds = append(spec.Bounds, arg)
+	}
+
+	return spec
+
 }
 
 func (t *SpecializedType) String() string {
@@ -46,6 +58,17 @@ func (t *SpecializedType) ResolveField(f string) Type {
 	return Instantiate(field, t.Specialization())
 }
 
+func (t *SpecializedType) ResolveType(f string) Type {
+
+	field := t.InstanceOf.ResolveType(f)
+
+	if field == nil {
+		return nil
+	}
+
+	return Instantiate(field, t.Specialization())
+}
+
 func (t *SpecializedType) ResolveMethod(f string) Type {
 
 	field := t.InstanceOf.ResolveMethod(f)
@@ -58,9 +81,5 @@ func (t *SpecializedType) ResolveMethod(f string) Type {
 }
 
 func (t *SpecializedType) Specialization() Specialization {
-	spec := make(Specialization)
-	for i, p := range t.Bounds {
-		spec[t.InstanceOf.TypeParameters[i]] = p
-	}
-	return spec
+	return t.Spec
 }

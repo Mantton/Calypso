@@ -120,7 +120,7 @@ func TestFunctionDeclaration(t *testing.T) {
 	vars := []string{"A", "B", "C", "D"}
 
 	for _, v := range vars {
-		A := fn.Sg().Scope.MustResolve(v)
+		A := fn.Scope.MustResolve(v)
 
 		_, err = types.Validate(A.Type(), intT)
 

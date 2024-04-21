@@ -82,7 +82,7 @@ func (c *Checker) checkConformanceDeclaration(d *ast.ConformanceDeclaration) {
 	typ := types.AsDefined(target.Type())
 
 	if typ == nil {
-		c.addError(fmt.Sprintf("%s is not a defined type", d.Target.Value), d.Target.Range())
+		c.addError(fmt.Sprintf("%s is not a defined type, [Conformance]", d.Target.Value), d.Target.Range())
 		return
 	}
 
@@ -164,16 +164,16 @@ func (c *Checker) injectFunctionsInType(fns []*ast.FunctionStatement, t *types.D
 		fn := stmt.Func
 		sg := c.registerFunctionSignatures(fn)
 
-		if sg.IsStatic {
+		if sg.Function.IsStatic {
 			continue
 		}
 
 		// Inject `self`
 		self := types.NewVar("self", t)
-		self.Mutable = sg.IsMutating
-		sg.Self = self
+		self.Mutable = sg.Function.IsMutating
+		sg.Function.Self = self
 
 		// Default
-		sg.Scope.Define(self)
+		sg.Function.Scope.Define(self)
 	}
 }

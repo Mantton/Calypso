@@ -74,10 +74,8 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 }
 
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
-	tFn, ok := b.Mod.TypeTable().Calls[n]
-	if !ok {
-		panic("unable to locate function")
-	}
+
+	var tFn *types.FunctionSignature
 
 	val := b.TFunctions[tFn]
 

@@ -148,6 +148,42 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 	}
 
 	switch typ := typ.(type) {
+	case *types.SpecializedFunctionSignature:
+		fn := typ
+		if len(expr.Arguments) != len(typ.Signature.Parameters) {
+			c.addError(
+				fmt.Sprintf("expected %d arguments, provided %d",
+					len(fn.Signature.Parameters),
+					len(expr.Arguments)),
+				expr.Range(),
+			)
+
+			return fn.ReturnType()
+		}
+
+		specializations := make(types.Specialization)
+		for i, arg := range expr.Arguments {
+			param := fn.Signature.Parameters[i]
+			expected, err := c.instantiateWithSpecialization(param.Type(), fn.Specialization())
+			if err != nil {
+				c.addError(err.Error(), arg.Range())
+				return fn.ReturnType()
+			}
+
+			if param.ParamLabel != arg.GetLabel() {
+				c.addError(fmt.Sprintf("missing paramter label \"%s\"", param.ParamLabel), arg.Range())
+			}
+
+			I := types.NewVar(param.Name(), expected)
+			err = c.resolveVar(I, arg.Value, specializations, ctx)
+
+			if err != nil {
+				c.addError(err.Error(), arg.Range())
+			}
+		}
+
+		return fn.ReturnType()
+
 	case *types.FunctionSignature:
 		// check if invocable
 		fn := typ
@@ -177,26 +213,6 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 
 		// if not generic, simply check arguments & return correct function type regardless of error
 		specializations := make(types.Specialization)
-		if !isGeneric {
-			for i, arg := range expr.Arguments {
-				expected := fn.Parameters[i]
-
-				if expected.ParamLabel != arg.GetLabel() {
-					c.addError(fmt.Sprintf("missing paramter label \"%s\"", expected.ParamLabel), arg.Range())
-				}
-
-				err := c.resolveVar(expected, arg.Value, specializations, ctx)
-
-				if err != nil {
-					c.addError(err.Error(), arg.Range())
-				}
-			}
-			c.table.Calls[expr] = fn
-
-			return fn.Result.Type()
-		}
-
-		// Function is generic, instantiate
 		for i, arg := range expr.Arguments {
 			expected := fn.Parameters[i]
 
@@ -211,15 +227,25 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			}
 		}
 
-		fmt.Println(specializations)
+		// return signature if not generic
+		if !isGeneric {
+			return fn.Result.Type()
+		}
+
+		// Function is generic, instantiate
 		t, err := c.instantiateWithSpecialization(fn, specializations)
+
 		if err != nil {
 			c.addError(err.Error(), expr.Target.Range())
 			return unresolved
 		}
 
-		c.table.Calls[expr] = t.(*types.FunctionSignature)
-		return t.(*types.FunctionSignature).Result.Type()
+		switch t := t.(type) {
+		case *types.FunctionSignature:
+			return t.Result.Type()
+		case *types.SpecializedFunctionSignature:
+			return t.ReturnType()
+		}
 
 	case *types.FunctionSet:
 
@@ -253,7 +279,6 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		// check is there is an exact match
 		if single, ok := options.GetAsSingle(); ok {
 			fmt.Println("\t[OVERLOAD] Exact match", single.Sg())
-			c.table.Calls[expr] = single.Sg()
 
 			return single.Sg().Result.Type()
 		}
@@ -661,7 +686,7 @@ func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression) types.Ty
 	}
 
 	// Body
-	newCtx := NewContext(sg.Scope, sg, nil)
+	newCtx := NewContext(sg.Function.Scope, sg, nil)
 	c.checkBlockStatement(e.Body, newCtx)
 
 	return sg
@@ -782,27 +807,13 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeConte
 		return unresolved
 	}
 
-	standardDefinition := types.AsDefined(symbol.Type())
-
-	if standardDefinition == nil {
-		c.addError("subscript is not a defined type", n.Range())
-		return unresolved
-	}
-
-	standard := types.AsStandard(standardDefinition.Parent())
+	standard := types.AsStandard(symbol.Type().Parent())
 	if standard == nil {
 		c.addError("subscript is not a standard", n.Range())
 		return unresolved
 	}
 
 	// 3 - Get Target Definition
-
-	definition := types.AsDefined(target)
-
-	if definition == nil {
-		c.addError(fmt.Sprintf("\"%s\" is not a defined type", target), n.Range())
-		return unresolved
-	}
 
 	// 4 - Validate Conformance to Subscript Standard
 	err := types.Conforms([]*types.Standard{standard}, target)
@@ -814,17 +825,10 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeConte
 
 	// 5 - Get Index Type
 
-	indexSymbol := definition.ResolveType("Index")
-
-	if indexSymbol == nil {
-		c.addError("Unable to resolve type: \"Index\"", n.Target.Range())
-		return unresolved
-	}
-
-	indexType := types.AsDefined(indexSymbol)
+	indexType := types.ResolveType(target, "Index")
 
 	if indexType == nil {
-		c.addError(fmt.Sprintf("%s is not a defined type", indexSymbol), n.Target.Range())
+		c.addError("Unable to resolve type: \"Index\"", n.Target.Range())
 		return unresolved
 	}
 
@@ -839,17 +843,10 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeConte
 	}
 
 	// - Validated At this point, return Element Type
-	elementSymbol := definition.ResolveType("Element")
-
-	if elementSymbol == nil {
-		c.addError("Unable to locate Element Type", n.Target.Range())
-		return unresolved
-	}
-
-	elementType := types.AsDefined(elementSymbol)
+	elementType := types.ResolveType(target, "Element")
 
 	if elementType == nil {
-		c.addError(fmt.Sprintf("%s is not a defined type", elementSymbol), n.Target.Range())
+		c.addError("Unable to locate Element Type", n.Target.Range())
 		return unresolved
 	}
 
