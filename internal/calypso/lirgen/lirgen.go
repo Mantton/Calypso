@@ -2,16 +2,20 @@ package lirgen
 
 import (
 	"github.com/mantton/calypso/internal/calypso/lir"
+	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func Generate(mod *types.Module) (*lir.Module, error) {
-	m := lir.NewModule(mod)
-	err := build(m)
+func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) (any, error) {
 
-	if err != nil {
-		return nil, err
+	for _, mod := range data.OrderedModules {
+		tMod := tmap.Modules[mod.FSMod.Path]
+		mod := lir.NewModule(tMod)
+		err := build(mod)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return m, nil
+	return nil, nil
 }

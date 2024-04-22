@@ -20,44 +20,47 @@ func (b *builder) pass1(f *ast.File) {
 }
 
 func (b *builder) genEnum(n *ast.EnumStatement) {
-	def := b.Mod.TypeTable().GetNodeType(n)
-	t, ok := def.Parent().(*types.Enum)
+	symbol := b.Mod.TypeTable().GetNodeType(n)
 
+	if types.IsGeneric(symbol) {
+		return
+	}
+
+	underlying, ok := symbol.Parent().(*types.Enum)
 	if !ok {
 		panic("node is not enum type")
 	}
 
-	b.Refs[t.Name] = &lir.TypeRef{
-		Type: def,
+	b.Refs[underlying.Name] = &lir.TypeRef{
+		Type: symbol,
 	}
 
-	defer fmt.Println("<ENUM>", t)
+	defer fmt.Println("<ENUM>", underlying)
 
-	if !t.IsUnion() {
+	if !underlying.IsUnion() {
 		return
 	}
 
-	b.genTaggedUnion(t, n.Identifier.Value)
+	b.genTaggedUnion(underlying, n.Identifier.Value)
 
 }
 func (b *builder) genStruct(n *ast.StructStatement) {
-	t, ok := b.Mod.TypeTable().GetNodeType(n).Parent().(*types.Struct)
+	symbol := types.AsDefined(b.Mod.TypeTable().GetNodeType(n)) // Get Symbol Definition
 
-	if !ok {
-		panic("node is not struct type")
+	if types.IsGeneric(symbol) {
+		return
 	}
 
-	fmt.Println("<STRUCT>", t)
-
+	underlying := symbol.Parent().(*types.Struct)
 	c := &lir.Composite{
-		Actual: t,
+		Actual: underlying,
 		Name:   n.Identifier.Value,
 	}
-	for _, f := range t.Fields {
+	for _, f := range underlying.Fields {
 		c.Members = append(c.Members, f.Type())
 	}
 
-	b.Mod.Composites[t] = c
+	b.Mod.Composites[underlying] = c
 }
 
 func (b *builder) genTaggedUnion(n *types.Enum, name string) {

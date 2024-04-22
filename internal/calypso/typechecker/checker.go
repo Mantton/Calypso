@@ -44,7 +44,7 @@ func New(mod *ast.Module, mp *types.PackageMap) *Checker {
 		mp:        mp,
 	}
 
-	m := types.NewModule(mod)
+	m := types.NewModule(mod, mp.Packages[mod.Package.FSPackage.Path])
 	m.Table = c.table
 	c.module = m
 	return c
@@ -68,22 +68,27 @@ func (c *Checker) GlobalFind(n string) (types.Symbol, bool) {
 	return c.ParentScope().Resolve(n, c.ParentScope())
 }
 
-func CheckParsedData(p *resolver.ResolvedData) error {
+func CheckParsedData(p *resolver.ResolvedData) (*types.PackageMap, error) {
 
-	x := types.NewPackageMap()
+	mp := types.NewPackageMap()
+
+	for _, pkg := range p.Packages {
+		tPkg := types.NewPackage(pkg)
+		mp.Packages[tPkg.AST.FSPackage.Path] = tPkg
+	}
 
 	for _, m := range p.OrderedModules {
-		c := New(m, x)
+		c := New(m, mp)
 		mod, err := c.Check()
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		x.Modules[mod.AST.FSMod.Path] = mod
+		mp.Modules[mod.AST.FSMod.Path] = mod
 	}
 
-	return nil
+	return mp, nil
 }
 
 // TODO: Check cyclic function usage

@@ -1,6 +1,8 @@
 package types
 
-import "github.com/mantton/calypso/internal/calypso/ast"
+import (
+	"github.com/mantton/calypso/internal/calypso/ast"
+)
 
 type PackageMap struct {
 	Packages map[string]*Package
@@ -35,9 +37,10 @@ func (p *Package) AddModule(m *Module) {
 	p.modules[m.Name()] = m
 }
 
-func NewModule(m *ast.Module) *Module {
+func NewModule(m *ast.Module, p *Package) *Module {
 	return &Module{
 		AST: m,
+		pkg: p,
 	}
 }
 

@@ -91,6 +91,7 @@ func ParseAndResolve(pkg *fs.LitePackage) (*ResolvedData, error) {
 		}
 
 		astPkg.Modules[k] = mod
+		mod.Package = astPkg
 		packages[fsPkg.Path] = astPkg
 	}
 
