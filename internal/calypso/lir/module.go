@@ -25,9 +25,9 @@ func (m *Module) Name() string {
 	return m.TModule.Name()
 }
 
-func (m *Module) TypeTable() *types.SymbolTable {
-	return m.TModule.Table
-}
+// func (m *Module) TypeTable() *types.SymbolTable {
+// 	return m.TModule.Table
+// }
 
 func (m *Module) FileSet() *ast.FileSet {
 	return m.TModule.AST.Set

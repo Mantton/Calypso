@@ -20,14 +20,10 @@ const (
 )
 
 type Checker struct {
-	Errors lexer.ErrorList
-	depth  int
-	mode   CheckerMode
-	// scope   *types.Scope
-	// fn      *types.FunctionSignature
-	table *types.SymbolTable
-	ctx   *NodeContext
-	// lhsType types.Type
+	Errors    lexer.ErrorList
+	depth     int
+	mode      CheckerMode
+	ctx       *NodeContext
 	file      *ast.File
 	astModule *ast.Module
 
@@ -39,19 +35,17 @@ func New(mod *ast.Module, mp *types.PackageMap) *Checker {
 	c := &Checker{
 		depth:     0,
 		mode:      USER,
-		table:     types.NewSymbolTable(),
 		astModule: mod,
 		mp:        mp,
 	}
 
 	m := types.NewModule(mod, mp.Packages[mod.Package.FSPackage.Path])
-	m.Table = c.table
 	c.module = m
 	return c
 }
 
 func (c *Checker) ParentScope() *types.Scope {
-	return c.table.Main
+	return c.module.Scope
 }
 
 var unresolved types.Type

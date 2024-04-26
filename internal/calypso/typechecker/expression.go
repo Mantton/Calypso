@@ -365,10 +365,6 @@ func (c *Checker) evaluateBinaryExpression(e *ast.BinaryExpression, ctx *NodeCon
 		return unresolved
 	}
 
-	if rhs == types.LookUp(types.NilLiteral) {
-		c.table.SetNodeType(e.Right, lhs)
-	}
-
 	switch op {
 	case token.PLUS, token.MINUS, token.QUO, token.STAR, token.PCT:
 		if types.IsNumeric(typ) {
@@ -614,8 +610,6 @@ func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations typ
 func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ctx *NodeContext) types.Type {
 
 	a := c.evaluateExpression(n.Target, ctx)
-	c.table.SetNodeType(n.Target, a)
-
 	if types.IsUnresolved(a) {
 		return unresolved
 	}
@@ -627,7 +621,7 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 		field = p.Value
 	default:
 		if a, ok := a.(*types.Module); ok {
-			sc := a.Table.Main
+			sc := a.Scope
 			return c.evaluateExpression(p, NewContext(sc, ctx.sg, nil))
 		}
 

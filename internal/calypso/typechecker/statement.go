@@ -341,10 +341,9 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, ctx *NodeContext) {
 	var alias *types.Alias
 	for alias == nil {
 
-		v := c.table.GetNodeType(n)
-
-		if v != nil {
-			alias = types.AsAlias(v)
+		symbol := ctx.scope.MustResolve(n.Identifier.Value)
+		if symbol != nil {
+			alias = types.AsAlias(symbol.Type())
 		} else {
 			c.defineAlias(n, ctx)
 		}

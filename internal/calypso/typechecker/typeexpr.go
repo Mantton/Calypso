@@ -166,7 +166,7 @@ func (c *Checker) evaluateTypeFieldAccessExpression(expr *ast.FieldAccessExpress
 	switch t := t.(type) {
 
 	case *types.Module:
-		nCtx := NewContext(t.Table.Main, ctx.sg, ctx.lhs)
+		nCtx := NewContext(t.Scope, ctx.sg, ctx.lhs)
 		f := c.evaluateTypeExpression(expr.Field, tPs, nCtx)
 		return f
 

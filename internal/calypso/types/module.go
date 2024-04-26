@@ -15,10 +15,10 @@ type Package struct {
 }
 
 type Module struct {
-	Table        *SymbolTable
-	pkg          *Package
-	AST          *ast.Module
-	ParentModule *Module
+	Scope        *Scope      // the top level scope of the module
+	pkg          *Package    // the package in which this module belongs to
+	AST          *ast.Module // the ast module this module typed
+	ParentModule *Module     // the parent mod
 }
 
 func NewPackageMap() *PackageMap {

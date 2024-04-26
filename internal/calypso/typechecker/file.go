@@ -12,7 +12,7 @@ func (c *Checker) Check() (*types.Module, error) {
 
 	main := types.NewScope(types.GlobalScope, "MAIN_SCOPE")
 	main.Parent = types.GlobalScope
-	c.table.Main = main
+	c.module.Scope = main
 	c.ctx = NewContext(main, nil, nil)
 
 	// Run Passes
@@ -81,7 +81,7 @@ func (c *Checker) passN(f *ast.File) {
 			name = d.Alias.Value
 		}
 
-		err := c.table.Main.CustomDefine(mod, name)
+		err := c.module.Scope.CustomDefine(mod, name)
 		if err != nil {
 			c.addError(err.Error(), d.Range())
 		}

@@ -75,7 +75,7 @@ func ResolveField(t Type, f string, m *Module) (Type, error) {
 		}
 
 	case *Module:
-		field := a.Table.Main.ResolveInCurrent(f)
+		field := a.Scope.ResolveInCurrent(f)
 		if !field.IsVisible(m) {
 			return nil, fmt.Errorf("`%s` is not accessible in this context", f)
 		}

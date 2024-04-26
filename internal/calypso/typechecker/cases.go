@@ -43,7 +43,6 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 	variable.SetType(expected)
 
 	if expected != unresolved {
-		c.table.SetNodeType(node, expected)
 		fmt.Printf("\t[NODE ASSIGNMENT] %p -> %s\n", node, expected)
 	}
 
