@@ -46,6 +46,13 @@ func IsGeneric(t Type) bool {
 			}
 		}
 		return false
+	case *SpecializedFunctionSignature:
+		for _, b := range t.Bounds {
+			if IsGeneric(b) {
+				return true
+			}
+		}
+		return false
 	default:
 		return false
 	}

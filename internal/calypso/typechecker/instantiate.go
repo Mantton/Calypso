@@ -37,7 +37,7 @@ func (c *Checker) instantiateWithArguments(t types.Type, args types.TypeList, ex
 	if types.IsUnresolved(instantiation) {
 		return nil, fmt.Errorf("failed to instantiate type")
 	}
-	fmt.Printf("Instantiated %s, from %s\n", instantiation, t)
+	// fmt.Printf("Instantiated %s, from %s\n", instantiation, t)
 	return instantiation, nil
 }
 
@@ -51,6 +51,6 @@ func (c *Checker) instantiateWithSpecialization(t types.Type, s types.Specializa
 	if types.IsUnresolved(instantiation) {
 		return nil, fmt.Errorf("failed to instantiate type")
 	}
-	fmt.Printf("Instantiated %s, from %s\n", instantiation, t)
+	// fmt.Printf("Instantiated %s, from %s\n", instantiation, t)
 	return instantiation, nil
 }

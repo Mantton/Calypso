@@ -18,6 +18,8 @@ type Function struct {
 	IsStatic   bool
 	IsMutating bool
 	AST        *ast.FunctionExpression
+
+	CallGraph map[Type]struct{}
 }
 
 func (t *Function) String() string {
@@ -149,4 +151,12 @@ func (fn *Function) IsVisible(from *Module) bool {
 	}
 
 	return false
+}
+
+func (fn *Function) AddCallEdge(t Type) {
+	if fn.CallGraph == nil {
+		fn.CallGraph = make(map[Type]struct{})
+	}
+
+	fn.CallGraph[t] = struct{}{}
 }

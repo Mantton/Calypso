@@ -63,7 +63,9 @@ func NewSpecializedFunctionSignature(fn *FunctionSignature, sub Specialization, 
 	}
 
 	inMod.Table.Specializations[symbolName] = spec
-
+	for fn := range fn.Function.CallGraph {
+		Instantiate(fn, sub, inMod)
+	}
 	return spec
 }
 

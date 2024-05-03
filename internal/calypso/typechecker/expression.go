@@ -162,6 +162,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		}
 
 		c.module.Table.SetNodeType(expr, typ)
+		ctx.sg.Function.AddCallEdge(typ)
 		specializations := make(types.Specialization)
 		for i, arg := range expr.Arguments {
 			param := fn.Signature.Parameters[i]
@@ -231,6 +232,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		// return signature if not generic
 		if !isGeneric {
 			c.module.Table.SetNodeType(expr, fn)
+			ctx.sg.Function.AddCallEdge(fn)
 			return fn.Result.Type()
 		}
 
@@ -243,6 +245,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		}
 
 		c.module.Table.SetNodeType(expr, t)
+		ctx.sg.Function.AddCallEdge(t)
 
 		switch t := t.(type) {
 		case *types.FunctionSignature:
@@ -289,7 +292,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			return single.Sg().Result.Type()
 		}
 		mostSpec := options.MostSpecialized()
-
+		// TODO: Call Edge
 		c.module.Table.SetNodeType(expr, mostSpec)
 		return mostSpec
 	}
@@ -877,8 +880,6 @@ func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSign
 	}
 
 	sg := instance.(*types.FunctionSignature)
-
-	fmt.Println("Instantiated: ", sg)
 
 	if len(sg.Parameters) != len(expr.Arguments) {
 		c.addError(fmt.Sprintf("expected %d arguments, got %d", len(sg.Parameters), len(fn.Parameters)), expr.Range())

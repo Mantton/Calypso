@@ -12,14 +12,13 @@ func Instantiate(t Type, ctx Specialization, mod *Module) Type {
 
 	// Non Generic Type, No Specialization Needed
 	if !IsGeneric(t) {
+		fmt.Println(t)
 		return t
 	}
 
 	if ctx == nil {
 		ctx = make(Specialization)
 	}
-
-	fmt.Printf("\n\tSubstituting %s with %s\n", t, ctx)
 
 	switch t := t.(type) {
 
@@ -33,22 +32,20 @@ func Instantiate(t Type, ctx Specialization, mod *Module) Type {
 		}
 
 		// return specialized type
-		fmt.Printf("\tSpecialized as %s\n", typ)
-
 		return typ
 	case *DefinedType:
 		// Specialize underlying type
 		typ := NewSpecializedType(t, ctx, mod)
-		fmt.Printf("\tSpecialized as %s\n", typ)
 
 		return typ
 	case *SpecializedType:
 		typ := NewSpecializedType(t.InstanceOf, apply(t.Spec, ctx), mod)
-		fmt.Printf("\tSpecialized as %s\n", typ)
 		return typ
 	case *FunctionSignature:
 		typ := NewSpecializedFunctionSignature(t, ctx, mod)
-		fmt.Printf("\tSpecialized as %s\n", typ)
+		return typ
+	case *SpecializedFunctionSignature:
+		typ := NewSpecializedFunctionSignature(t.Signature, apply(t.Spec, ctx), mod)
 		return typ
 	case *Alias:
 		return Instantiate(t.RHS, ctx, mod)
@@ -126,12 +123,8 @@ func apply(s1, s2 Specialization) Specialization {
 
 func SpecializedSymbolName(symbol Symbol, args TypeList) string {
 	o := symbol.SymbolName()
-	for i, typ := range args {
-		o += typ.String()
-
-		if i != len(args)-1 {
-			o += "::"
-		}
+	for _, typ := range args {
+		o += "::_G::" + typ.String()
 	}
 	return o
 }
