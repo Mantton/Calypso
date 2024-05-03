@@ -50,16 +50,12 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 		return
 	}
 
-	name := n.Identifier.Value
-
 	fn := lir.NewFunction(tFn)
 	fn.Name = tFn.SymbolName()      // set function name to symbol name
 	b.Functions[n] = fn             // map node to function
 	b.TFunctions[tFn.Sg()] = fn     // map sg to function
 	b.Mod.Functions[fn.Name] = fn   // add function to module
 	fn.External = tFn.Target != nil // mark target
-
-	fmt.Println("<FUNCTION>", name, sg)
 }
 
 func (b *builder) registerMonomorphicSpecializations(fn *types.Function) {
@@ -69,7 +65,9 @@ func (b *builder) registerMonomorphicSpecializations(fn *types.Function) {
 
 	// 2 - Loop through generic instances & create new functions
 	for _, ssg := range fn.AllSpecs() {
-		fmt.Println("<FUNCTION>", fn.Name(), " , ", ssg.Sg())
+		if types.IsGeneric(ssg) {
+			continue
+		}
 
 		sFn := lir.NewFunction(fn)
 		sFn.Spec = ssg
@@ -122,6 +120,7 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 }
 
 func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
+	fmt.Println("Walking", fn.Name)
 	fn.AddSelf()
 
 	// Parameters
@@ -145,6 +144,7 @@ func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
 	for _, stmt := range stmts {
 		b.visitStatement(stmt, fn)
 	}
+	fmt.Println()
 
 }
 
@@ -152,11 +152,12 @@ func (b *builder) walkMonomorphizations(fn *types.Function) {
 	expr := fn.AST()
 	gFn := b.Mod.GFunctions[fn.SymbolName()]
 
-	fmt.Println(gFn)
 	for _, ssg := range fn.AllSpecs() {
+		if types.IsGeneric(ssg) {
+			continue
+		}
 		sFn := gFn.Specs[ssg.SymbolName()]
 
-		fmt.Println("<WALK_FUNCTION>", fn.Name(), ssg.Sg())
 		b.walkFunction(expr, sFn)
 	}
 }

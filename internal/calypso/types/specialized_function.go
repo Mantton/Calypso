@@ -94,5 +94,5 @@ func (f *SpecializedFunctionSignature) Sg() *FunctionSignature {
 }
 
 func (f *SpecializedFunctionSignature) SymbolName() string {
-	return SpecializedSymbolName(f.sg.Function, f.Bounds)
+	return SpecializedSymbolName(f.Sg().Function, f.Bounds)
 }

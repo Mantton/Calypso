@@ -13,3 +13,7 @@ func NewGenericFunction(fn *types.Function) *GenericFunction {
 		Specs:  map[string]*Function{},
 	}
 }
+
+func (fn *GenericFunction) Yields() types.Type {
+	return fn.Target.Sg()
+}

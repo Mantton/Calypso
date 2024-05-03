@@ -42,6 +42,7 @@ func (m *Module) Find(s string) Value {
 	symbol := m.TModule.Scope.MustResolve(s)
 
 	s = symbol.SymbolName()
+
 	if v, ok := m.Functions[s]; ok {
 		return v
 	}
@@ -51,6 +52,10 @@ func (m *Module) Find(s string) Value {
 	}
 
 	if v, ok := m.Composites[s]; ok {
+		return v
+	}
+
+	if v, ok := m.GFunctions[s]; ok {
 		return v
 	}
 

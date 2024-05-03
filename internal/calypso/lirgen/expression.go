@@ -80,13 +80,32 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 		panic(fmt.Sprintf("unable to locate target function for: %s", n.Target))
 	}
 
-	target, ok := val.(*lir.Function)
+	var target *lir.Function
 
-	if !ok {
-		panic("invalid calling expression")
+	switch val := val.(type) {
+	case *lir.GenericFunction:
+		// Find Target To Use
+		X := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedFunctionSignature)
+		if types.IsGeneric(X) {
+			// Target Is Generic, Specialize with Function Spec
+			ssg := types.Instantiate(X, fn.Spec.Specialization()).(*types.SpecializedFunctionSignature)
+			target = val.Specs[ssg.SymbolName()]
+		} else {
+			// Target is non generic, find
+			target = val.Specs[X.SymbolName()]
+		}
+
+	case *lir.Function:
+		target = val
+	default:
+		panic("unhandled call expression")
 	}
 
 	var args []lir.Value
+
+	if target == nil {
+		panic("target function is nil")
+	}
 
 	if target.TFunction.Self != nil {
 		panic("unimplemented method access")
