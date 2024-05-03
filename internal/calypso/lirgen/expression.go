@@ -74,21 +74,18 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
 
-	var tFn *types.FunctionSignature
-	panic("UNIMPLEMENTED")
-	val := b.TFunctions[tFn]
+	// Find Calling Signature
+	callTyp := b.Mod.TModule.Table.GetNodeType(n)
+	target := b.TFunctions[callTyp]
 
-	var f *lir.Function
+	if target == nil {
+		panic(fmt.Sprintf("unable to locate target function for: %s", callTyp))
+	}
+
 	var args []lir.Value
 
-	switch val := val.(type) {
-	case *lir.Function:
-		f = val
-	case *lir.Method:
-		f = val.Fn
-		if val.Self != nil {
-			args = append(args, val.Self)
-		}
+	if target.TFunction.Self != nil {
+		panic("unimplemented method access")
 	}
 
 	for _, p := range n.Arguments {
@@ -97,7 +94,7 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	}
 
 	i := &lir.Call{
-		Target:    f,
+		Target:    target,
 		Arguments: args,
 	}
 

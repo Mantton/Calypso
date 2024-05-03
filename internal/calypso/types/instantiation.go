@@ -6,23 +6,6 @@ import (
 
 type Specialization = map[Type]Type
 
-func HashValue(m Specialization, l TypeParams) string {
-	str := ""
-
-	if m == nil {
-		panic("how!")
-	}
-	for _, x := range l {
-		p, ok := m[x]
-		if !ok {
-			panic(fmt.Sprintf("%s not found in %s", x.name, m))
-		}
-		str += p.String()
-	}
-
-	return str
-}
-
 func Instantiate(t Type, ctx Specialization) Type {
 
 	var out Type

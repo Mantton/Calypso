@@ -46,17 +46,18 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	}
 
 	if types.IsGeneric(sg) {
-		panic("not implemented")
+		fmt.Println("DEBUG: Generic Function, skipping")
+		return
 	}
 
 	name := n.Identifier.Value
 
 	fn := lir.NewFunction(tFn)
-	fn.Name = tFn.SymbolName()
-	b.Functions[n] = fn
-	b.TFunctions[sg] = fn
-	b.Mod.Functions[fn.Name] = fn
-	fn.External = tFn.Target != nil
+	fn.Name = tFn.SymbolName()      // set function name to symbol name
+	b.Functions[n] = fn             // map node to function
+	b.TFunctions[tFn.Sg()] = fn     // map sg to function
+	b.Mod.Functions[fn.Name] = fn   // add function to module
+	fn.External = tFn.Target != nil // mark target
 
 	fmt.Println("<FUNCTION>", name, sg)
 }
@@ -94,7 +95,8 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 
 	sg := b.Mod.TModule.Table.Nodes[n].(*types.FunctionSignature)
 	if types.IsGeneric(sg) {
-		panic("not implemented")
+		fmt.Println("DEBUG: Generic Function, skipping")
+		return
 	}
 
 	// Non Generic

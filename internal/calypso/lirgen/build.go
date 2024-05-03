@@ -8,21 +8,21 @@ import (
 
 type builder struct {
 	Mod            *lir.Module
-	Functions      map[*ast.FunctionExpression]*lir.Function
+	Functions      map[*ast.FunctionExpression]*lir.Function // maps fn expressions to their lir impl
+	TFunctions     map[types.Type]*lir.Function              // maps fn types to their lir impl
 	EnumFunctions  map[*types.EnumVariant]*lir.Function
 	RFunctionEnums map[*lir.Function]*types.EnumVariant
 	Refs           map[string]*lir.TypeRef
-	TFunctions     map[*types.FunctionSignature]lir.Value
 }
 
 func build(mod *lir.Module) error {
 	b := &builder{
 		Mod:            mod,
 		Functions:      make(map[*ast.FunctionExpression]*lir.Function),
+		TFunctions:     make(map[types.Type]*lir.Function),
 		EnumFunctions:  make(map[*types.EnumVariant]*lir.Function),
 		RFunctionEnums: make(map[*lir.Function]*types.EnumVariant),
 		Refs:           make(map[string]*lir.TypeRef),
-		TFunctions:     make(map[*types.FunctionSignature]lir.Value),
 	}
 
 	b.pass()

@@ -42,5 +42,8 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 	}
 
 	variable.SetType(expected)
+	if _, ok := node.(*ast.NilLiteral); ok {
+		c.module.Table.SetNodeType(node, expected)
+	}
 	return nil
 }

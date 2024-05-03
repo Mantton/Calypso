@@ -13,16 +13,19 @@ const DEBUG = false
 
 func CompilePackage(pkg *fs.LitePackage) error {
 	// Resolve AST & Imports
+	fmt.Println("\n\nAST GEN")
 	data, err := resolver.ParseAndResolve(pkg)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("\n\nTypeCheck")
 	pkgMap, err := typechecker.CheckParsedData(data)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("\n\nLIR GEN")
 	err = lirgen.Generate(data, pkgMap)
 
 	if err != nil {

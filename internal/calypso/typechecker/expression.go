@@ -161,6 +161,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			return fn.ReturnType()
 		}
 
+		c.module.Table.SetNodeType(expr, typ)
 		specializations := make(types.Specialization)
 		for i, arg := range expr.Arguments {
 			param := fn.Signature.Parameters[i]
@@ -229,6 +230,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 
 		// return signature if not generic
 		if !isGeneric {
+			c.module.Table.SetNodeType(expr, fn)
 			return fn.Result.Type()
 		}
 
@@ -239,6 +241,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			c.addError(err.Error(), expr.Target.Range())
 			return unresolved
 		}
+
+		c.module.Table.SetNodeType(expr, t)
 
 		switch t := t.(type) {
 		case *types.FunctionSignature:
@@ -280,10 +284,14 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		if single, ok := options.GetAsSingle(); ok {
 			fmt.Println("\t[OVERLOAD] Exact match", single.Sg())
 
+			c.module.Table.SetNodeType(expr, single.Sg())
+
 			return single.Sg().Result.Type()
 		}
+		mostSpec := options.MostSpecialized()
 
-		return options.MostSpecialized()
+		c.module.Table.SetNodeType(expr, mostSpec)
+		return mostSpec
 	}
 
 	c.addError(
