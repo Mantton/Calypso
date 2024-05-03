@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 )
 
@@ -70,7 +72,7 @@ func (m *Module) Module() *Module {
 }
 
 func (m *Module) SymbolName() string {
-	return "wut"
+	return fmt.Sprintf("%s::%s", m.Package().Name(), m.Name())
 }
 
 func (m *Module) String() string {

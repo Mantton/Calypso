@@ -724,8 +724,8 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	// Resolve Type of Target
 	var definition *types.DefinedType
 	switch target := target.(type) {
-	// Accessing a type
 	case *lir.TypeRef:
+		// Accessing a type
 		definition = types.AsDefined(target.Type)
 		isTypeAccess = true
 	case *lir.Module:
@@ -736,7 +736,8 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			return v
 		}
 
-		panic("unable to locate symbol in module")
+		msg := fmt.Sprintf("cannot locate symbol '%s' in context '%s'", field, target.TModule.SymbolName())
+		panic(msg)
 
 	default:
 		// Accessing Property of an Address

@@ -9,9 +9,8 @@ type Module struct {
 	Functions       map[string]*Function
 	GlobalConstants map[string]*Global
 	Composites      map[string]*Composite
-	// Composites      map[types.Type]*Composite
-	TModule *types.Module
-	Imports map[string]*Module
+	TModule         *types.Module
+	Imports         map[string]*Module
 }
 
 func NewModule(mod *types.Module) *Module {
@@ -52,5 +51,6 @@ func (m *Module) Find(s string) Value {
 	if v, ok := m.Composites[s]; ok {
 		return v
 	}
+
 	return nil
 }

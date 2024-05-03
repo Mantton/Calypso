@@ -28,7 +28,7 @@ func (e *symbol) SetType(t Type) {
 func (e *symbol) Type() Type      { return e.typ }
 func (e *symbol) Module() *Module { return e.mod }
 func (e *symbol) SymbolName() string {
-	v := fmt.Sprintf("%s::%s::%s", e.mod.pkg.Name(), e.mod.Name(), e.name)
+	v := fmt.Sprintf("%s::%s", e.mod.SymbolName(), e.name)
 	return v
 }
 

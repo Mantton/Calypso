@@ -84,13 +84,16 @@ func ResolveField(t Type, f string, m *Module) (Type, error) {
 
 	case *Module:
 		field := a.Scope.ResolveInCurrent(f)
+
+		if field == nil {
+			return nil, fmt.Errorf("`%s` cannot be located", f)
+		}
+
 		if !field.IsVisible(m) {
 			return nil, fmt.Errorf("`%s` is not accessible in this context", f)
 		}
 
-		if field != nil {
-			return field.Type(), nil
-		}
+		return field.Type(), nil
 	}
 
 	return nil, fmt.Errorf("unknown function, type or field: \"%s\" on type \"%s\"", f, t)
