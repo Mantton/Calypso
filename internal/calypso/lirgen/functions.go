@@ -73,6 +73,7 @@ func (b *builder) registerMonomorphicSpecializations(fn *types.Function) {
 		sFn.Spec = ssg
 		sFn.Name = ssg.SymbolName()
 		gFn.Specs[sFn.Name] = sFn
+		b.MP.CallGraph.AddNode(sFn) // CallGraph Add Node
 	}
 
 	b.Mod.GFunctions[fn.SymbolName()] = gFn
@@ -159,5 +160,15 @@ func (b *builder) walkMonomorphizations(fn *types.Function) {
 		sFn := gFn.Specs[ssg.SymbolName()]
 
 		b.walkFunction(expr, sFn)
+	}
+}
+
+func (b *builder) mono() {
+
+	for _, fn := range b.Mod.Functions {
+		fns := b.MP.GetNestedFunctions(fn)
+		for _, nFn := range fns {
+			b.Mod.Functions[nFn.Name] = nFn
+		}
 	}
 }

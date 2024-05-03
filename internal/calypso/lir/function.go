@@ -1,6 +1,8 @@
 package lir
 
 import (
+	"sync/atomic"
+
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
@@ -12,9 +14,9 @@ type Parameter struct {
 }
 
 type Function struct {
-	TFunction *types.Function
-	Spec      *types.SpecializedFunctionSignature
-
+	TFunction  *types.Function
+	Spec       *types.SpecializedFunctionSignature
+	id         int64
 	Blocks     []*Block
 	Locals     []*Allocate
 	Variables  map[string]Value
@@ -94,11 +96,21 @@ func (f *Function) AddSelf() {
 	f.Variables[p.Name] = p
 }
 
+var tick int64
+
 func NewFunction(fn *types.Function) *Function {
+	newID := atomic.AddInt64(&tick, 1)
+
 	f := &Function{
 		Variables: make(map[string]Value),
 		TFunction: fn,
+		id:        newID,
 	}
+
 	f.NewBlock()
 	return f
+}
+
+func (fn *Function) ID() int64 {
+	return fn.id
 }

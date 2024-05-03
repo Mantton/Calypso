@@ -107,6 +107,11 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 		panic("target function is nil")
 	}
 
+	// Add Call Graph Edge
+	g := b.MP.CallGraph
+	e := g.NewEdge(fn, target)
+	g.SetEdge(e)
+
 	if target.TFunction.Self != nil {
 		panic("unimplemented method access")
 	}

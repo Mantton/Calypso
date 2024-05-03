@@ -2,6 +2,7 @@ package lir
 
 import (
 	"github.com/mantton/calypso/internal/calypso/types"
+	"gonum.org/v1/gonum/graph/simple"
 )
 
 // * 1
@@ -25,11 +26,31 @@ type Instruction interface {
 }
 
 type PackageMap struct {
-	Modules map[string]*Module
+	Modules   map[string]*Module
+	CallGraph *simple.DirectedGraph
 }
 
 func NewPackageMap() *PackageMap {
 	return &PackageMap{
-		Modules: make(map[string]*Module),
+		Modules:   make(map[string]*Module),
+		CallGraph: simple.NewDirectedGraph(),
 	}
+}
+
+func (p PackageMap) GetNestedFunctions(fn *Function) []*Function {
+	var dependencies []*Function
+
+	// Traverse the graph and called called functions
+	g := p.CallGraph
+
+	nodes := g.From(fn.ID())
+
+	for nodes.Next() {
+		t := nodes.Node().(*Function)
+		dependencies = append(dependencies, t)
+
+		dependencies = append(dependencies, p.GetNestedFunctions(t)...)
+	}
+
+	return dependencies
 }
