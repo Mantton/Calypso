@@ -165,10 +165,13 @@ func (b *builder) walkMonomorphizations(fn *types.Function) {
 
 func (b *builder) mono() {
 
+	// Add specialized functions from the call graph to the module requiring them
 	for _, fn := range b.Mod.Functions {
 		fns := b.MP.GetNestedFunctions(fn)
 		for _, nFn := range fns {
-			b.Mod.Functions[nFn.Name] = nFn
+			if nFn.Spec != nil {
+				b.Mod.Functions[nFn.Name] = nFn
+			}
 		}
 	}
 }
