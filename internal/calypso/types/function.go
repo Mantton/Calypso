@@ -2,6 +2,8 @@ package types
 
 import (
 	"fmt"
+
+	"github.com/mantton/calypso/internal/calypso/ast"
 )
 
 type Function struct {
@@ -15,6 +17,7 @@ type Function struct {
 	IsAsync    bool
 	IsStatic   bool
 	IsMutating bool
+	AST        *ast.FunctionExpression
 }
 
 func (t *Function) String() string {
@@ -79,7 +82,7 @@ func NewFunctionSignature() *FunctionSignature {
 	}
 }
 
-func NewFunction(name string, sg *FunctionSignature, mod *Module) *Function {
+func NewFunction(name string, sg *FunctionSignature, mod *Module, expr *ast.FunctionExpression) *Function {
 	fn := &Function{
 		symbol: symbol{
 			name: name,

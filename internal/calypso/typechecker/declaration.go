@@ -35,7 +35,7 @@ func (c *Checker) checkStandardDeclaration(d *ast.StandardDeclaration) {
 			// evaluate Function Signature
 			sg := c.registerFunctionSignatures(node.Func)
 
-			f := types.NewFunction(n, sg, c.module)
+			f := types.NewFunction(n, sg, c.module, node.Func)
 			// Add method
 			ok := underlying.AddMethod(n, f)
 

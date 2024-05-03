@@ -799,7 +799,7 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 	}
 
 	sg.Result.SetType(types.NewPointer(p))
-	tFn := types.NewFunction(composite.Name, sg, b.Mod.TModule)
+	tFn := types.NewFunction(composite.Name, sg, b.Mod.TModule, nil)
 	fn = lir.NewFunction(tFn)
 
 	for _, field := range n.Fields {

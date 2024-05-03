@@ -6,27 +6,29 @@ type SpecializedType struct {
 	Bounds     TypeList
 	Spec       Specialization
 	InstanceOf *DefinedType
+	Module     *Module
 }
 
-func NewSpecializedType(def *DefinedType, sub Specialization) *SpecializedType {
+func NewSpecializedType(def *DefinedType, sub Specialization, inMod *Module) *SpecializedType {
+	bounds := makeBounds(def.TypeParameters, sub)
+	symbolName := SpecializedSymbolName(def, bounds)
+
+	preDef := inMod.FindSpecialized(symbolName)
+
+	if preDef != nil {
+		return preDef.(*SpecializedType)
+	}
+
 	spec := &SpecializedType{
 		Spec:       sub,
 		InstanceOf: def,
+		Module:     inMod,
+		Bounds:     bounds,
 	}
 
-	for _, p := range def.TypeParameters {
-		arg, ok := sub[p]
-
-		if !ok {
-			fmt.Println("DEBUG - Unspecialized TypeParameter", p)
-			return nil
-		}
-
-		spec.Bounds = append(spec.Bounds, arg)
-	}
+	inMod.Table.Specializations[symbolName] = spec
 
 	return spec
-
 }
 
 func (t *SpecializedType) String() string {
@@ -44,7 +46,7 @@ func (t *SpecializedType) String() string {
 }
 
 func (t *SpecializedType) Parent() Type {
-	return cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization())
+	return cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization(), t.Module)
 }
 
 func (t *SpecializedType) ResolveField(f string) Type {
@@ -55,7 +57,7 @@ func (t *SpecializedType) ResolveField(f string) Type {
 		return nil
 	}
 
-	return Instantiate(field, t.Specialization())
+	return Instantiate(field, t.Specialization(), t.Module)
 }
 
 func (t *SpecializedType) ResolveType(f string) Type {
@@ -66,7 +68,7 @@ func (t *SpecializedType) ResolveType(f string) Type {
 		return nil
 	}
 
-	return Instantiate(field, t.Specialization())
+	return Instantiate(field, t.Specialization(), t.Module)
 }
 
 func (t *SpecializedType) ResolveMethod(f string) Type {
@@ -77,9 +79,25 @@ func (t *SpecializedType) ResolveMethod(f string) Type {
 		return nil
 	}
 
-	return Instantiate(field, t.Specialization())
+	return Instantiate(field, t.Specialization(), t.Module)
 }
 
 func (t *SpecializedType) Specialization() Specialization {
 	return t.Spec
+}
+
+func makeBounds(params TypeParams, ctx Specialization) TypeList {
+	bounds := TypeList{}
+	for _, p := range params {
+		arg, ok := ctx[p]
+
+		if !ok {
+			fmt.Println("DEBUG - Unspecialized TypeParameter")
+			return nil
+		}
+
+		bounds = append(bounds, arg)
+	}
+
+	return bounds
 }

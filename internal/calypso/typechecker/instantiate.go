@@ -33,7 +33,7 @@ func (c *Checker) instantiateWithArguments(t types.Type, args types.TypeList, ex
 		spec[p] = arg
 	}
 
-	instantiation := types.Instantiate(t, spec)
+	instantiation := types.Instantiate(t, spec, c.module)
 	if types.IsUnresolved(instantiation) {
 		return nil, fmt.Errorf("failed to instantiate type")
 	}
@@ -47,7 +47,7 @@ func (c *Checker) instantiateWithSpecialization(t types.Type, s types.Specializa
 		return nil, fmt.Errorf("%s is not a generic type", t)
 
 	}
-	instantiation := types.Instantiate(t, s)
+	instantiation := types.Instantiate(t, s, c.module)
 	if types.IsUnresolved(instantiation) {
 		return nil, fmt.Errorf("failed to instantiate type")
 	}

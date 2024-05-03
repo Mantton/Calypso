@@ -11,7 +11,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	// Create new function
 
 	sg := types.NewFunctionSignature()
-	def := types.NewFunction(e.Identifier.Value, sg, c.module)
+	def := types.NewFunction(e.Identifier.Value, sg, c.module, e)
 	def.IsPublic = e.Visibility == ast.PUBLIC
 	// Enter Function Scope
 	def.Scope = types.NewScope(scope, e.Identifier.Value)

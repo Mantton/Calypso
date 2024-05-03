@@ -22,6 +22,8 @@ func (c *Checker) Check() (*types.Module, error) {
 		return nil, errors.New(c.Errors.String())
 	}
 
+	fmt.Println(c.module.Table.Specializations)
+
 	return c.module, nil
 }
 

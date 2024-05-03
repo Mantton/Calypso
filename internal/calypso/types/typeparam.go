@@ -1,15 +1,27 @@
 package types
 
+import (
+	"fmt"
+	"sync/atomic"
+)
+
+var tick int64
+
 type TypeParam struct {
 	symbol
 	Constraints []*Standard // standards, this param is constrained to
+	ID          int64
 }
 
 func NewTypeParam(n string, cns []*Standard) *TypeParam {
+
+	newID := atomic.AddInt64(&tick, 1)
+
 	return &TypeParam{
 		symbol: symbol{
 			name: n,
 		},
+		ID:          newID,
 		Constraints: cns,
 	}
 }
@@ -17,7 +29,7 @@ func NewTypeParam(n string, cns []*Standard) *TypeParam {
 type TypeParams []*TypeParam
 
 func (t *TypeParam) String() string {
-	return t.name
+	return fmt.Sprintf("%s_%d", t.name, t.ID)
 }
 func (t *TypeParam) Name() string { return t.name }
 func (t *TypeParam) Type() Type   { return t }

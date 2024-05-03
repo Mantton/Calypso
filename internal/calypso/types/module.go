@@ -87,3 +87,7 @@ func (m *Module) IsVisible(from *Module) bool {
 
 	return false
 }
+
+func (m *Module) FindSpecialized(name string) Type {
+	return m.Table.Specializations[name]
+}
