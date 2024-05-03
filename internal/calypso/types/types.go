@@ -52,7 +52,8 @@ func IsGeneric(t Type) bool {
 				return true
 			}
 		}
-		return false
+
+		return IsGeneric(t.Sg())
 	default:
 		return false
 	}

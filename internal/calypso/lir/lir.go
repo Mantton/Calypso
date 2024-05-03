@@ -23,3 +23,13 @@ type Value interface {
 type Instruction interface {
 	Node
 }
+
+type PackageMap struct {
+	Modules map[string]*Module
+}
+
+func NewPackageMap() *PackageMap {
+	return &PackageMap{
+		Modules: make(map[string]*Module),
+	}
+}

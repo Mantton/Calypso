@@ -8,13 +8,16 @@ import (
 
 func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) error {
 
+	mp := lir.NewPackageMap()
 	for _, mod := range data.OrderedModules {
-		tMod := tmap.Modules[mod.FSMod.Path]
+		path := mod.FSMod.Path
+		tMod := tmap.Modules[path]
 		mod := lir.NewModule(tMod)
-		err := build(mod)
+		err := build(mod, mp)
 		if err != nil {
 			return err
 		}
+		mp.Modules[path] = mod
 	}
 
 	return nil

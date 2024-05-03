@@ -74,12 +74,16 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
 
-	// Find Calling Signature
-	callTyp := b.Mod.TModule.Table.GetNodeType(n)
-	target := b.TFunctions[callTyp]
+	val := b.evaluateExpression(n.Target, fn)
 
-	if target == nil {
-		panic(fmt.Sprintf("unable to locate target function for: %s", callTyp))
+	if val == nil {
+		panic(fmt.Sprintf("unable to locate target function for: %s", n.Target))
+	}
+
+	target, ok := val.(*lir.Function)
+
+	if !ok {
+		panic("invalid calling expression")
 	}
 
 	var args []lir.Value
@@ -205,7 +209,6 @@ func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Func
 
 func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
 	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
-	fmt.Printf(" %T\n", lhs)
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -565,6 +568,13 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 		if ok {
 			return ref
 		}
+
+		mod, ok := b.Mod.Imports[n.Value]
+
+		if ok {
+			return mod
+		}
+
 		panic(fmt.Sprintf("unknown identifier, %s", n.Value))
 	case *ast.FieldAccessExpression:
 		return b.evaluateFieldAccessExpression(n, fn, false)
@@ -709,6 +719,16 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	case *lir.TypeRef:
 		definition = types.AsDefined(target.Type)
 		isTypeAccess = true
+	case *lir.Module:
+		// Accessing Module
+		v := target.Find(field)
+
+		if v != nil {
+			return v
+		}
+
+		panic("unable to locate symbol in module")
+
 	default:
 		// Accessing Property of an Address
 		symbol := b.Mod.TModule.Table.GetNodeType(n.Target)
@@ -799,7 +819,7 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 	}
 
 	sg.Result.SetType(types.NewPointer(p))
-	tFn := types.NewFunction(composite.Name, sg, b.Mod.TModule, nil)
+	tFn := types.NewFunction(composite.Name, sg, b.Mod.TModule)
 	fn = lir.NewFunction(tFn)
 
 	for _, field := range n.Fields {

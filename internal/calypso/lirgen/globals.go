@@ -5,6 +5,22 @@ import (
 	"github.com/mantton/calypso/internal/calypso/lir"
 )
 
+func (b *builder) passN(f *ast.File) {
+
+	for _, d := range f.Nodes.Imports {
+		key := d.PopulatedImportKey
+
+		mod := b.MP.Modules[key]
+
+		// Define in scope
+		name := mod.Name()
+		if d.Alias != nil {
+			name = d.Alias.Value
+		}
+		b.Mod.Imports[name] = mod
+	}
+}
+
 // Global Constants
 func (b *builder) pass0(f *ast.File) {
 	for _, c := range f.Nodes.Constants {

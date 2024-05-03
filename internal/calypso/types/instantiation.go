@@ -45,7 +45,7 @@ func Instantiate(t Type, ctx Specialization, mod *Module) Type {
 		typ := NewSpecializedFunctionSignature(t, ctx, mod)
 		return typ
 	case *SpecializedFunctionSignature:
-		typ := NewSpecializedFunctionSignature(t.Signature, apply(t.Spec, ctx), mod)
+		typ := NewSpecializedFunctionSignature(t.InstanceOf, apply(t.Spec, ctx), mod)
 		return typ
 	case *Alias:
 		return Instantiate(t.RHS, ctx, mod)

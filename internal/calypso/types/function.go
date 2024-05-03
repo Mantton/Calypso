@@ -17,7 +17,6 @@ type Function struct {
 	IsAsync    bool
 	IsStatic   bool
 	IsMutating bool
-	AST        *ast.FunctionExpression
 
 	CallGraph map[Type]struct{}
 }
@@ -84,7 +83,7 @@ func NewFunctionSignature() *FunctionSignature {
 	}
 }
 
-func NewFunction(name string, sg *FunctionSignature, mod *Module, expr *ast.FunctionExpression) *Function {
+func NewFunction(name string, sg *FunctionSignature, mod *Module) *Function {
 	fn := &Function{
 		symbol: symbol{
 			name: name,
@@ -159,4 +158,16 @@ func (fn *Function) AddCallEdge(t Type) {
 	}
 
 	fn.CallGraph[t] = struct{}{}
+}
+
+func (fn *Function) AST() *ast.FunctionExpression {
+
+	x := fn.mod.Table.GetSymbol(fn)
+
+	if x == nil {
+		return nil
+	}
+
+	y := x.(*ast.FunctionExpression)
+	return y
 }

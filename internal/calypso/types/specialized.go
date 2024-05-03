@@ -13,10 +13,10 @@ func NewSpecializedType(def *DefinedType, sub Specialization, inMod *Module) *Sp
 	bounds := makeBounds(def.TypeParameters, sub)
 	symbolName := SpecializedSymbolName(def, bounds)
 
-	preDef := inMod.FindSpecialized(symbolName)
+	preDef := inMod.FindSpecializedType(symbolName)
 
 	if preDef != nil {
-		return preDef.(*SpecializedType)
+		return preDef
 	}
 
 	spec := &SpecializedType{
@@ -26,7 +26,7 @@ func NewSpecializedType(def *DefinedType, sub Specialization, inMod *Module) *Sp
 		Bounds:     bounds,
 	}
 
-	inMod.Table.Specializations[symbolName] = spec
+	inMod.Table.SpecializedTypes[symbolName] = spec
 
 	return spec
 }

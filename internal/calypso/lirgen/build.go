@@ -13,9 +13,10 @@ type builder struct {
 	EnumFunctions  map[*types.EnumVariant]*lir.Function
 	RFunctionEnums map[*lir.Function]*types.EnumVariant
 	Refs           map[string]*lir.TypeRef
+	MP             *lir.PackageMap
 }
 
-func build(mod *lir.Module) error {
+func build(mod *lir.Module, mp *lir.PackageMap) error {
 	b := &builder{
 		Mod:            mod,
 		Functions:      make(map[*ast.FunctionExpression]*lir.Function),
@@ -23,6 +24,7 @@ func build(mod *lir.Module) error {
 		EnumFunctions:  make(map[*types.EnumVariant]*lir.Function),
 		RFunctionEnums: make(map[*lir.Function]*types.EnumVariant),
 		Refs:           make(map[string]*lir.TypeRef),
+		MP:             mp,
 	}
 
 	b.pass()
@@ -33,6 +35,7 @@ func build(mod *lir.Module) error {
 func (b *builder) pass() {
 	files := b.Mod.FileSet().Files
 	passes := []func(*ast.File){
+		b.passN,
 		b.pass0,
 		b.pass1,
 		b.pass2,

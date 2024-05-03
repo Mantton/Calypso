@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/fs"
+	"github.com/mantton/calypso/internal/calypso/lirgen"
 	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
@@ -24,12 +25,12 @@ func CompilePackage(pkg *fs.LitePackage) error {
 		return err
 	}
 
-	// fmt.Println("\n\nLIR GEN")
-	// err = lirgen.Generate(data, pkgMap)
+	fmt.Println("\n\nLIR GEN")
+	err = lirgen.Generate(data, pkgMap)
 
-	// if err != nil {
-	// 	return err
-	// }
+	if err != nil {
+		return err
+	}
 
 	fmt.Println(pkgMap)
 	return nil

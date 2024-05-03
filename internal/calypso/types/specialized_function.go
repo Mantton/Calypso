@@ -3,10 +3,11 @@ package types
 import "fmt"
 
 type SpecializedFunctionSignature struct {
-	Signature *FunctionSignature
-	Bounds    TypeList
-	Spec      Specialization
-	Module    *Module
+	InstanceOf *FunctionSignature
+	Bounds     TypeList
+	Spec       Specialization
+	Module     *Module
+	sg         *FunctionSignature
 }
 
 func (t *SpecializedFunctionSignature) Parent() Type { return t }
@@ -18,9 +19,9 @@ func (t *SpecializedFunctionSignature) String() string {
 	f += "(%s) -> %s"
 	params := ""
 	spec := t.Specialization()
-	ret := Instantiate(t.Signature.Result.Type(), spec, t.Module).String()
+	ret := Instantiate(t.InstanceOf.Result.Type(), spec, t.Module).String()
 
-	for i, p := range t.Signature.Parameters {
+	for i, p := range t.InstanceOf.Parameters {
 		a := ""
 
 		pT := Instantiate(p.Type(), spec, t.Module)
@@ -32,7 +33,7 @@ func (t *SpecializedFunctionSignature) String() string {
 		a += pT.String()
 		params += a
 
-		if i != len(t.Signature.Parameters)-1 {
+		if i != len(t.InstanceOf.Parameters)-1 {
 			params += ", "
 		}
 	}
@@ -49,20 +50,20 @@ func NewSpecializedFunctionSignature(fn *FunctionSignature, sub Specialization, 
 	bounds := makeBounds(fn.TypeParameters, sub)
 	symbolName := SpecializedSymbolName(fn.Function, bounds)
 
-	// TODO: Generics have naming clash e.g T & T
-	preDef := inMod.FindSpecialized(symbolName)
+	preDef := inMod.FindSpecializedFn(symbolName)
 
 	if preDef != nil {
-		return preDef.(*SpecializedFunctionSignature)
-	}
-	spec := &SpecializedFunctionSignature{
-		Signature: fn,
-		Spec:      sub,
-		Module:    inMod,
-		Bounds:    makeBounds(fn.TypeParameters, sub),
+		return preDef
 	}
 
-	inMod.Table.Specializations[symbolName] = spec
+	spec := &SpecializedFunctionSignature{
+		InstanceOf: fn,
+		Spec:       sub,
+		Module:     inMod,
+		Bounds:     makeBounds(fn.TypeParameters, sub),
+	}
+
+	inMod.Table.SpecializedFunctions[symbolName] = spec
 	for fn := range fn.Function.CallGraph {
 		Instantiate(fn, sub, inMod)
 	}
@@ -70,21 +71,26 @@ func NewSpecializedFunctionSignature(fn *FunctionSignature, sub Specialization, 
 }
 
 func (f *SpecializedFunctionSignature) ReturnType() Type {
-	return Instantiate(f.Signature.Result.Type(), f.Specialization(), f.Module)
+	return Instantiate(f.InstanceOf.Result.Type(), f.Specialization(), f.Module)
 }
 
 func (f SpecializedFunctionSignature) Sg() *FunctionSignature {
-	sg := NewFunctionSignature()
 
-	for _, p := range f.Signature.Parameters {
+	if f.sg != nil {
+		return f.sg
+	}
+
+	f.sg = NewFunctionSignature()
+
+	for _, p := range f.InstanceOf.Parameters {
 		v := NewVar(p.name, nil)
 		v.SetType(Instantiate(p.typ, f.Spec, f.Module))
 		v.ParamLabel = p.ParamLabel
 		v.Mutable = p.Mutable
-		sg.AddParameter(v)
+		f.sg.AddParameter(v)
 	}
 
-	sg.Result.SetType(Instantiate(f.Signature.Result.typ, f.Spec, f.Module))
-	sg.Function = f.Signature.Function
-	return sg
+	f.sg.Result.SetType(Instantiate(f.InstanceOf.Result.typ, f.Spec, f.Module))
+	f.sg.Function = f.InstanceOf.Function
+	return f.sg
 }

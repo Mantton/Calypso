@@ -150,10 +150,10 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 	switch typ := typ.(type) {
 	case *types.SpecializedFunctionSignature:
 		fn := typ
-		if len(expr.Arguments) != len(typ.Signature.Parameters) {
+		if len(expr.Arguments) != len(typ.InstanceOf.Parameters) {
 			c.addError(
 				fmt.Sprintf("expected %d arguments, provided %d",
-					len(fn.Signature.Parameters),
+					len(fn.InstanceOf.Parameters),
 					len(expr.Arguments)),
 				expr.Range(),
 			)
@@ -165,7 +165,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		ctx.sg.Function.AddCallEdge(typ)
 		specializations := make(types.Specialization)
 		for i, arg := range expr.Arguments {
-			param := fn.Signature.Parameters[i]
+			param := fn.InstanceOf.Parameters[i]
 			expected, err := c.instantiateWithSpecialization(param.Type(), fn.Specialization())
 			if err != nil {
 				c.addError(err.Error(), arg.Range())

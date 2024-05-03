@@ -88,6 +88,10 @@ func (m *Module) IsVisible(from *Module) bool {
 	return false
 }
 
-func (m *Module) FindSpecialized(name string) Type {
-	return m.Table.Specializations[name]
+func (m *Module) FindSpecializedFn(name string) *SpecializedFunctionSignature {
+	return m.Table.SpecializedFunctions[name]
+}
+
+func (m *Module) FindSpecializedType(name string) *SpecializedType {
+	return m.Table.SpecializedTypes[name]
 }

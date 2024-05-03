@@ -3,16 +3,18 @@ package types
 import "github.com/mantton/calypso/internal/calypso/ast"
 
 type SymbolTable struct {
-	Symbols         map[Symbol]ast.Node // This links symbols to their corresponding nodes
-	Nodes           map[ast.Node]Type   // this links nodes to their corresponding types
-	Specializations map[string]Type
+	Symbols              map[Symbol]ast.Node // This links symbols to their corresponding nodes
+	Nodes                map[ast.Node]Type   // this links nodes to their corresponding types
+	SpecializedFunctions map[string]*SpecializedFunctionSignature
+	SpecializedTypes     map[string]*SpecializedType
 }
 
 func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{
-		Symbols:         make(map[Symbol]ast.Node),
-		Nodes:           make(map[ast.Node]Type),
-		Specializations: make(map[string]Type),
+		Symbols:              make(map[Symbol]ast.Node),
+		Nodes:                make(map[ast.Node]Type),
+		SpecializedFunctions: make(map[string]*SpecializedFunctionSignature),
+		SpecializedTypes:     make(map[string]*SpecializedType),
 	}
 }
 
