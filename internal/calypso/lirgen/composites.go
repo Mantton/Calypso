@@ -41,7 +41,7 @@ func (b *builder) genEnum(n *ast.EnumStatement) {
 		return
 	}
 
-	b.genTaggedUnion(underlying, n.Identifier.Value)
+	b.genTaggedUnion(symbol.(types.Symbol), underlying)
 
 }
 func (b *builder) genStruct(n *ast.StructStatement) {
@@ -68,10 +68,10 @@ func (b *builder) genStruct(n *ast.StructStatement) {
 	}
 
 	c.UnderlyingSymbol = symbol
-	b.Mod.SComposites[symbol.SymbolName()] = c
+	b.Mod.Composites[symbol.SymbolName()] = c
 }
 
-func (b *builder) genTaggedUnion(n *types.Enum, name string) {
+func (b *builder) genTaggedUnion(symbol types.Symbol, n *types.Enum) {
 
 	// Take
 	/*
@@ -95,7 +95,7 @@ func (b *builder) genTaggedUnion(n *types.Enum, name string) {
 	// 2 - Base Composite can simply be 1X i8 (Discriminant) + nX i8 (Max Union)
 	baseComposite := &lir.Composite{
 		UnderlyingType: n,
-		Name:           name,
+		Name:           symbol.SymbolName(),
 		Members: []types.Type{
 			byt,
 			&lir.StaticArray{
@@ -104,7 +104,7 @@ func (b *builder) genTaggedUnion(n *types.Enum, name string) {
 			},
 		},
 	}
-	b.Mod.Composites[n] = baseComposite
+	b.Mod.Composites[symbol.SymbolName()] = baseComposite
 
 	// 3 - Generate Composite Types for each tagged union
 	for _, variant := range n.Variants {
@@ -127,15 +127,20 @@ func (b *builder) genTaggedUnion(n *types.Enum, name string) {
 			})
 		}
 
+		symbolName := EnumVariantSymbolName(variant, symbol)
 		members = append(members, ts...)
 		composite := &lir.Composite{
 			UnderlyingType: variant,
-			Name:           name + "." + variant.Name,
+			Name:           symbolName,
 			Members:        members,
 			IsAligned:      paddingSize != 0,
 		}
 
-		b.Mod.Composites[variant] = composite
+		b.Mod.Composites[symbolName] = composite
 		composite.EnumParent = baseComposite
 	}
+}
+
+func EnumVariantSymbolName(v *types.EnumVariant, sym types.Symbol) string {
+	return sym.SymbolName() + "::_v::" + v.Name
 }

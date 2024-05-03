@@ -179,6 +179,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 
 	var T lir.Value
 
+	symbol := cond.Yields().(types.Symbol)
 	typ := cond.Yields().Parent()
 
 	// Is Composite Enum
@@ -187,7 +188,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 			addr := &lir.GEP{
 				Address:   cond,
 				Index:     0,
-				Composite: b.Mod.Composites[en],
+				Composite: b.Mod.Composites[symbol.SymbolName()],
 			}
 
 			T = &lir.Load{
@@ -219,7 +220,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 		block := fn.NewBlock()
 
 		if expr != nil {
-			b.evaluateEnumVariantTuple(fn, expr, typ, cond)
+			b.evaluateEnumVariantTuple(fn, expr, typ, symbol, cond)
 		}
 
 		b.visitBlockStatement(cs.Action, fn)

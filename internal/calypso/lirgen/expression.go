@@ -162,7 +162,7 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 		switch val := val.(type) {
 		case *lir.Composite:
 			if b.Mod.TModule.Package() != val.UnderlyingSymbol.Module().Package() {
-				b.Mod.SComposites[val.Name] = val
+				b.Mod.Composites[val.Name] = val
 			}
 		}
 		return val
@@ -668,10 +668,10 @@ func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Func
 	def := types.AsDefined(typ)
 
 	addr := b.emitHeapAlloc(fn, def)
+	composite := b.Mod.Composites[def.SymbolName()]
 
 	for _, field := range n.Body.Fields {
 		sym := def.GetScope().MustResolve(field.Key.Value)
-		composite := b.Mod.Composites[def.Parent()]
 
 		value := b.evaluateExpression(field.Value, fn)
 
@@ -769,7 +769,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 	if ok {
 		index := symbol.StructIndex
-		composite := b.Mod.Composites[definition.Parent()]
+		composite := b.Mod.Composites[definition.SymbolName()]
 
 		// Invalid Field
 		if index == -1 {
@@ -800,7 +800,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 		// Composites are treated like a function call
 		if en.IsUnion() {
-			return b.generateOrReturnFunctionForVariant(variant, en)
+			return b.generateOrReturnFunctionForVariant(variant, en, definition)
 		} else {
 			return lir.NewConst(int64(variant.Discriminant), types.LookUp(types.Int32))
 		}
@@ -811,8 +811,8 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 }
 
-func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *types.Enum) *lir.Function {
-	composite := b.Mod.Composites[n]
+func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *types.Enum, s types.Symbol) *lir.Function {
+	composite := b.Mod.Composites[EnumVariantSymbolName(n, s)]
 
 	// Already Built, return
 	fn, ok := b.EnumFunctions[n]
@@ -910,8 +910,8 @@ func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Fu
 	return dis, expr, en
 }
 
-func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, self lir.Value) {
-	composite := b.Mod.Composites[v]
+func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, s types.Symbol, self lir.Value) {
+	composite := b.Mod.Composites[EnumVariantSymbolName(v, s)]
 
 	// 0 Index is Discriminant
 	x := 1
