@@ -90,14 +90,6 @@ func (m *Module) IsVisible(from *Module) bool {
 	return false
 }
 
-func (m *Module) FindSpecializedFn(name string) *SpecializedFunctionSignature {
-	return m.Table.SpecializedFunctions[name]
-}
-
-func (m *Module) FindSpecializedType(name string) *SpecializedType {
-	return m.Table.SpecializedTypes[name]
-}
-
 func (e *Module) IsPublic() bool {
 	return false
 }

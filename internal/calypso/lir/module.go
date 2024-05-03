@@ -11,11 +11,13 @@ type Module struct {
 	Composites      map[string]*Composite
 	TModule         *types.Module
 	Imports         map[string]*Module
+	GFunctions      map[string]*GenericFunction // Maps symbols to their generic functions
 }
 
 func NewModule(mod *types.Module) *Module {
 	return &Module{
 		Functions:       make(map[string]*Function),
+		GFunctions:      make(map[string]*GenericFunction),
 		GlobalConstants: make(map[string]*Global),
 		Composites:      make(map[string]*Composite),
 		Imports:         make(map[string]*Module),

@@ -6,7 +6,7 @@ import (
 
 type Specialization = map[Type]Type
 
-func Instantiate(t Type, ctx Specialization, mod *Module) Type {
+func Instantiate(t Type, ctx Specialization) Type {
 
 	var out Type
 
@@ -35,25 +35,25 @@ func Instantiate(t Type, ctx Specialization, mod *Module) Type {
 		return typ
 	case *DefinedType:
 		// Specialize underlying type
-		typ := NewSpecializedType(t, ctx, mod)
+		typ := NewSpecializedType(t, ctx)
 
 		return typ
 	case *SpecializedType:
-		typ := NewSpecializedType(t.InstanceOf, apply(t.Spec, ctx), mod)
+		typ := NewSpecializedType(t.InstanceOf, apply(t.Spec, ctx))
 		return typ
 	case *FunctionSignature:
-		typ := NewSpecializedFunctionSignature(t, ctx, mod)
+		typ := NewSpecializedFunctionSignature(t, ctx)
 		return typ
 	case *SpecializedFunctionSignature:
-		typ := NewSpecializedFunctionSignature(t.InstanceOf, apply(t.Spec, ctx), mod)
+		typ := NewSpecializedFunctionSignature(t.InstanceOf, apply(t.Spec, ctx))
 		return typ
 	case *Alias:
-		return Instantiate(t.RHS, ctx, mod)
+		return Instantiate(t.RHS, ctx)
 	case *Pointer:
-		cT := t.PointerTo               // Type Pointing To
-		uT := Instantiate(cT, ctx, mod) // Instantiate Type with Specialization Map
-		out = NewPointer(uT)            // Create new pointer with specialized type
-		return out                      // return updated pointer
+		cT := t.PointerTo          // Type Pointing To
+		uT := Instantiate(cT, ctx) // Instantiate Type with Specialization Map
+		out = NewPointer(uT)       // Create new pointer with specialized type
+		return out                 // return updated pointer
 	default:
 		// unimplemented instantiation
 		panic(fmt.Sprintf("cannot instantiate type %s", t))
@@ -61,7 +61,7 @@ func Instantiate(t Type, ctx Specialization, mod *Module) Type {
 }
 
 // TODO: Find better way
-func cloneWithSpecialization(t Type, ctx Specialization, mod *Module) Type {
+func cloneWithSpecialization(t Type, ctx Specialization) Type {
 	switch parent := t.(type) {
 	case *Basic:
 		return t // Basic Types cannot be specialized
@@ -69,7 +69,7 @@ func cloneWithSpecialization(t Type, ctx Specialization, mod *Module) Type {
 		// Collect Fields
 		fields := []*Var{}
 		for _, field := range parent.Fields {
-			s := Instantiate(field.Type(), ctx, mod)
+			s := Instantiate(field.Type(), ctx)
 			spec := NewVar(field.Name(), s)
 			fields = append(fields, spec)
 		}
@@ -87,7 +87,7 @@ func cloneWithSpecialization(t Type, ctx Specialization, mod *Module) Type {
 
 			for _, f := range variant.Fields {
 				v := NewVar(f.Name(), nil)
-				s := Instantiate(f.Type(), ctx, mod)
+				s := Instantiate(f.Type(), ctx)
 				v.SetType(s)
 				fields = append(fields, v)
 			}

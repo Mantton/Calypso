@@ -5,6 +5,7 @@ type DefinedType struct {
 	wrapped        Type
 	TypeParameters TypeParams
 	scope          *Scope
+	specs          map[string]*SpecializedType
 }
 
 func NewBaseDefinedType(name string, wrapped Type, params TypeParams, scope *Scope, mod *Module) *DefinedType {
@@ -176,8 +177,30 @@ func (n *DefinedType) GetScope() *Scope {
 	return n.scope
 }
 
-type HType interface {
-	ResolveField(string) Type
-	ResolveType(string) Type
-	ResolveMethod(string) Type
+func (d *DefinedType) AddSpec(n string, sp *SpecializedType) {
+
+	if d.specs == nil {
+		d.specs = make(map[string]*SpecializedType)
+	}
+
+	d.specs[n] = sp
+}
+
+func (d *DefinedType) FindSpec(n string) *SpecializedType {
+
+	if d.specs == nil {
+		return nil
+	}
+
+	return d.specs[n]
+}
+
+func (d *DefinedType) AllSpecs() []*SpecializedType {
+	x := []*SpecializedType{}
+
+	for _, v := range d.specs {
+		x = append(x, v)
+	}
+
+	return x
 }

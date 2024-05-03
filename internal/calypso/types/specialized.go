@@ -6,14 +6,13 @@ type SpecializedType struct {
 	Bounds     TypeList
 	Spec       Specialization
 	InstanceOf *DefinedType
-	Module     *Module
 }
 
-func NewSpecializedType(def *DefinedType, sub Specialization, inMod *Module) *SpecializedType {
+func NewSpecializedType(def *DefinedType, sub Specialization) *SpecializedType {
 	bounds := makeBounds(def.TypeParameters, sub)
 	symbolName := SpecializedSymbolName(def, bounds)
 
-	preDef := inMod.FindSpecializedType(symbolName)
+	preDef := def.FindSpec(symbolName)
 
 	if preDef != nil {
 		return preDef
@@ -22,12 +21,10 @@ func NewSpecializedType(def *DefinedType, sub Specialization, inMod *Module) *Sp
 	spec := &SpecializedType{
 		Spec:       sub,
 		InstanceOf: def,
-		Module:     inMod,
 		Bounds:     bounds,
 	}
 
-	inMod.Table.SpecializedTypes[symbolName] = spec
-
+	def.AddSpec(symbolName, spec)
 	return spec
 }
 
@@ -46,7 +43,7 @@ func (t *SpecializedType) String() string {
 }
 
 func (t *SpecializedType) Parent() Type {
-	return cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization(), t.Module)
+	return cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization())
 }
 
 func (t *SpecializedType) ResolveField(f string) Type {
@@ -57,7 +54,7 @@ func (t *SpecializedType) ResolveField(f string) Type {
 		return nil
 	}
 
-	return Instantiate(field, t.Specialization(), t.Module)
+	return Instantiate(field, t.Specialization())
 }
 
 func (t *SpecializedType) ResolveType(f string) Type {
@@ -68,7 +65,7 @@ func (t *SpecializedType) ResolveType(f string) Type {
 		return nil
 	}
 
-	return Instantiate(field, t.Specialization(), t.Module)
+	return Instantiate(field, t.Specialization())
 }
 
 func (t *SpecializedType) ResolveMethod(f string) Type {
@@ -79,11 +76,15 @@ func (t *SpecializedType) ResolveMethod(f string) Type {
 		return nil
 	}
 
-	return Instantiate(field, t.Specialization(), t.Module)
+	return Instantiate(field, t.Specialization())
 }
 
 func (t *SpecializedType) Specialization() Specialization {
 	return t.Spec
+}
+
+func (f *SpecializedType) SymbolName() string {
+	return SpecializedSymbolName(f.InstanceOf, f.Bounds)
 }
 
 func makeBounds(params TypeParams, ctx Specialization) TypeList {

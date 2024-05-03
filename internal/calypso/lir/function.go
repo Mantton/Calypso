@@ -12,12 +12,14 @@ type Parameter struct {
 }
 
 type Function struct {
-	TFunction    *types.Function
-	sg           *types.FunctionSignature
-	Blocks       []*Block
-	Locals       []*Allocate
-	Variables    map[string]Value
-	Parameters   []*Parameter
+	TFunction *types.Function
+	Spec      *types.SpecializedFunctionSignature
+
+	Blocks     []*Block
+	Locals     []*Allocate
+	Variables  map[string]Value
+	Parameters []*Parameter
+
 	Owner        *Member
 	CurrentBlock *Block
 	External     bool
@@ -25,16 +27,13 @@ type Function struct {
 }
 
 func (f *Function) Signature() *types.FunctionSignature {
-	if f.sg != nil {
-		return f.sg
+	if f.Spec != nil {
+		return f.Spec.Sg()
 	} else {
 		return f.TFunction.Sg()
 	}
 }
 
-func (f *Function) SetSignature(sg *types.FunctionSignature) {
-	f.sg = sg
-}
 func (f *Function) Yields() types.Type  { return f.Signature() }
 func (f *Parameter) Yields() types.Type { return f.Symbol }
 

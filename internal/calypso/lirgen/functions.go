@@ -35,19 +35,6 @@ func (b *builder) pass2(f *ast.File) {
 			b.registerFunction(fn.Func)
 		}
 	}
-
-	fmt.Println("\nGeneric Specializations")
-	for k, n := range b.Mod.TModule.Table.SpecializedFunctions {
-		// Do not generate generic
-		if types.IsGeneric(n) {
-			continue
-		}
-
-		b.registerMonomorphicSpecialization(k, n)
-	}
-
-	fmt.Println()
-
 }
 
 func (b *builder) registerFunction(n *ast.FunctionExpression) {
@@ -59,7 +46,7 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	}
 
 	if types.IsGeneric(sg) {
-		fmt.Println("DEBUG: Generic Function, skipping")
+		b.registerMonomorphicSpecializations(sg.Function)
 		return
 	}
 
@@ -75,12 +62,22 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	fmt.Println("<FUNCTION>", name, sg)
 }
 
-func (b *builder) registerMonomorphicSpecialization(k string, ssg *types.SpecializedFunctionSignature) {
-	fn := lir.NewFunction(ssg.InstanceOf.Function)
-	fn.Name = k
-	b.Mod.Functions[fn.Name] = fn
-	b.TFunctions[ssg] = fn
-	fmt.Println("<FUNCTION>", fn.Name, " , ", ssg.Sg())
+func (b *builder) registerMonomorphicSpecializations(fn *types.Function) {
+
+	// 1 - Instantiate Generic Funciton
+	gFn := lir.NewGenericFunction(fn)
+
+	// 2 - Loop through generic instances & create new functions
+	for _, ssg := range fn.AllSpecs() {
+		fmt.Println("<FUNCTION>", fn.Name(), " , ", ssg.Sg())
+
+		sFn := lir.NewFunction(fn)
+		sFn.Spec = ssg
+		sFn.Name = ssg.SymbolName()
+		gFn.Specs[sFn.Name] = sFn
+	}
+
+	b.Mod.GFunctions[fn.SymbolName()] = gFn
 }
 
 // Populate Bodies?
@@ -110,22 +107,12 @@ func (b *builder) pass3(f *ast.File) {
 			b.visitFunction(fn.Func)
 		}
 	}
-
-	// Monomorphization
-	for _, n := range b.Mod.TModule.Table.SpecializedFunctions {
-		// Do not generate generic
-		if types.IsGeneric(n) {
-			continue
-		}
-		b.walkMonomorphization(n)
-	}
-
 }
 
 func (b *builder) visitFunction(n *ast.FunctionExpression) {
-
 	sg := b.Mod.TModule.Table.Nodes[n].(*types.FunctionSignature)
 	if types.IsGeneric(sg) {
+		b.walkMonomorphizations(sg.Function)
 		return
 	}
 
@@ -138,7 +125,6 @@ func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
 	fn.AddSelf()
 
 	// Parameters
-	fmt.Println(fn.Signature(), fn.TFunction.SymbolName())
 	for _, p := range fn.Signature().Parameters {
 		fn.AddParameter(p)
 	}
@@ -162,12 +148,15 @@ func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
 
 }
 
-func (b *builder) walkMonomorphization(ssg *types.SpecializedFunctionSignature) {
-	fn := b.TFunctions[ssg]
-	expr := ssg.InstanceOf.Function.AST()
+func (b *builder) walkMonomorphizations(fn *types.Function) {
+	expr := fn.AST()
+	gFn := b.Mod.GFunctions[fn.SymbolName()]
 
-	if expr == nil {
-		panic("NIL")
+	fmt.Println(gFn)
+	for _, ssg := range fn.AllSpecs() {
+		sFn := gFn.Specs[ssg.SymbolName()]
+
+		fmt.Println("<WALK_FUNCTION>", fn.Name(), ssg.Sg())
+		b.walkFunction(expr, sFn)
 	}
-	b.walkFunction(expr, fn)
 }

@@ -17,6 +17,7 @@ type Function struct {
 	IsMutating bool
 
 	CallGraph map[Type]struct{}
+	specs     map[string]*SpecializedFunctionSignature
 }
 
 func (t *Function) String() string {
@@ -168,4 +169,32 @@ func (fn *Function) AST() *ast.FunctionExpression {
 
 	y := x.(*ast.FunctionExpression)
 	return y
+}
+
+func (d *Function) AddSpec(n string, sp *SpecializedFunctionSignature) {
+
+	if d.specs == nil {
+		d.specs = make(map[string]*SpecializedFunctionSignature)
+	}
+
+	d.specs[n] = sp
+}
+
+func (d *Function) FindSpec(n string) *SpecializedFunctionSignature {
+
+	if d.specs == nil {
+		return nil
+	}
+
+	return d.specs[n]
+}
+
+func (d *Function) AllSpecs() []*SpecializedFunctionSignature {
+	x := []*SpecializedFunctionSignature{}
+
+	for _, v := range d.specs {
+		x = append(x, v)
+	}
+
+	return x
 }
