@@ -667,16 +667,10 @@ func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpressi
 
 func (c *Checker) evaluateFunctionExpression(e *ast.FunctionExpression) types.Type {
 
-	typ := c.table.GetNodeType(e)
+	sg := c.module.Table.GetNodeType(e).(*types.FunctionSignature)
 
-	if typ == nil {
+	if sg == nil {
 		panic("unregistered node")
-	}
-
-	sg, ok := typ.(*types.FunctionSignature)
-
-	if !ok {
-		panic("passes missed function")
 	}
 
 	fn := sg.Function

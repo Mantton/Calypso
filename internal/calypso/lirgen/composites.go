@@ -20,7 +20,7 @@ func (b *builder) pass1(f *ast.File) {
 }
 
 func (b *builder) genEnum(n *ast.EnumStatement) {
-	symbol := b.Mod.TypeTable().GetNodeType(n)
+	symbol := b.Mod.TModule.Table.GetNodeType(n)
 
 	if types.IsGeneric(symbol) {
 		return
@@ -45,7 +45,8 @@ func (b *builder) genEnum(n *ast.EnumStatement) {
 
 }
 func (b *builder) genStruct(n *ast.StructStatement) {
-	symbol := types.AsDefined(b.Mod.TypeTable().GetNodeType(n)) // Get Symbol Definition
+
+	symbol := b.Mod.TModule.Table.GetNodeType(n)
 
 	if types.IsGeneric(symbol) {
 		return

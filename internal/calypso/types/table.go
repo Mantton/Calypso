@@ -1,30 +1,31 @@
 package types
 
-// type SymbolTable struct {
-// 	Main    *Scope              // This is the main scope of the module
-// 	Symbols map[Symbol]ast.Node // This links symbols to their corresponding nodes
-// 	Nodes   map[ast.Node]Type   // this links nodes to their corresponding types
-// }
+import "github.com/mantton/calypso/internal/calypso/ast"
 
-// func NewSymbolTable() *SymbolTable {
-// 	return &SymbolTable{
-// 		Symbols: make(map[Symbol]ast.Node),
-// 		Nodes:   make(map[ast.Node]Type),
-// 	}
-// }
+type SymbolTable struct {
+	Symbols map[Symbol]ast.Node // This links symbols to their corresponding nodes
+	Nodes   map[ast.Node]Type   // this links nodes to their corresponding types
+}
 
-// func (t *SymbolTable) SetSymbol(s Symbol, n ast.Node) {
-// 	t.Symbols[s] = n
-// }
+func NewSymbolTable() *SymbolTable {
+	return &SymbolTable{
+		Symbols: make(map[Symbol]ast.Node),
+		Nodes:   make(map[ast.Node]Type),
+	}
+}
 
-// func (t *SymbolTable) GetSymbol(s Symbol) ast.Node {
-// 	return t.Symbols[s]
-// }
+func (t *SymbolTable) SetSymbol(s Symbol, n ast.Node) {
+	t.Symbols[s] = n
+}
 
-// func (t *SymbolTable) SetNodeType(n ast.Node, typ Type) {
-// 	t.Nodes[n] = typ
-// }
+func (t *SymbolTable) GetSymbol(s Symbol) ast.Node {
+	return t.Symbols[s]
+}
 
-// func (t *SymbolTable) GetNodeType(n ast.Node) Type {
-// 	return t.Nodes[n]
-// }
+func (t *SymbolTable) SetNodeType(n ast.Node, typ Type) {
+	t.Nodes[n] = typ
+}
+
+func (t *SymbolTable) GetNodeType(n ast.Node) Type {
+	return t.Nodes[n]
+}

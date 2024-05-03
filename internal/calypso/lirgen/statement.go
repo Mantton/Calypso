@@ -61,14 +61,14 @@ func (b *builder) visitVariableStatement(n *ast.VariableStatement, fn *lir.Funct
 		}
 	}
 
-	symbol := b.Mod.TModule.Table.GetNodeType(n.Value)
+	symbol := fn.TFunction.Scope.MustResolve(n.Identifier.Value)
 
 	if symbol == nil {
 		panic("unable to resolve node type")
 	}
 
 	vAddr, _ := val.(*lir.Allocate)
-	addr := b.emitLocalVar(fn, n.Identifier.Value, symbol, vAddr)
+	addr := b.emitLocalVar(fn, n.Identifier.Value, symbol.Type(), vAddr)
 
 	if vAddr == nil {
 		b.emitStore(fn, addr, val)

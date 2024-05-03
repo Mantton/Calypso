@@ -13,7 +13,6 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg, c.module)
 	def.IsPublic = e.Visibility == ast.PUBLIC
-
 	// Enter Function Scope
 	def.Scope = types.NewScope(scope, e.Identifier.Value)
 
@@ -66,6 +65,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 	if err != nil {
 		c.addError(err.Error(), e.Identifier.Range())
 	}
+	c.module.Table.SetNodeType(e, def.Sg())
 
 	return def
 }
@@ -123,6 +123,8 @@ func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *typ
 		)
 		return nil
 	}
+
+	c.module.Table.SetNodeType(core, def)
 	return def
 }
 

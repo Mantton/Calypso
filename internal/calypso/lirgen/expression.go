@@ -25,13 +25,13 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 	case *ast.CharLiteral:
 		return lir.NewConst(e.Value, types.LookUp(types.Char))
 	case *ast.IntegerLiteral:
-		typ := b.Mod.TypeTable().GetNodeType(n)
+		typ := b.Mod.TModule.Table.GetNodeType(n)
 		if typ == nil {
 			typ = types.LookUp(types.Int)
 		}
 		return lir.NewConst(e.Value, typ)
 	case *ast.FloatLiteral:
-		typ := b.Mod.TypeTable().GetNodeType(n)
+		typ := b.Mod.TModule.Table.GetNodeType(n)
 
 		if typ == nil {
 			typ = types.LookUp(types.Float)
@@ -39,11 +39,10 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 
 		return lir.NewConst(e.Value, typ)
 	case *ast.NilLiteral:
-		typ := b.Mod.TypeTable().GetNodeType(n)
+		typ := b.Mod.TModule.Table.GetNodeType(n)
 		if typ == nil {
 			panic("unknown nullptr type")
 		}
-
 		return lir.NewConst(0, typ)
 	case *ast.VoidLiteral:
 		return lir.NewConst(0, types.LookUp(types.Void))
@@ -76,7 +75,7 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
 
 	var tFn *types.FunctionSignature
-
+	panic("UNIMPLEMENTED")
 	val := b.TFunctions[tFn]
 
 	var f *lir.Function
@@ -644,8 +643,7 @@ func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpressi
 func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Function) lir.Value {
 
 	// 1 - Allocate
-
-	typ := b.Mod.TypeTable().GetNodeType(n)
+	typ := b.Mod.TModule.Table.GetNodeType(n)
 
 	if typ == nil {
 		panic("nil type")
@@ -716,8 +714,8 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 		isTypeAccess = true
 	default:
 		// Accessing Property of an Address
-		targetTyp := b.Mod.TypeTable().GetNodeType(n.Target)
-		definition = types.AsDefined(targetTyp)
+		symbol := b.Mod.TModule.Table.GetNodeType(n.Target)
+		definition = types.AsDefined(symbol)
 	}
 
 	if definition == nil {
@@ -729,7 +727,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 	// Is Function Call
 	if function != nil {
-		astTarget := b.Mod.TypeTable().GetSymbol(function).(*ast.FunctionExpression)
+		astTarget := b.Mod.TModule.Table.GetSymbol(function).(*ast.FunctionExpression)
 		lirTarget := b.Functions[astTarget]
 		if lirTarget.TFunction.IsStatic {
 			return lirTarget

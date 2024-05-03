@@ -9,6 +9,8 @@ import (
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
+const DEBUG = false
+
 func CompilePackage(pkg *fs.LitePackage) error {
 	// Resolve AST & Imports
 	data, err := resolver.ParseAndResolve(pkg)
@@ -21,12 +23,12 @@ func CompilePackage(pkg *fs.LitePackage) error {
 		return err
 	}
 
-	lir, err := lirgen.Generate(data, pkgMap)
+	err = lirgen.Generate(data, pkgMap)
 
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(lir, "ig")
+	fmt.Println(pkgMap)
 	return nil
 }

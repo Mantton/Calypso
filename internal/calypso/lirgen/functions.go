@@ -44,6 +44,7 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	if tFn == nil {
 		panic("function node not type checked")
 	}
+
 	if types.IsGeneric(sg) {
 		panic("not implemented")
 	}

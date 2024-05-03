@@ -15,7 +15,8 @@ type Package struct {
 }
 
 type Module struct {
-	Scope        *Scope      // the top level scope of the module
+	Scope        *Scope // the top level scope of the module
+	Table        *SymbolTable
 	pkg          *Package    // the package in which this module belongs to
 	AST          *ast.Module // the ast module this module typed
 	ParentModule *Module     // the parent mod
@@ -39,8 +40,9 @@ func (p *Package) AddModule(m *Module) {
 
 func NewModule(m *ast.Module, p *Package) *Module {
 	return &Module{
-		AST: m,
-		pkg: p,
+		AST:   m,
+		pkg:   p,
+		Table: NewSymbolTable(),
 	}
 }
 

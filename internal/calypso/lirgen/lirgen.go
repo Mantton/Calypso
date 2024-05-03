@@ -6,16 +6,16 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) (any, error) {
+func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) error {
 
 	for _, mod := range data.OrderedModules {
 		tMod := tmap.Modules[mod.FSMod.Path]
 		mod := lir.NewModule(tMod)
 		err := build(mod)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return nil, nil
+	return nil
 }

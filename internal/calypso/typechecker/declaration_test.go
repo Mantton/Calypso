@@ -6,24 +6,6 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func MustCompile(input string, t *testing.T) *types.SymbolTable {
-	return nil
-	// file, errs := parser.ParseString(input)
-
-	// if len(errs) != 0 {
-	// 	t.Fatal(errs)
-	// }
-
-	// c := New(USER, &ast.FileSet{Files: []*ast.File{file}})
-	// res, err := c.Check()
-
-	// if err != nil {
-	// 	t.Fatalf("expected no errors, got \n\t%s", c.Errors)
-	// }
-
-	// return res.Table
-}
-
 func TestConstantDeclaration(t *testing.T) {
 	input := `
 		module main;
@@ -32,9 +14,13 @@ func TestConstantDeclaration(t *testing.T) {
 		const Baz = true;
 	`
 
-	res := MustCompile(input, t)
+	res, err := CheckString(input)
 
-	fooSym := res.Main.MustResolve("Foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fooSym := res.Scope.MustResolve("Foo")
 
 	if fooSym == nil {
 		t.Error("Expected Foo Symbol")
@@ -52,7 +38,11 @@ func TestInvalidConstantDeclaration(t *testing.T) {
 		const Foo = call();
 	`
 
-	MustCompile(input, t)
+	_, err := CheckString(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestFunctionDeclaration(t *testing.T) {
@@ -89,9 +79,13 @@ func TestFunctionDeclaration(t *testing.T) {
 		}
 	`
 
-	table := MustCompile(input, t)
+	res, err := CheckString(input)
 
-	foo := table.Main.MustResolve("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	foo := res.Scope.MustResolve("foo")
 
 	if foo == nil {
 		t.Error("function \"foo\" is not in scope")
@@ -100,13 +94,13 @@ func TestFunctionDeclaration(t *testing.T) {
 	intT := types.LookUp(types.Int)
 	sg := types.NewFunctionSignature()
 	sg.Result.SetType(intT)
-	_, err := types.Validate(foo.Type(), sg)
+	_, err = types.Validate(foo.Type(), sg)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	main := table.Main.MustResolve("main")
+	main := res.Scope.MustResolve("main")
 	if main == nil {
 		t.Error("function \"main\" not in scope")
 	}
@@ -170,7 +164,11 @@ func TestFunctionOverloading(t *testing.T) {
 	}
 `
 
-	MustCompile(input, t)
+	_, err := CheckString(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMethodOverloading(t *testing.T) {
@@ -206,7 +204,11 @@ func TestMethodOverloading(t *testing.T) {
 		}
 	`
 
-	MustCompile(input, t)
+	_, err := CheckString(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 func TestStandardAndConformanceDeclaration(t *testing.T) {
 	input := `
@@ -234,8 +236,11 @@ func TestStandardAndConformanceDeclaration(t *testing.T) {
 		}
 	`
 
-	MustCompile(input, t)
+	_, err := CheckString(input)
 
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestExtensionDeclaration(t *testing.T) {
@@ -259,7 +264,11 @@ func TestExtensionDeclaration(t *testing.T) {
 		}
 	`
 
-	MustCompile(input, t)
+	_, err := CheckString(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestExternDeclaration(t *testing.T) {
@@ -275,5 +284,9 @@ func TestExternDeclaration(t *testing.T) {
 		}
 	`
 
-	MustCompile(input, t)
+	_, err := CheckString(input)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }

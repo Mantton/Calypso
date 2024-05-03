@@ -40,11 +40,7 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 	if !types.IsAssignable(expected) {
 		return fmt.Errorf("%s, cannot assign", expected)
 	}
+
 	variable.SetType(expected)
-
-	if expected != unresolved {
-		fmt.Printf("\t[NODE ASSIGNMENT] %p -> %s\n", node, expected)
-	}
-
 	return nil
 }

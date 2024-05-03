@@ -1,15 +1,16 @@
 package typechecker
 
 import (
+	"errors"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
+	"github.com/mantton/calypso/internal/calypso/parser"
 	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
 type CheckerMode byte
-
-const DEBUG = false
 
 const (
 	//  Standard Library, Certain Restrictions are lifted
@@ -20,12 +21,11 @@ const (
 )
 
 type Checker struct {
-	Errors    lexer.ErrorList
-	depth     int
-	mode      CheckerMode
-	ctx       *NodeContext
-	file      *ast.File
-	astModule *ast.Module
+	Errors lexer.ErrorList
+	depth  int
+	mode   CheckerMode
+	ctx    *NodeContext
+	file   *ast.File
 
 	module *types.Module
 	mp     *types.PackageMap
@@ -33,10 +33,9 @@ type Checker struct {
 
 func New(mod *ast.Module, mp *types.PackageMap) *Checker {
 	c := &Checker{
-		depth:     0,
-		mode:      USER,
-		astModule: mod,
-		mp:        mp,
+		depth: 0,
+		mode:  USER,
+		mp:    mp,
 	}
 
 	m := types.NewModule(mod, mp.Packages[mod.Package.FSPackage.Path])
@@ -83,6 +82,23 @@ func CheckParsedData(p *resolver.ResolvedData) (*types.PackageMap, error) {
 	}
 
 	return mp, nil
+}
+
+func CheckString(str string) (*types.Module, error) {
+
+	file, errs := parser.ParseString(str)
+
+	if len(errs) != 0 {
+		return nil, errors.New(errs.String())
+	}
+
+	m := &ast.Module{
+		Set: &ast.FileSet{Files: []*ast.File{file}},
+	}
+	mp := types.NewPackageMap()
+	c := New(m, mp)
+
+	return c.Check()
 }
 
 // TODO: Check cyclic function usage
