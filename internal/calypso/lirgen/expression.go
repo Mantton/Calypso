@@ -154,6 +154,20 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 		return cons
 	}
 
+	val = b.Mod.Find(n.Value)
+
+	if val != nil {
+
+		// Inject if not defined in package
+		switch val := val.(type) {
+		case *lir.Composite:
+			if b.Mod.TModule.Package() != val.UnderlyingSymbol.Module().Package() {
+				b.Mod.SComposites[val.Name] = val
+			}
+		}
+		return val
+	}
+
 	panic(fmt.Sprintf("unable to locate identifier, %s", n.Value))
 
 }
@@ -649,13 +663,8 @@ func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpressi
 
 func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Function) lir.Value {
 
-	// 1 - Allocate
-	typ := b.Mod.TModule.Table.GetNodeType(n)
-
-	if typ == nil {
-		panic("nil type")
-	}
-
+	val := b.evaluateExpression(n.Target, fn)
+	typ := val.Yields()
 	def := types.AsDefined(typ)
 
 	addr := b.emitHeapAlloc(fn, def)

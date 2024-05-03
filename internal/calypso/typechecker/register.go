@@ -12,7 +12,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 
 	sg := types.NewFunctionSignature()
 	def := types.NewFunction(e.Identifier.Value, sg, c.module)
-	def.IsPublic = e.Visibility == ast.PUBLIC
+	def.SetVisibility(e.Visibility == ast.PUBLIC)
 	// Enter Function Scope
 	def.Scope = types.NewScope(scope, e.Identifier.Value)
 
@@ -114,7 +114,7 @@ func (c *Checker) registerConformance(d *ast.ConformanceDeclaration) {
 
 func (c *Checker) define(n *ast.IdentifierExpression, core ast.Node, parent *types.Scope) *types.DefinedType {
 	scope := types.NewScope(parent, n.Value)
-	def := types.NewBaseDefinedType(n.Value, unresolved, nil, scope)
+	def := types.NewBaseDefinedType(n.Value, unresolved, nil, scope, c.module)
 	err := parent.Define(def)
 
 	if err != nil {
@@ -141,6 +141,7 @@ func (c *Checker) defineAlias(n *ast.TypeStatement, ctx *NodeContext) *types.Ali
 		)
 		return nil
 	}
+
 	return alias
 }
 

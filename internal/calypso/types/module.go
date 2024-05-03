@@ -95,3 +95,7 @@ func (m *Module) FindSpecializedFn(name string) *SpecializedFunctionSignature {
 func (m *Module) FindSpecializedType(name string) *SpecializedType {
 	return m.Table.SpecializedTypes[name]
 }
+
+func (e *Module) IsPublic() bool {
+	return false
+}

@@ -46,22 +46,29 @@ func (b *builder) genEnum(n *ast.EnumStatement) {
 }
 func (b *builder) genStruct(n *ast.StructStatement) {
 
-	symbol := b.Mod.TModule.Table.GetNodeType(n)
+	typ := b.Mod.TModule.Table.GetNodeType(n)
 
-	if types.IsGeneric(symbol) {
+	if types.IsGeneric(typ) {
 		return
 	}
 
-	underlying := symbol.Parent().(*types.Struct)
+	underlying := typ.Parent().(*types.Struct)
 	c := &lir.Composite{
-		Actual: underlying,
-		Name:   n.Identifier.Value,
+		UnderlyingType: underlying,
+		Name:           n.Identifier.Value,
 	}
 	for _, f := range underlying.Fields {
 		c.Members = append(c.Members, f.Type())
 	}
 
-	b.Mod.Composites[underlying] = c
+	symbol := typ.(types.Symbol)
+
+	if symbol == nil {
+		panic("nil symbol")
+	}
+
+	c.UnderlyingSymbol = symbol
+	b.Mod.SComposites[symbol.SymbolName()] = c
 }
 
 func (b *builder) genTaggedUnion(n *types.Enum, name string) {
@@ -87,8 +94,8 @@ func (b *builder) genTaggedUnion(n *types.Enum, name string) {
 
 	// 2 - Base Composite can simply be 1X i8 (Discriminant) + nX i8 (Max Union)
 	baseComposite := &lir.Composite{
-		Actual: n,
-		Name:   name,
+		UnderlyingType: n,
+		Name:           name,
 		Members: []types.Type{
 			byt,
 			&lir.StaticArray{
@@ -122,10 +129,10 @@ func (b *builder) genTaggedUnion(n *types.Enum, name string) {
 
 		members = append(members, ts...)
 		composite := &lir.Composite{
-			Actual:    variant,
-			Name:      name + "." + variant.Name,
-			Members:   members,
-			IsAligned: paddingSize != 0,
+			UnderlyingType: variant,
+			Name:           name + "." + variant.Name,
+			Members:        members,
+			IsAligned:      paddingSize != 0,
 		}
 
 		b.Mod.Composites[variant] = composite

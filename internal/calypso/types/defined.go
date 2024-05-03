@@ -7,10 +7,11 @@ type DefinedType struct {
 	scope          *Scope
 }
 
-func NewBaseDefinedType(name string, wrapped Type, params TypeParams, scope *Scope) *DefinedType {
+func NewBaseDefinedType(name string, wrapped Type, params TypeParams, scope *Scope, mod *Module) *DefinedType {
 	return &DefinedType{
 		symbol: symbol{
 			name: name,
+			mod:  mod,
 		},
 		TypeParameters: params,
 		wrapped:        wrapped,

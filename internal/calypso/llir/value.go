@@ -172,7 +172,7 @@ func (b *builder) createGEP(v *lir.GEP) llvm.Value {
 		llvm.ConstInt(b.context.Int32Type(), uint64(v.Index), false),
 	}
 
-	elemT := b.getType(v.Composite.Actual.Parent())
+	elemT := b.getType(v.Composite.UnderlyingType.Parent())
 	// b.module.Dump()
 	return b.CreateInBoundsGEP(elemT, addr, indices, "")
 }

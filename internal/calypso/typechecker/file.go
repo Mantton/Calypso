@@ -134,6 +134,7 @@ func (c *Checker) pass1(f *ast.File) {
 	for _, d := range f.Nodes.Enums {
 		def := c.define(d.Identifier, d, c.ParentScope())
 		c.registerTypeParameters(d.GenericParams, def)
+		def.SetVisibility(d.Visibility == ast.PUBLIC)
 
 	}
 
@@ -141,6 +142,7 @@ func (c *Checker) pass1(f *ast.File) {
 	for _, d := range f.Nodes.Structs {
 		def := c.define(d.Identifier, d, c.ParentScope())
 		c.registerTypeParameters(d.GenericParams, def)
+		def.SetVisibility(d.Visibility == ast.PUBLIC)
 	}
 }
 

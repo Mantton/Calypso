@@ -15,11 +15,12 @@ type Package struct {
 }
 
 type Composite struct {
-	Members    []types.Type
-	Actual     types.Type
-	Name       string
-	EnumParent *Composite
-	IsAligned  bool
+	Members          []types.Type
+	UnderlyingType   types.Type
+	UnderlyingSymbol types.Symbol
+	Name             string
+	EnumParent       *Composite
+	IsAligned        bool
 }
 
 func (c *Composite) String() string {
@@ -36,6 +37,10 @@ func (c *Composite) String() string {
 	base := fmt.Sprintf("%s = { %s }", c.Name, members)
 	return base
 
+}
+
+func (c *Composite) Yields() types.Type {
+	return c.UnderlyingSymbol.Type()
 }
 
 // New Type For Array Type in LLVM

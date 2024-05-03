@@ -10,6 +10,7 @@ type Symbol interface {
 	Type() Type // object type
 	Module() *Module
 	SymbolName() string
+	IsPublic() bool
 	IsVisible(from *Module) bool
 }
 
@@ -17,6 +18,7 @@ type symbol struct {
 	name string
 	typ  Type
 	mod  *Module
+	pub  bool
 }
 
 func (e *symbol) Name() string { return e.name }
@@ -34,5 +36,17 @@ func (e *symbol) IsVisible(from *Module) bool {
 	if e.mod == nil {
 		return true
 	}
-	return from == e.mod
+	if from == e.mod {
+		return true
+	}
+
+	return e.IsPublic()
+}
+
+func (e *symbol) IsPublic() bool {
+	return e.pub
+}
+
+func (e *symbol) SetVisibility(b bool) {
+	e.pub = b
 }

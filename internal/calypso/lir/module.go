@@ -8,6 +8,7 @@ import (
 type Module struct {
 	Functions       map[string]*Function
 	GlobalConstants map[string]*Global
+	SComposites     map[string]*Composite
 	Composites      map[types.Type]*Composite
 	TModule         *types.Module
 	Imports         map[string]*Module
@@ -18,6 +19,7 @@ func NewModule(mod *types.Module) *Module {
 		Functions:       make(map[string]*Function),
 		GlobalConstants: make(map[string]*Global),
 		Composites:      make(map[types.Type]*Composite),
+		SComposites:     make(map[string]*Composite),
 		Imports:         make(map[string]*Module),
 		TModule:         mod,
 	}
@@ -48,5 +50,8 @@ func (m *Module) Find(s string) Value {
 		return v
 	}
 
+	if v, ok := m.SComposites[s]; ok {
+		return v
+	}
 	return nil
 }

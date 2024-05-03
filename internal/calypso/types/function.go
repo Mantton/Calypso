@@ -12,8 +12,6 @@ type Function struct {
 	Self   *Var
 	Scope  *Scope
 
-	IsPublic bool
-
 	IsAsync    bool
 	IsStatic   bool
 	IsMutating bool
@@ -145,7 +143,7 @@ func IsFunctionSignature(t Type) bool {
 
 func (fn *Function) IsVisible(from *Module) bool {
 	// Is Public or being accessed from current module
-	if fn.IsPublic || from == fn.mod {
+	if fn.IsPublic() || from == fn.mod {
 		return true
 	}
 
