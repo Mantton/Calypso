@@ -102,3 +102,8 @@ func makeBounds(params TypeParams, ctx Specialization) TypeList {
 
 	return bounds
 }
+
+func (n *SpecializedType) ResolveSymbol(s string) (Symbol, Type) {
+	symbol, typ := n.InstanceOf.ResolveSymbol(s)
+	return symbol, Instantiate(typ, n.Spec)
+}

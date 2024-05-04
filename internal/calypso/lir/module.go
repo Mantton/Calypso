@@ -6,12 +6,17 @@ import (
 )
 
 type Module struct {
-	Functions       map[string]*Function
-	GlobalConstants map[string]*Global
-	Composites      map[string]*Composite
-	TModule         *types.Module
-	Imports         map[string]*Module
-	GFunctions      map[string]*GenericFunction // Maps symbols to their generic functions
+
+	// core
+	Functions       map[string]*Function  // functions to be built in this module
+	GlobalConstants map[string]*Global    // global constants in this module
+	Composites      map[string]*Composite // composites defined in this module
+	TModule         *types.Module         // the typechecked module
+	Imports         map[string]*Module    // imports in this module
+
+	// Generics
+	GFunctions map[string]*GenericFunction // Maps symbols to their generic functions
+	GTypes     map[string]*GenericType     // maps symbols to their generic type
 }
 
 func NewModule(mod *types.Module) *Module {
@@ -20,6 +25,7 @@ func NewModule(mod *types.Module) *Module {
 		GFunctions:      make(map[string]*GenericFunction),
 		GlobalConstants: make(map[string]*Global),
 		Composites:      make(map[string]*Composite),
+		GTypes:          make(map[string]*GenericType),
 		Imports:         make(map[string]*Module),
 		TModule:         mod,
 	}
@@ -38,11 +44,12 @@ func (m *Module) Yields() types.Type {
 }
 
 func (m *Module) Find(s string) Value {
-
 	symbol := m.TModule.Scope.MustResolve(s)
-
 	s = symbol.SymbolName()
+	return m.FindSymbol(s)
+}
 
+func (m *Module) FindSymbol(s string) Value {
 	if v, ok := m.Functions[s]; ok {
 		return v
 	}
@@ -56,6 +63,10 @@ func (m *Module) Find(s string) Value {
 	}
 
 	if v, ok := m.GFunctions[s]; ok {
+		return v
+	}
+
+	if v, ok := m.GTypes[s]; ok {
 		return v
 	}
 

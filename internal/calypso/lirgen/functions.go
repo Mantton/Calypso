@@ -121,7 +121,7 @@ func (b *builder) visitFunction(n *ast.FunctionExpression) {
 }
 
 func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
-	fmt.Println("Walking", fn.Name)
+	fmt.Println("\nWalking", fn.Name)
 	fn.AddSelf()
 
 	// Parameters

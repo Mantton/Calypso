@@ -49,7 +49,7 @@ func (b *builder) visitStatement(node ast.Statement, fn *lir.Function) {
 }
 
 func (b *builder) visitVariableStatement(n *ast.VariableStatement, fn *lir.Function) {
-	val := b.evaluateExpression(n.Value, fn)
+	val := b.evaluateExpression(n.Value, fn, b.Mod)
 
 	if n.IsConstant {
 		v, ok := val.(*lir.Constant)
@@ -76,7 +76,7 @@ func (b *builder) visitVariableStatement(n *ast.VariableStatement, fn *lir.Funct
 }
 
 func (b *builder) visitReturnStatement(n *ast.ReturnStatement, fn *lir.Function) {
-	val := b.evaluateExpression(n.Value, fn)
+	val := b.evaluateExpression(n.Value, fn, b.Mod)
 
 	if val.Yields() == types.LookUp(types.Void) {
 		fn.Emit(&lir.ReturnVoid{})
@@ -90,7 +90,7 @@ func (b *builder) visitReturnStatement(n *ast.ReturnStatement, fn *lir.Function)
 }
 
 func (b *builder) visitExpressionStatement(n *ast.ExpressionStatement, fn *lir.Function) {
-	i, ok := b.evaluateExpression(n.Expr, fn).(lir.Instruction)
+	i, ok := b.evaluateExpression(n.Expr, fn, b.Mod).(lir.Instruction)
 
 	if !ok {
 		return
@@ -107,7 +107,7 @@ func (b *builder) visitBlockStatement(n *ast.BlockStatement, fn *lir.Function) {
 
 func (b *builder) visitIfStatement(n *ast.IfStatement, fn *lir.Function) {
 
-	cond := b.evaluateExpression(n.Condition, fn)
+	cond := b.evaluateExpression(n.Condition, fn, b.Mod)
 
 	br := &lir.ConditionalBranch{
 		Condition: cond,
@@ -157,7 +157,7 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 
 	// Emit Condition
 	fn.CurrentBlock = loop
-	cond := b.evaluateExpression(n.Condition, fn)
+	cond := b.evaluateExpression(n.Condition, fn, b.Mod)
 	fn.Emit(&lir.ConditionalBranch{
 		Condition:   cond,
 		Action:      body,
@@ -175,7 +175,7 @@ func (b *builder) visitWhileStatement(n *ast.WhileStatement, fn *lir.Function) {
 }
 
 func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function) {
-	cond := b.evaluateExpression(n.Condition, fn)
+	cond := b.evaluateExpression(n.Condition, fn, b.Mod)
 
 	var T lir.Value
 
@@ -215,12 +215,12 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 			defaultCase = cs
 			continue
 		}
-		value, expr, typ := b.evaluateSwitchConditionExpression(cs.Condition, fn)
+		value, expr, typ := b.evaluateSwitchConditionExpression(cs.Condition, fn, b.Mod)
 
 		block := fn.NewBlock()
 
 		if expr != nil {
-			b.evaluateEnumVariantTuple(fn, expr, typ, symbol, cond)
+			b.evaluateEnumVariantTuple(fn, expr, typ, symbol, cond, b.Mod)
 		}
 
 		b.visitBlockStatement(cs.Action, fn)

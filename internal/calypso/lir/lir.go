@@ -26,14 +26,16 @@ type Instruction interface {
 }
 
 type PackageMap struct {
-	Modules   map[string]*Module
-	CallGraph *simple.DirectedGraph
+	Modules    map[string]*Module
+	CallGraph  *simple.DirectedGraph
+	Composites map[types.Type]*Composite
 }
 
 func NewPackageMap() *PackageMap {
 	return &PackageMap{
-		Modules:   make(map[string]*Module),
-		CallGraph: simple.NewDirectedGraph(),
+		Modules:    make(map[string]*Module),
+		CallGraph:  simple.NewDirectedGraph(),
+		Composites: make(map[types.Type]*Composite),
 	}
 }
 

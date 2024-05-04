@@ -204,3 +204,12 @@ func (d *DefinedType) AllSpecs() []*SpecializedType {
 
 	return x
 }
+
+func (n *DefinedType) ResolveSymbol(s string) (Symbol, Type) {
+	symbol := n.scope.ResolveInCurrent(s)
+
+	if symbol == nil {
+		return nil, nil
+	}
+	return symbol, symbol.Type()
+}

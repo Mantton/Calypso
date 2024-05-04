@@ -9,7 +9,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function, mod *lir.Module) lir.Value {
 	fmt.Printf(
 		"\tVisiting Expression: %T @ Line %d\n",
 		n,
@@ -47,34 +47,36 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function) lir.Val
 	case *ast.VoidLiteral:
 		return lir.NewConst(0, types.LookUp(types.Void))
 	case *ast.IdentifierExpression:
-		return b.evaluateIdentifierExpression(e, fn)
+		return b.evaluateIdentifierExpression(e, fn, mod)
 	case *ast.CallExpression:
-		return b.evaluateCallExpression(e, fn)
+		return b.evaluateCallExpression(e, fn, mod)
 	case *ast.CallArgument:
-		return b.evaluateExpression(e.Value, fn)
+		return b.evaluateExpression(e.Value, fn, mod)
 	case *ast.AssignmentExpression:
-		return b.evaluateAssignmentExpression(e, fn)
+		return b.evaluateAssignmentExpression(e, fn, mod)
 	case *ast.BinaryExpression:
-		return b.evaluateBinaryExpression(e, fn)
+		return b.evaluateBinaryExpression(e, fn, mod)
 	case *ast.GroupedExpression:
-		return b.evaluateExpression(e.Expr, fn)
+		return b.evaluateExpression(e.Expr, fn, mod)
 	case *ast.UnaryExpression:
-		return b.evaluateUnaryExpression(e, fn)
+		return b.evaluateUnaryExpression(e, fn, mod)
 	case *ast.ShorthandAssignmentExpression:
-		return b.evaluateShortHandExpression(e, fn)
+		return b.evaluateShortHandExpression(e, fn, mod)
 	case *ast.CompositeLiteral:
-		return b.evaluateCompositeLiteral(e, fn)
+		return b.evaluateCompositeLiteral(e, fn, mod)
 	case *ast.FieldAccessExpression:
-		return b.evaluateFieldAccessExpression(e, fn, true)
+		return b.evaluateFieldAccessExpression(e, fn, mod, true)
+	case *ast.SpecializationExpression:
+		return b.evaluateSpecializationExpression(e, fn, mod)
 	default:
 		msg := fmt.Sprintf("unknown expr %T\n", e)
 		panic(msg)
 	}
 }
 
-func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function, mod *lir.Module) lir.Value {
 
-	val := b.evaluateExpression(n.Target, fn)
+	val := b.evaluateExpression(n.Target, fn, mod)
 
 	if val == nil {
 		panic(fmt.Sprintf("unable to locate target function for: %s", n.Target))
@@ -117,7 +119,7 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	}
 
 	for _, p := range n.Arguments {
-		v := b.evaluateExpression(p, fn)
+		v := b.evaluateExpression(p, fn, mod)
 		args = append(args, v)
 	}
 
@@ -130,7 +132,7 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	return i
 }
 
-func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *lir.Function, mod *lir.Module) lir.Value {
 	// Scoped Variable
 	val, ok := fn.Variables[n.Value]
 
@@ -173,19 +175,19 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 	}
 
 	// Global Constant
-	cons, ok := b.Mod.GlobalConstants[n.Value]
+	cons, ok := mod.GlobalConstants[n.Value]
 	if ok {
 		return cons
 	}
 
-	val = b.Mod.Find(n.Value)
+	val = mod.Find(n.Value)
 
 	if val != nil {
 
 		// Inject if not defined in package
 		switch val := val.(type) {
 		case *lir.Composite:
-			if b.Mod.TModule.Package() != val.UnderlyingSymbol.Module().Package() {
+			if mod.TModule.Package() != val.Type.(types.Symbol).Module().Package() {
 				b.Mod.Composites[val.Name] = val
 			}
 		}
@@ -196,14 +198,14 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 
 }
 
-func (b *builder) evaluateAssignmentExpression(n *ast.AssignmentExpression, fn *lir.Function) lir.Value {
-	a := b.evaluateAddressOfExpression(n.Target, fn)
-	v := b.evaluateExpression(n.Value, fn)
+func (b *builder) evaluateAssignmentExpression(n *ast.AssignmentExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	a := b.evaluateAddressOfExpression(n.Target, fn, mod)
+	v := b.evaluateExpression(n.Value, fn, mod)
 	b.emitStore(fn, a, v)
 	return nil
 }
 
-func (b *builder) evaluateUnaryExpression(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateUnaryExpression(n *ast.UnaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
 
 	switch n.Op {
 	case token.STAR:
@@ -211,33 +213,33 @@ func (b *builder) evaluateUnaryExpression(n *ast.UnaryExpression, fn *lir.Functi
 	case token.AMP:
 		panic("todo: get pointer Reference")
 	case token.NOT:
-		return b.evaluateLogicalNot(n, fn)
+		return b.evaluateLogicalNot(n, fn, mod)
 	case token.MINUS:
-		return b.evaluateArithmeticNegate(n, fn)
+		return b.evaluateArithmeticNegate(n, fn, mod)
 	default:
 		msg := fmt.Sprintf("unimplemented unary operand, %s", token.LookUp(n.Op))
 		panic(msg)
 	}
 }
 
-func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
 	switch n.Op {
 	case token.PLUS:
-		return b.evaluateArithmeticAddExpression(n, fn)
+		return b.evaluateArithmeticAddExpression(n, fn, mod)
 	case token.MINUS:
-		return b.evaluateArithmeticSubExpression(n, fn)
+		return b.evaluateArithmeticSubExpression(n, fn, mod)
 	case token.QUO:
-		return b.evaluateArithmeticDivExpression(n, fn)
+		return b.evaluateArithmeticDivExpression(n, fn, mod)
 	case token.STAR:
-		return b.evaluateArithmeticMulExpression(n, fn)
+		return b.evaluateArithmeticMulExpression(n, fn, mod)
 	case token.PCT:
-		return b.evaluateArithmeticRemExpression(n, fn)
+		return b.evaluateArithmeticRemExpression(n, fn, mod)
 	case token.L_CHEVRON, token.R_CHEVRON, token.EQL, token.LEQ, token.GEQ, token.NEQ:
-		return b.evaluateArithmeticComparison(n.Op, n, fn)
+		return b.evaluateArithmeticComparison(n.Op, n, fn, mod)
 	case token.BIT_SHIFT_LEFT, token.BIT_SHIFT_RIGHT, token.AMP, token.BAR, token.CARET:
-		return b.evaluateBitOperation(n.Op, n, fn)
+		return b.evaluateBitOperation(n.Op, n, fn, mod)
 	case token.DOUBLE_AMP, token.DOUBLE_BAR:
-		return b.evaluateBooleanOp(n.Op, n, fn)
+		return b.evaluateBooleanOp(n.Op, n, fn, mod)
 	default:
 		msg := fmt.Sprintf("unimplemented binary operand, %s", token.LookUp(n.Op))
 		panic(msg)
@@ -245,8 +247,8 @@ func (b *builder) evaluateBinaryExpression(n *ast.BinaryExpression, fn *lir.Func
 
 }
 
-func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 	typ := lhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -267,8 +269,8 @@ func (b *builder) evaluateArithmeticAddExpression(n *ast.BinaryExpression, fn *l
 	panic(msg)
 }
 
-func (b *builder) evaluateArithmeticSubExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateArithmeticSubExpression(n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 
 	typ := lhs.Yields()
 
@@ -290,8 +292,8 @@ func (b *builder) evaluateArithmeticSubExpression(n *ast.BinaryExpression, fn *l
 	panic(msg)
 }
 
-func (b *builder) evaluateArithmeticMulExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateArithmeticMulExpression(n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 
 	typ := lhs.Yields()
 
@@ -313,8 +315,8 @@ func (b *builder) evaluateArithmeticMulExpression(n *ast.BinaryExpression, fn *l
 	panic(msg)
 }
 
-func (b *builder) evaluateArithmeticDivExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateArithmeticDivExpression(n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 
 	typ := lhs.Yields()
 
@@ -341,8 +343,8 @@ func (b *builder) evaluateArithmeticDivExpression(n *ast.BinaryExpression, fn *l
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticRemExpression(n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateArithmeticRemExpression(n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 
 	typ := lhs.Yields()
 
@@ -369,8 +371,8 @@ func (b *builder) evaluateArithmeticRemExpression(n *ast.BinaryExpression, fn *l
 	panic("todo: implement operand calls")
 }
 
-func (b *builder) evaluateArithmeticComparison(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateArithmeticComparison(op token.Token, n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 
 	typ := lhs.Yields()
 
@@ -416,8 +418,8 @@ func (b *builder) evaluateArithmeticComparison(op token.Token, n *ast.BinaryExpr
 
 }
 
-func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
-	rhs := b.evaluateExpression(n.Expr, fn)
+func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	rhs := b.evaluateExpression(n.Expr, fn, mod)
 	typ := rhs.Yields()
 
 	if types.IsInteger(typ) {
@@ -435,8 +437,8 @@ func (b *builder) evaluateArithmeticNegate(n *ast.UnaryExpression, fn *lir.Funct
 	panic(fmt.Sprintf("negate: unsupported type, %s", typ))
 }
 
-func (b *builder) evaluateLogicalNot(n *ast.UnaryExpression, fn *lir.Function) lir.Value {
-	rhs := b.evaluateExpression(n.Expr, fn)
+func (b *builder) evaluateLogicalNot(n *ast.UnaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	rhs := b.evaluateExpression(n.Expr, fn, mod)
 
 	typ := rhs.Yields()
 
@@ -458,8 +460,8 @@ func (b *builder) evaluateLogicalNot(n *ast.UnaryExpression, fn *lir.Function) l
 	panic(fmt.Sprintf("unimplemented logical not %s", typ))
 }
 
-func (b *builder) evaluateBitOperation(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs, rhs := b.evaluateExpression(n.Left, fn), b.evaluateExpression(n.Right, fn)
+func (b *builder) evaluateBitOperation(op token.Token, n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs, rhs := b.evaluateExpression(n.Left, fn, mod), b.evaluateExpression(n.Right, fn, mod)
 
 	typ := lhs.Yields()
 
@@ -504,8 +506,8 @@ func (b *builder) evaluateBitOperation(op token.Token, n *ast.BinaryExpression, 
 }
 
 // Reference: https://en.wikipedia.org/wiki/Short-circuit_evaluation
-func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn *lir.Function) lir.Value {
-	lhs := b.evaluateExpression(n.Left, fn)
+func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	lhs := b.evaluateExpression(n.Left, fn, mod)
 	typ := lhs.Yields()
 
 	if !types.IsBoolean(typ) {
@@ -552,7 +554,7 @@ func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn 
 	// 2 - Populate RHS Resolution Block
 	// Create comparison checking if RHS != false
 	fn.CurrentBlock = next
-	rhs := b.evaluateExpression(n.Right, fn)
+	rhs := b.evaluateExpression(n.Right, fn, mod)
 	cmp2 := &lir.ICmp{
 		Left:       rhs,
 		Right:      lir.NewConst(false, typ),
@@ -585,11 +587,11 @@ func (b *builder) evaluateBooleanOp(op token.Token, n *ast.BinaryExpression, fn 
 	return phi
 }
 
-func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function, mod *lir.Module) lir.Value {
 	switch n := n.(type) {
 	case *ast.IdentifierExpression:
 
-		global, ok := b.Mod.GlobalConstants[n.Value]
+		global, ok := mod.GlobalConstants[n.Value]
 
 		if ok {
 			return global
@@ -607,7 +609,7 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 			return ref
 		}
 
-		mod, ok := b.Mod.Imports[n.Value]
+		mod, ok := mod.Imports[n.Value]
 
 		if ok {
 			return mod
@@ -615,67 +617,67 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 
 		panic(fmt.Sprintf("unknown identifier, %s", n.Value))
 	case *ast.FieldAccessExpression:
-		return b.evaluateFieldAccessExpression(n, fn, false)
+		return b.evaluateFieldAccessExpression(n, fn, mod, false)
 	default:
 		panic("unimplmented address of")
 	}
 }
 
-func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpression, fn *lir.Function) lir.Value {
+func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpression, fn *lir.Function, mod *lir.Module) lir.Value {
 	var rhs lir.Value
-	addr := b.evaluateAddressOfExpression(n.Target, fn)
+	addr := b.evaluateAddressOfExpression(n.Target, fn, mod)
 
 	switch n.Op {
 	case token.PLUS_EQ:
 		rhs = b.evaluateArithmeticAddExpression(&ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.MINUS_EQ:
 		rhs = b.evaluateArithmeticSubExpression(&ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.QUO_EQ:
 		rhs = b.evaluateArithmeticDivExpression(&ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.STAR_EQ:
 		rhs = b.evaluateArithmeticMulExpression(&ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.PCT_EQ:
 		rhs = b.evaluateArithmeticRemExpression(&ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.AMP_EQ:
 		rhs = b.evaluateBitOperation(token.AMP, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.BAR_EQ:
 		rhs = b.evaluateBitOperation(token.BAR, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.CARET_EQ:
 		rhs = b.evaluateBitOperation(token.CARET, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.BIT_SHIFT_LEFT_EQ:
 		rhs = b.evaluateBitOperation(token.BIT_SHIFT_LEFT, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 	case token.BIT_SHIFT_RIGHT_EQ:
 		rhs = b.evaluateBitOperation(token.BIT_SHIFT_RIGHT, &ast.BinaryExpression{
 			Left:  n.Target,
 			Right: n.Right,
-		}, fn)
+		}, fn, mod)
 
 	default:
 		panic("unimplemented shorthand expression")
@@ -685,116 +687,91 @@ func (b *builder) evaluateShortHandExpression(n *ast.ShorthandAssignmentExpressi
 	return lir.NewConst(nil, types.LookUp(types.Void))
 }
 
-func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Function) lir.Value {
+func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Function, mod *lir.Module) lir.Value {
+	val := b.evaluateExpression(n.Target, fn, mod)
 
-	val := b.evaluateExpression(n.Target, fn)
-	typ := val.Yields()
-	def := types.AsDefined(typ)
+	var composite *lir.Composite
 
-	addr := b.emitHeapAlloc(fn, def)
-	composite := b.Mod.Composites[def.SymbolName()]
+	switch val := val.(type) {
+	case *lir.Composite:
+		composite = val
+	case *lir.GenericType:
+		A := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedType)
+		composite = val.Specs[A.SymbolName()]
+	}
+
+	if composite == nil {
+		panic("should be composite")
+	}
+
+	// ! Mandatory
+	b.Mod.Composites[composite.Name] = composite
+	b.MP.Composites[composite.Type] = composite
+
+	addr := b.emitHeapAlloc(fn, composite.Yields())
 
 	for _, field := range n.Body.Fields {
-		sym := def.GetScope().MustResolve(field.Key.Value)
+		index := types.GetFieldIndex(field.Key.Value, composite.Yields())
+		value := b.evaluateExpression(field.Value, fn, mod)
+		// Get Pointer to Property
 
-		value := b.evaluateExpression(field.Value, fn)
-
-		if sym == nil {
-			panic(fmt.Sprintf("unresolved symbol, %s", field.Key.Value))
+		prop_ptr := &lir.GEP{
+			Index:     index,
+			Address:   addr,
+			Composite: composite,
 		}
 
-		switch sym := sym.(type) {
-		case *types.Var:
-			index := sym.StructIndex
+		fn.Emit(prop_ptr)
 
-			// Get Pointer to Property
-
-			prop_ptr := &lir.GEP{
-				Index:     index,
-				Address:   addr,
-				Composite: composite,
-			}
-
-			fn.Emit(prop_ptr)
-
-			// Store
-			store := &lir.Store{
-				Address: prop_ptr,
-				Value:   value,
-			}
-
-			fn.Emit(store)
-		default:
-			panic("cannot set non variable property")
+		// Store
+		store := &lir.Store{
+			Address: prop_ptr,
+			Value:   value,
 		}
+
+		fn.Emit(store)
 	}
 
 	return addr
 }
 
-func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn *lir.Function, load bool) lir.Value {
+func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn *lir.Function, mod *lir.Module, load bool) lir.Value {
 	// 1 - Evaluate Address or Type Reference
-	target := b.evaluateAddressOfExpression(n.Target, fn)
+	target := b.evaluateAddressOfExpression(n.Target, fn, mod)
 
-	// 2 - Cast Field Property to Ident to access string name
-	fExpr, ok := n.Field.(*ast.IdentifierExpression)
-	if !ok {
-		panic("non ident field access")
-	}
-
-	field := fExpr.Value
-	isTypeAccess := false
-
-	// Resolve Type of Target
-	var definition *types.DefinedType
-	switch target := target.(type) {
-	case *lir.TypeRef:
-		// Accessing a type
-		definition = types.AsDefined(target.Type)
-		isTypeAccess = true
-	case *lir.Module:
-		// Accessing Module
-		v := target.Find(field)
-
-		if v != nil {
-			return v
-		}
-
-		msg := fmt.Sprintf("cannot locate symbol '%s' in context '%s'", field, target.TModule.SymbolName())
-		panic(msg)
-
+	var field string
+	switch p := n.Field.(type) {
+	case *ast.IdentifierExpression:
+		field = p.Value
 	default:
-		// Accessing Property of an Address
-		symbol := b.Mod.TModule.Table.GetNodeType(n.Target)
-		definition = types.AsDefined(symbol)
-	}
-
-	if definition == nil {
-		panic("Type is not a defined type")
-	}
-
-	// Check if resolving function on type
-	function := types.AsFunction(definition.GetScope().MustResolve(field))
-
-	// Is Function Call
-	if function != nil {
-		astTarget := b.Mod.TModule.Table.GetSymbol(function).(*ast.FunctionExpression)
-		lirTarget := b.Functions[astTarget]
-		if lirTarget.TFunction.IsStatic {
-			return lirTarget
-		}
-		return &lir.Method{
-			Fn:   lirTarget,
-			Self: target,
+		if target, ok := target.(*lir.Module); ok {
+			return b.evaluateExpression(p, fn, target)
 		}
 	}
 
-	// Is Variable Field
-	symbol, ok := definition.GetScope().MustResolve(field).(*types.Var)
+	// Handle Module
+	switch target := (target).(type) {
+	case *lir.Module:
+		return target.Find(field)
+	}
 
-	if ok {
+	targetType := target.Yields()
+	if fn.Spec != nil {
+		targetType = types.Instantiate(targetType, fn.Spec.Spec)
+	}
+
+	// Composite Type
+	composite := b.resolveCompositeOf(targetType, mod)
+
+	if composite == nil {
+		panic("unknown composite")
+	}
+
+	symbol, symbolType := types.ResolveSymbol(targetType, field)
+
+	switch symbol := symbol.(type) {
+	case *types.Var:
 		index := symbol.StructIndex
-		composite := b.Mod.Composites[definition.SymbolName()]
 
 		// Invalid Field
 		if index == -1 {
@@ -808,7 +785,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			Composite: composite,
 		}
 
-		// If SHould Load, return load instruction
+		// If Should Load, return load instruction
 		if load {
 			return &lir.Load{
 				Address: ptr,
@@ -817,27 +794,32 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 		// return GEP instruction, yeilding ptr to field
 		return ptr
+	case *types.Function:
+		tgt := b.TFunctions[symbolType]
+		return tgt
+	default:
+		panic("unhandled symbol type")
 	}
 
 	// Accessing a type, if accessing static funciton, it would've been resolved earlier, so most likely accessing an enum
-	if en, ok := definition.Parent().(*types.Enum); ok && isTypeAccess {
-		variant := en.FindVariant(field)
+	// if en, ok := definition.Parent().(*types.Enum); ok && isTypeAccess {
+	// 	variant := en.FindVariant(field)
 
-		// Composites are treated like a function call
-		if en.IsUnion() {
-			return b.generateOrReturnFunctionForVariant(variant, en, definition)
-		} else {
-			return lir.NewConst(int64(variant.Discriminant), types.LookUp(types.Int32))
-		}
+	// 	// Composites are treated like a function call
+	// 	if en.IsUnion() {
+	// 		return b.generateOrReturnFunctionForVariant(variant, en, definition)
+	// 	} else {
+	// 		return lir.NewConst(int64(variant.Discriminant), types.LookUp(types.Int32))
+	// 	}
 
-	}
+	// }
 	// Non Function Call
 	panic("unimplemented field access case")
 
 }
 
-func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *types.Enum, s types.Symbol) *lir.Function {
-	composite := b.Mod.Composites[EnumVariantSymbolName(n, s)]
+func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *types.Enum, s types.Symbol, mod *lir.Module) *lir.Function {
+	composite := mod.Composites[EnumVariantSymbolName(n, s)]
 
 	// Already Built, return
 	fn, ok := b.EnumFunctions[n]
@@ -853,7 +835,7 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 	}
 
 	sg.Result.SetType(types.NewPointer(p))
-	tFn := types.NewFunction(composite.Name, sg, b.Mod.TModule)
+	tFn := types.NewFunction(composite.Name, sg, mod.TModule)
 	fn = lir.NewFunction(tFn)
 
 	for _, field := range n.Fields {
@@ -900,32 +882,32 @@ func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *ty
 	return fn
 }
 
-func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Function) (lir.Value, *ast.CallExpression, *types.EnumVariant) {
+func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Function, mod *lir.Module) (lir.Value, *ast.CallExpression, *types.EnumVariant) {
 
 	var target lir.Value
 	var expr *ast.CallExpression
 	switch n := n.(type) {
 	case *ast.CallExpression:
 		expr = n
-		target = b.evaluateExpression(n.Target, fn)
+		target = b.evaluateExpression(n.Target, fn, mod)
 	case *ast.FieldAccessExpression:
-		target = b.evaluateExpression(n, fn)
+		target = b.evaluateExpression(n, fn, mod)
 
 	default:
-		return b.evaluateExpression(n, fn), nil, nil
+		return b.evaluateExpression(n, fn, mod), nil, nil
 	}
 
 	f, ok := target.(*lir.Function)
 
 	if !ok {
-		return b.evaluateExpression(n, fn), nil, nil
+		return b.evaluateExpression(n, fn, mod), nil, nil
 	}
 
 	en := b.RFunctionEnums[f]
 
 	if en == nil {
 
-		return b.evaluateExpression(n, fn), nil, nil
+		return b.evaluateExpression(n, fn, mod), nil, nil
 	}
 
 	// Composite Enum
@@ -935,8 +917,8 @@ func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Fu
 	return dis, expr, en
 }
 
-func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, s types.Symbol, self lir.Value) {
-	composite := b.Mod.Composites[EnumVariantSymbolName(v, s)]
+func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, s types.Symbol, self lir.Value, mod *lir.Module) {
+	composite := mod.Composites[EnumVariantSymbolName(v, s)]
 
 	// 0 Index is Discriminant
 	x := 1
@@ -970,4 +952,45 @@ func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpressi
 		fn.Emit(load)
 		fn.Variables[ident.Value] = load
 	}
+}
+
+func (b *builder) evaluateSpecializationExpression(expr *ast.SpecializationExpression, fn *lir.Function, mod *lir.Module) lir.Value {
+	A := b.evaluateExpression(expr.Expression, fn, mod)
+	B := b.Mod.TModule.Table.GetNodeType(expr)
+	var C lir.Value
+	switch A := A.(type) {
+	case *lir.GenericType:
+		symbol := B.(*types.SpecializedType).SymbolName()
+		C = A.Specs[symbol]
+	case *lir.GenericFunction:
+		// TODO:
+		symbol := B.(*types.SpecializedFunctionSignature).SymbolName()
+		C = A.Specs[symbol]
+	}
+	return C
+}
+
+func (b *builder) resolveCompositeOf(t types.Type, mod *lir.Module) *lir.Composite {
+	switch t := t.(type) {
+	case *types.Pointer:
+		return b.resolveCompositeOf(t.PointerTo, mod)
+	case *types.SpecializedType:
+		c := mod.Composites[t.SymbolName()]
+
+		if c != nil {
+			return c
+		}
+	case *types.DefinedType:
+		c := mod.Composites[t.SymbolName()]
+		if c != nil {
+			return c
+		}
+	}
+
+	if x, ok := b.MP.Composites[t]; ok {
+		mod.Composites[x.Name] = x
+		return x
+	}
+
+	panic("unhandled type")
 }

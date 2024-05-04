@@ -17,7 +17,7 @@ func Instantiate(t Type, ctx Specialization) Type {
 	}
 
 	if ctx == nil {
-		ctx = make(Specialization)
+		panic("unknown")
 	}
 
 	switch t := t.(type) {
@@ -71,6 +71,7 @@ func cloneWithSpecialization(t Type, ctx Specialization) Type {
 		for _, field := range parent.Fields {
 			s := Instantiate(field.Type(), ctx)
 			spec := NewVar(field.Name(), s)
+			spec.StructIndex = field.StructIndex
 			fields = append(fields, spec)
 		}
 		return NewStruct(fields)

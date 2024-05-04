@@ -67,38 +67,6 @@ func IsAssignable(t Type) bool {
 	return true
 }
 
-func ResolveField(t Type, f string, m *Module) (Type, error) {
-
-	switch a := t.(type) {
-	case *DefinedType:
-		field := a.ResolveField(f)
-		if field != nil {
-			return field, nil
-		}
-
-	case *SpecializedType:
-		field := a.ResolveField(f)
-		if field != nil {
-			return field, nil
-		}
-
-	case *Module:
-		field := a.Scope.ResolveInCurrent(f)
-
-		if field == nil {
-			return nil, fmt.Errorf("`%s` cannot be located", f)
-		}
-
-		if !field.IsVisible(m) {
-			return nil, fmt.Errorf("`%s` is not accessible in this context", f)
-		}
-
-		return field.Type(), nil
-	}
-
-	return nil, fmt.Errorf("unknown function, type or field: \"%s\" on type \"%s\"", f, t)
-}
-
 func ResolveMethod(t Type, n string) (Type, error) {
 	switch a := t.(type) {
 	case *DefinedType:
@@ -137,4 +105,38 @@ func ResolveType(t Type, n string) Type {
 
 func IsUnresolved(t Type) bool {
 	return ResolveAliases(t) == LookUp(Unresolved)
+}
+
+func ResolveSymbol(t Type, n string) (Symbol, Type) {
+
+	switch a := t.(type) {
+	case *Pointer:
+		return ResolveSymbol(a.PointerTo, n)
+	case *DefinedType:
+		sym, typ := a.ResolveSymbol(n)
+
+		if sym == nil {
+			return nil, nil
+		}
+		return sym, typ
+
+	case *SpecializedType:
+		sym, typ := a.ResolveSymbol(n)
+
+		if sym == nil {
+			return nil, nil
+		}
+		return sym, typ
+
+	case *Module:
+		field := a.Scope.ResolveInCurrent(n)
+
+		if field == nil {
+			return nil, nil
+		}
+
+		return field, field.Type()
+	}
+
+	panic("cannot access field of type")
 }

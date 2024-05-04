@@ -167,6 +167,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		for i, arg := range expr.Arguments {
 			param := fn.InstanceOf.Parameters[i]
 			expected, err := c.instantiateWithSpecialization(param.Type(), fn.Specialization())
+
 			if err != nil {
 				c.addError(err.Error(), arg.Range())
 				return fn.ReturnType()
@@ -214,6 +215,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		}
 
 		// if not generic, simply check arguments & return correct function type regardless of error
+		hasError := false
 		specializations := make(types.Specialization)
 		for i, arg := range expr.Arguments {
 			expected := fn.Parameters[i]
@@ -226,6 +228,15 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 
 			if err != nil {
 				c.addError(err.Error(), arg.Range())
+				hasError = true
+			}
+		}
+
+		if hasError {
+			if isGeneric {
+				return unresolved
+			} else {
+				return fn.Result.Type()
 			}
 		}
 
@@ -528,6 +539,7 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeCon
 
 	tparams := types.GetTypeParams(target)
 	if len(tparams) == 0 {
+		c.module.Table.SetNodeType(n, base)
 		return base
 	}
 
@@ -545,17 +557,18 @@ func (c *Checker) evaluateCompositeLiteral(n *ast.CompositeLiteral, ctx *NodeCon
 		return unresolved
 	}
 
+	c.module.Table.SetNodeType(n, inst)
 	return inst
 }
 
 func (c *Checker) resolveVar(f *types.Var, v ast.Expression, specializations types.Specialization, ctx *NodeContext) error {
 	vT := c.evaluateExpression(v, ctx)
 
-	fmt.Println("\n", "\t[Resolver] Variable Name", f.Name(), "\n", "\t[Resolver] Variable Type", f.Type(), "\n", "\t[Resolver] Provided Type", vT)
 	if types.IsUnresolved(vT) {
 		return fmt.Errorf("unresolved type assigned for `%s`", f.Name())
 	}
 
+	fmt.Println("\n", "\t[Resolver] Variable Name", f.Name(), "\n", "\t[Resolver] Variable Type", f.Type(), "\n", "\t[Resolver] Provided Type", vT)
 	// check constraints & specialize
 	// can either be a type param or generic struct or a generic function
 	fT := types.ResolveAliases(f.Type())
@@ -640,14 +653,21 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 		return unresolved
 	}
 
-	f, err := types.ResolveField(a, field, c.module)
+	symbol, symbolType := types.ResolveSymbol(a, field)
 
-	if err != nil {
-		c.addError(err.Error(), n.Field.Range())
+	// DNE
+	if symbol == nil {
+		c.addError(fmt.Sprintf("unable to located '%s', field", field), n.Field.Range())
 		return unresolved
 	}
 
-	return f
+	// Private
+	if !symbol.IsVisible(c.module) {
+		c.addError(fmt.Sprintf("cannot access '%s' from this context", field), n.Field.Range())
+		return unresolved
+	}
+
+	return symbolType
 }
 
 func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpression, ctx *NodeContext) types.Type {
@@ -673,6 +693,8 @@ func (c *Checker) evaluateSpecializationExpression(e *ast.SpecializationExpressi
 		c.addError(err.Error(), e.Clause.Range())
 		return unresolved
 	}
+
+	c.module.Table.SetNodeType(e, instance)
 	return instance
 }
 

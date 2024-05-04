@@ -30,7 +30,7 @@ func (b *builder) pass0(f *ast.File) {
 
 func (b *builder) genConstant(c *ast.ConstantDeclaration) {
 	ident := c.Stmt.Identifier.Value
-	value, ok := b.evaluateExpression(c.Stmt.Value, nil).(*lir.Constant)
+	value, ok := b.evaluateExpression(c.Stmt.Value, nil, b.Mod).(*lir.Constant)
 
 	if !ok {
 		panic("not a constant value")
