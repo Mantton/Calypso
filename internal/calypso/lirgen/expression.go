@@ -99,8 +99,28 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 
 	case *lir.Function:
 		target = val
+
+	case *lir.UnionTypeInlineCreation:
+		var args []lir.Value
+
+		for _, p := range n.Arguments {
+			v := b.evaluateExpression(p, fn, mod)
+			args = append(args, v)
+		}
+		X := b.Mod.TModule.Table.GetNodeType(n)
+
+		var ret types.Type
+		switch X := X.(type) {
+		case *types.SpecializedFunctionSignature:
+			ret = X.Sg().Result.Type()
+		case *types.FunctionSignature:
+			ret = X
+		}
+		return b.emitUnionVariant(val, fn, args, ret)
 	default:
-		panic("unhandled call expression")
+		X := b.Mod.TModule.Table.GetNodeType(n)
+		fmt.Println(X)
+		panic(fmt.Sprintf("unhandled call expression, %T", val))
 	}
 
 	var args []lir.Value
@@ -183,14 +203,6 @@ func (b *builder) evaluateIdentifierExpression(n *ast.IdentifierExpression, fn *
 	val = mod.Find(n.Value)
 
 	if val != nil {
-
-		// Inject if not defined in package
-		switch val := val.(type) {
-		case *lir.Composite:
-			if mod.TModule.Package() != val.Type.(types.Symbol).Module().Package() {
-				b.Mod.Composites[val.Name] = val
-			}
-		}
 		return val
 	}
 
@@ -603,12 +615,6 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 			return val
 		}
 
-		ref, ok := b.Refs[n.Value]
-
-		if ok {
-			return ref
-		}
-
 		mod, ok := mod.Imports[n.Value]
 
 		if ok {
@@ -617,7 +623,8 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 
 		panic(fmt.Sprintf("unknown identifier, %s", n.Value))
 	case *ast.FieldAccessExpression:
-		return b.evaluateFieldAccessExpression(n, fn, mod, false)
+		x := b.evaluateFieldAccessExpression(n, fn, mod, false)
+		return x
 	default:
 		panic("unimplmented address of")
 	}
@@ -745,141 +752,105 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 		field = p.Value
 	default:
 		if target, ok := target.(*lir.Module); ok {
-			return b.evaluateExpression(p, fn, target)
+			tgt := b.evaluateExpression(p, fn, target)
+			return tgt
 		}
 	}
 
 	// Handle Module
 	switch target := (target).(type) {
 	case *lir.Module:
-		return target.Find(field)
+		tgt := target.Find(field)
+		if tgt == nil {
+			panic(fmt.Sprintf("cannot find, %s", field))
+		}
+		return tgt
 	}
 
-	targetType := target.Yields()
+	var targetType types.Type
+
+	switch target := target.(type) {
+	case *lir.GenericEnumReference:
+		X := target.Type.Parent().(*types.Enum).FindVariant(field)
+
+		// Unit
+		if len(X.Fields) == 0 {
+			return lir.NewConst(int64(X.Discriminant), types.LookUp(types.Int32))
+		}
+
+		return &lir.UnionTypeInlineCreation{
+			Type:    target.Type,
+			Variant: X,
+		}
+	case *lir.EnumReference:
+		X := target.Type.Parent().(*types.Enum).FindVariant(field)
+		// Unit
+		if len(X.Fields) == 0 {
+			return lir.NewConst(int64(X.Discriminant), types.LookUp(types.Int32))
+		}
+		return &lir.UnionTypeInlineCreation{
+			Type:    target.Type.(types.Symbol),
+			Variant: X,
+		}
+	default:
+		targetType = target.Yields()
+	}
+
 	if fn.Spec != nil {
 		targetType = types.Instantiate(targetType, fn.Spec.Spec)
 	}
 
-	// Composite Type
-	composite := b.resolveCompositeOf(targetType, mod)
-
-	if composite == nil {
-		panic("unknown composite")
-	}
-
 	symbol, symbolType := types.ResolveSymbol(targetType, field)
 
-	switch symbol := symbol.(type) {
-	case *types.Var:
-		index := symbol.StructIndex
+	parent := targetType.Parent()
 
-		// Invalid Field
-		if index == -1 {
-			panic("unknown field")
-		}
+	if types.IsPointer(parent) {
+		parent = types.Dereference(parent).Parent()
+	}
 
-		// Get Element Pointer of Field
-		ptr := &lir.GEP{
-			Index:     index,
-			Address:   target,
-			Composite: composite,
-		}
+	switch parent := parent.Parent().(type) {
+	case *types.Struct:
+		switch symbol := symbol.(type) {
+		case *types.Var:
 
-		// If Should Load, return load instruction
-		if load {
-			return &lir.Load{
-				Address: ptr,
+			// Composite Type
+			composite := b.resolveCompositeOf(targetType, mod)
+
+			if composite == nil {
+				panic("unknown composite")
 			}
-		}
+			index := symbol.StructIndex
 
-		// return GEP instruction, yeilding ptr to field
-		return ptr
-	case *types.Function:
-		tgt := b.TFunctions[symbolType]
-		return tgt
+			// Invalid Field
+			if index == -1 {
+				panic("unknown field")
+			}
+
+			// Get Element Pointer of Field
+			ptr := &lir.GEP{
+				Index:     index,
+				Address:   target,
+				Composite: composite,
+			}
+
+			// If Should Load, return load instruction
+			if load {
+				return &lir.Load{
+					Address: ptr,
+				}
+			}
+
+			// return GEP instruction, yeilding ptr to field
+			return ptr
+		case *types.Function:
+			tgt := b.TFunctions[symbolType]
+			return tgt
+		default:
+			panic("unhandled symbol type")
+		}
 	default:
-		panic("unhandled symbol type")
+		panic(fmt.Sprintf("unhandled symbol type, %s", parent))
 	}
-
-	// Accessing a type, if accessing static funciton, it would've been resolved earlier, so most likely accessing an enum
-	// if en, ok := definition.Parent().(*types.Enum); ok && isTypeAccess {
-	// 	variant := en.FindVariant(field)
-
-	// 	// Composites are treated like a function call
-	// 	if en.IsUnion() {
-	// 		return b.generateOrReturnFunctionForVariant(variant, en, definition)
-	// 	} else {
-	// 		return lir.NewConst(int64(variant.Discriminant), types.LookUp(types.Int32))
-	// 	}
-
-	// }
-	// Non Function Call
-	panic("unimplemented field access case")
-
-}
-
-func (b *builder) generateOrReturnFunctionForVariant(n *types.EnumVariant, p *types.Enum, s types.Symbol, mod *lir.Module) *lir.Function {
-	composite := mod.Composites[EnumVariantSymbolName(n, s)]
-
-	// Already Built, return
-	fn, ok := b.EnumFunctions[n]
-
-	if ok {
-		return fn
-	}
-
-	// Tuple Type, Return Function Returning Parent Type
-	sg := types.NewFunctionSignature()
-	for _, p := range n.Fields {
-		sg.AddParameter(p)
-	}
-
-	sg.Result.SetType(types.NewPointer(p))
-	tFn := types.NewFunction(composite.Name, sg, mod.TModule)
-	fn = lir.NewFunction(tFn)
-
-	for _, field := range n.Fields {
-		fn.AddParameter(field)
-	}
-
-	// Allocate Base Type
-	addr := &lir.Allocate{
-		TypeOf: p,
-	}
-
-	fn.Emit(addr)
-
-	// GEP & Store of Fields
-	for i := range n.Fields {
-
-		ptr := &lir.GEP{
-			Index:     i + 1, // First Position is always dicriminant
-			Address:   addr,
-			Composite: composite,
-		}
-
-		store := &lir.Store{
-			Address: ptr,
-			Value:   fn.Parameters[i],
-		}
-
-		fn.Emit(store)
-	}
-
-	// emit store of disciminant
-	fn.Emit(&lir.Store{
-		Address: addr,
-		Value:   lir.NewConst(int64(n.Discriminant), types.LookUp(types.Int8)),
-	})
-
-	// emit return of pointer to foo
-	fn.Emit(&lir.Return{
-		Result: addr,
-	})
-
-	b.EnumFunctions[n] = fn
-	b.RFunctionEnums[fn] = n
-	return fn
 }
 
 func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Function, mod *lir.Module) (lir.Value, *ast.CallExpression, *types.EnumVariant) {
@@ -992,5 +963,46 @@ func (b *builder) resolveCompositeOf(t types.Type, mod *lir.Module) *lir.Composi
 		return x
 	}
 
-	panic("unhandled type")
+	panic(fmt.Sprintf("unhandled type, %s", t))
+}
+
+func (b *builder) emitUnionVariant(n *lir.UnionTypeInlineCreation, fn *lir.Function, args []lir.Value, ret types.Type) lir.Value {
+	composite := b.MP.Composites[n.Variant]
+
+	// Allocate Base Type
+	addr := &lir.Allocate{
+		TypeOf: ret,
+	}
+
+	fn.Emit(addr)
+
+	// GEP & Store of Fields
+	for i := range n.Variant.Fields {
+
+		ptr := &lir.GEP{
+			Index:     i + 1, // First Position is always dicriminant
+			Address:   addr,
+			Composite: composite,
+		}
+
+		store := &lir.Store{
+			Address: ptr,
+			Value:   args[i],
+		}
+
+		fn.Emit(store)
+	}
+
+	// emit store of disciminant
+	fn.Emit(&lir.Store{
+		Address: addr,
+		Value:   lir.NewConst(int64(n.Variant.Discriminant), types.LookUp(types.Int8)),
+	})
+
+	// emit return of pointer to foo
+	fn.Emit(&lir.Return{
+		Result: addr,
+	})
+
+	return fn
 }

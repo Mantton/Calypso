@@ -12,7 +12,6 @@ type builder struct {
 	TFunctions     map[types.Type]*lir.Function              // maps fn types to their lir impl
 	EnumFunctions  map[*types.EnumVariant]*lir.Function
 	RFunctionEnums map[*lir.Function]*types.EnumVariant
-	Refs           map[string]*lir.TypeRef
 	MP             *lir.PackageMap
 }
 
@@ -23,7 +22,6 @@ func build(mod *lir.Module, mp *lir.PackageMap) error {
 		TFunctions:     make(map[types.Type]*lir.Function),
 		EnumFunctions:  make(map[*types.EnumVariant]*lir.Function),
 		RFunctionEnums: make(map[*lir.Function]*types.EnumVariant),
-		Refs:           make(map[string]*lir.TypeRef),
 		MP:             mp,
 	}
 

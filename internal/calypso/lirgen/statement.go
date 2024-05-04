@@ -61,14 +61,8 @@ func (b *builder) visitVariableStatement(n *ast.VariableStatement, fn *lir.Funct
 		}
 	}
 
-	symbol := fn.TFunction.Scope.MustResolve(n.Identifier.Value)
-
-	if symbol == nil {
-		panic("unable to resolve node type")
-	}
-
 	vAddr, _ := val.(*lir.Allocate)
-	addr := b.emitLocalVar(fn, n.Identifier.Value, symbol.Type(), vAddr)
+	addr := b.emitLocalVar(fn, n.Identifier.Value, val.Yields(), vAddr)
 
 	if vAddr == nil {
 		b.emitStore(fn, addr, val)
@@ -179,7 +173,13 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 
 	var T lir.Value
 
-	symbol := cond.Yields().(types.Symbol)
+	symT := cond.Yields()
+
+	if types.IsPointer(symT) {
+		symT = types.Dereference(symT)
+	}
+
+	symbol := symT.(types.Symbol)
 	typ := cond.Yields().Parent()
 
 	// Is Composite Enum

@@ -1,6 +1,8 @@
 package lir
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -17,6 +19,9 @@ type Module struct {
 	// Generics
 	GFunctions map[string]*GenericFunction // Maps symbols to their generic functions
 	GTypes     map[string]*GenericType     // maps symbols to their generic type
+
+	Enums  map[string]*EnumReference
+	GEnums map[string]*GenericEnumReference
 }
 
 func NewModule(mod *types.Module) *Module {
@@ -27,6 +32,8 @@ func NewModule(mod *types.Module) *Module {
 		Composites:      make(map[string]*Composite),
 		GTypes:          make(map[string]*GenericType),
 		Imports:         make(map[string]*Module),
+		Enums:           make(map[string]*EnumReference),
+		GEnums:          make(map[string]*GenericEnumReference),
 		TModule:         mod,
 	}
 }
@@ -58,6 +65,14 @@ func (m *Module) FindSymbol(s string) Value {
 		return v
 	}
 
+	if v, ok := m.Enums[s]; ok {
+		return v
+	}
+
+	if v, ok := m.GEnums[s]; ok {
+		return v
+	}
+
 	if v, ok := m.Composites[s]; ok {
 		return v
 	}
@@ -70,5 +85,6 @@ func (m *Module) FindSymbol(s string) Value {
 		return v
 	}
 
+	fmt.Println("DNE", s)
 	return nil
 }

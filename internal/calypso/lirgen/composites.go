@@ -1,8 +1,6 @@
 package lirgen
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/types"
@@ -11,7 +9,7 @@ import (
 // Composites
 func (b *builder) pass1(f *ast.File) {
 	for _, n := range f.Nodes.Enums {
-		b.genEnum(n)
+		b.registerEnum(n)
 	}
 
 	for _, n := range f.Nodes.Structs {
@@ -19,29 +17,17 @@ func (b *builder) pass1(f *ast.File) {
 	}
 }
 
-func (b *builder) genEnum(n *ast.EnumStatement) {
-	symbol := b.Mod.TModule.Table.GetNodeType(n)
+func (b *builder) registerEnum(n *ast.EnumStatement) {
+	nT := b.Mod.TModule.Table.GetNodeType(n)
+	symbol := types.AsDefined(nT)
 
 	if types.IsGeneric(symbol) {
+		b.genGenericEnums(symbol)
 		return
 	}
 
-	underlying, ok := symbol.Parent().(*types.Enum)
-	if !ok {
-		panic("node is not enum type")
-	}
-
-	b.Refs[underlying.Name] = &lir.TypeRef{
-		Type: symbol,
-	}
-
-	defer fmt.Println("<ENUM>", underlying)
-
-	if !underlying.IsUnion() {
-		return
-	}
-
-	b.genTaggedUnion(symbol.(types.Symbol), underlying)
+	underlying := symbol.Type().Parent().(*types.Enum)
+	b.genEnumComposite(symbol, underlying)
 
 }
 func (b *builder) registerStruct(n *ast.StructStatement) {
@@ -60,7 +46,7 @@ func (b *builder) registerStruct(n *ast.StructStatement) {
 	b.MP.Composites[symbol] = c
 }
 
-func (b *builder) genTaggedUnion(symbol types.Symbol, n *types.Enum) {
+func (b *builder) genTaggedUnion(symbol types.Type, n *types.Enum) {
 
 	// Take
 	/*
@@ -81,10 +67,12 @@ func (b *builder) genTaggedUnion(symbol types.Symbol, n *types.Enum) {
 	discrimimantSize := lir.SizeOf(byt) // Get Size of Discrimimant Size
 	maxUnionSize := size - discrimimantSize
 
+	baseSymbolName := SymbolName(symbol)
+
 	// 2 - Base Composite can simply be 1X i8 (Discriminant) + nX i8 (Max Union)
 	baseComposite := &lir.Composite{
-		Type: n,
-		Name: symbol.SymbolName(),
+		Type: symbol,
+		Name: baseSymbolName,
 		Members: []types.Type{
 			byt,
 			&lir.StaticArray{
@@ -93,11 +81,15 @@ func (b *builder) genTaggedUnion(symbol types.Symbol, n *types.Enum) {
 			},
 		},
 	}
-	b.Mod.Composites[symbol.SymbolName()] = baseComposite
-	b.MP.Composites[symbol.Type()] = baseComposite
+	b.Mod.Composites[baseSymbolName] = baseComposite
+	b.MP.Composites[symbol] = baseComposite
 
 	// 3 - Generate Composite Types for each tagged union
 	for _, variant := range n.Variants {
+
+		if len(variant.Fields) == 0 {
+			continue
+		}
 
 		paddingSize := maxUnionSize
 		ts := []types.Type{}
@@ -117,7 +109,7 @@ func (b *builder) genTaggedUnion(symbol types.Symbol, n *types.Enum) {
 			})
 		}
 
-		symbolName := EnumVariantSymbolName(variant, symbol)
+		symbolName := EnumVariantSymbolNameStr(variant, baseSymbolName)
 		members = append(members, ts...)
 		composite := &lir.Composite{
 			Type:      variant,
@@ -133,7 +125,11 @@ func (b *builder) genTaggedUnion(symbol types.Symbol, n *types.Enum) {
 }
 
 func EnumVariantSymbolName(v *types.EnumVariant, sym types.Symbol) string {
-	return sym.SymbolName() + "::_v::" + v.Name
+	return sym.SymbolName() + "::_V::" + v.Name
+}
+
+func EnumVariantSymbolNameStr(v *types.EnumVariant, sym string) string {
+	return sym + "::_V::" + v.Name
 }
 
 // Structs
@@ -147,7 +143,6 @@ func (b *builder) genStructComposite(name string, underlying *types.Struct, t ty
 		c.Members = append(c.Members, f.Type())
 	}
 
-	fmt.Println("Generated Composite", c)
 	return c
 }
 
@@ -163,5 +158,47 @@ func (b *builder) genGenericStruct(symbol *types.DefinedType) {
 		c := b.genStructComposite(sT.SymbolName(), sT.Parent().(*types.Struct), sT)
 		t.Specs[c.Name] = c
 		b.MP.Composites[sT] = c
+	}
+}
+
+func (b *builder) genEnumComposite(t types.Type, underlying *types.Enum) *lir.EnumReference {
+	ref := &lir.EnumReference{
+		Type: t,
+		Enum: underlying,
+	}
+
+	b.Mod.Enums[SymbolName(t)] = ref
+
+	if underlying.IsUnion() {
+		b.genTaggedUnion(t, underlying)
+	}
+	return ref
+}
+
+func (b *builder) genGenericEnums(symbol *types.DefinedType) {
+
+	ref := &lir.GenericEnumReference{
+		Type:  symbol,
+		Specs: make(map[string]*lir.EnumReference),
+	}
+	for _, sT := range symbol.AllSpecs() {
+		ref.Specs[SymbolName(sT)] = b.genEnumComposite(sT, sT.Parent().(*types.Enum))
+	}
+
+	b.Mod.GEnums[symbol.SymbolName()] = ref
+}
+
+func SymbolName(t types.Type) string {
+	switch t := t.(type) {
+	case *types.SpecializedType:
+		return t.SymbolName()
+	case *types.DefinedType:
+		return t.SymbolName()
+	case *types.SpecializedFunctionSignature:
+		return t.SymbolName()
+	case *types.FunctionSignature:
+		return t.Function.SymbolName()
+	default:
+		panic("unimplemented symbol")
 	}
 }

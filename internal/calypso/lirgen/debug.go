@@ -29,4 +29,10 @@ func (b *builder) debugPrint() {
 
 	fmt.Println()
 
+	fmt.Println("\nEnums")
+	for _, c := range b.Mod.Enums {
+		fmt.Println(SymbolName(c.Type))
+	}
+	fmt.Println()
+
 }

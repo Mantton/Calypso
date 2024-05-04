@@ -193,7 +193,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 
 		// Enum Switch Spread
 		if ctx.lhs != nil {
-			return c.evaluateEnumDestructure(ctx.lhs, fn, expr, ctx)
+			return c.evaluateEnumDestructure(fn, expr, ctx)
 		}
 
 		isGeneric := types.IsGeneric(fn)
@@ -667,6 +667,7 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 		return unresolved
 	}
 
+	c.module.Table.SetNodeType(n, symbolType)
 	return symbolType
 }
 
@@ -880,32 +881,27 @@ func (c *Checker) evaluateIndexExpression(n *ast.IndexExpression, ctx *NodeConte
 	return elementType
 }
 
-func (c *Checker) evaluateEnumDestructure(inc types.Type, fn *types.FunctionSignature, expr *ast.CallExpression, ctx *NodeContext) types.Type {
-	lhsTyp := types.AsDefined(inc)
+func (c *Checker) evaluateEnumDestructure(fn types.Type, expr *ast.CallExpression, ctx *NodeContext) types.Type {
 
-	if lhsTyp == nil {
-		c.addError(fmt.Sprintf("expected defined type, got %s, %s", lhsTyp, fn), expr.Range())
-		return unresolved
+	var sg *types.FunctionSignature
+
+	switch fn := fn.(type) {
+	case *types.SpecializedFunctionSignature:
+		sg = fn.Sg()
+	case *types.FunctionSignature:
+		sg = fn
 	}
 
-	specializations := make(types.Specialization)
+	switch lhs := ctx.lhs.(type) {
+	case *types.SpecializedType:
+		x, err := c.instantiateWithSpecialization(sg, lhs.Specialization())
 
-	for _, p := range lhsTyp.TypeParameters {
-		specializations[p] = p
-	}
+		if err != nil {
+			c.addError(err.Error(), expr.Range())
+			return unresolved
+		}
 
-	instance, err := c.instantiateWithSpecialization(fn, specializations)
-
-	if err != nil {
-		c.addError(err.Error(), expr.Range())
-		return unresolved
-	}
-
-	sg := instance.(*types.FunctionSignature)
-
-	if len(sg.Parameters) != len(expr.Arguments) {
-		c.addError(fmt.Sprintf("expected %d arguments, got %d", len(sg.Parameters), len(fn.Parameters)), expr.Range())
-		return unresolved
+		sg = x.(*types.SpecializedFunctionSignature).Sg()
 	}
 
 	for i, t := range sg.Parameters {

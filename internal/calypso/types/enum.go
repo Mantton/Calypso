@@ -9,6 +9,7 @@ type EnumVariant struct {
 	Name         string
 	Discriminant int
 	Fields       []*Var
+	Owner        *Enum
 }
 
 type EnumVariants []*EnumVariant
@@ -16,14 +17,20 @@ type EnumVariants []*EnumVariant
 func (t *Enum) Parent() Type   { return t }
 func (t *Enum) String() string { return t.Name }
 
-func (t *EnumVariant) Parent() Type   { return t }
-func (t *EnumVariant) String() string { return t.Name }
+func (t *EnumVariant) Parent() Type   { return t.Owner }
+func (t *EnumVariant) String() string { return t.Owner.String() + "::" + t.Name }
 
 func NewEnum(name string, cases []*EnumVariant) *Enum {
-	return &Enum{
+	e := &Enum{
 		Name:     name,
 		Variants: cases,
 	}
+
+	for _, cs := range cases {
+		cs.Owner = e
+	}
+
+	return e
 }
 
 func NewEnumVariant(name string, discriminant int, fields []*Var) *EnumVariant {

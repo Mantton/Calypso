@@ -13,6 +13,7 @@ func NewVar(name string, t Type) *Var {
 			name: name,
 			typ:  t,
 		},
+		StructIndex: -1,
 	}
 }
 

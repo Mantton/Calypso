@@ -138,5 +138,5 @@ func ResolveSymbol(t Type, n string) (Symbol, Type) {
 		return field, field.Type()
 	}
 
-	panic("cannot access field of type")
+	panic(fmt.Sprintf("cannot access field of type, %s, %T", t, t))
 }

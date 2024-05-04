@@ -261,6 +261,23 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
 		discs[discriminant] = true
 		gDisc += 1
 
+		if len(fields) != 0 {
+			sg := types.NewFunctionSignature()
+			for _, p := range v.Fields {
+				sg.AddParameter(p)
+			}
+
+			sg.Result.SetType(def)
+			sg.Parameters = v.Fields
+			fn := types.NewFunction(v.Name, sg, c.module)
+			fn.SetVisibility(true)
+			def.GetScope().Define(fn)
+		} else {
+			// No fields
+			disc := types.NewVar(v.Name, def)
+			disc.SetVisibility(true)
+			def.GetScope().Define(disc)
+		}
 	}
 
 	if len(variants) == 0 {
