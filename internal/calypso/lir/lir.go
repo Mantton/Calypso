@@ -2,7 +2,6 @@ package lir
 
 import (
 	"github.com/mantton/calypso/internal/calypso/types"
-	"gonum.org/v1/gonum/graph/simple"
 )
 
 // * 1
@@ -23,39 +22,4 @@ type Value interface {
 // a statement that consumes a value and performs computation
 type Instruction interface {
 	Node
-}
-
-type PackageMap struct {
-	Modules    map[string]*Module
-	CallGraph  *simple.DirectedGraph
-	Composites map[types.Type]*Composite
-
-	Functions map[types.Type]*Function
-}
-
-func NewPackageMap() *PackageMap {
-	return &PackageMap{
-		Modules:    make(map[string]*Module),
-		CallGraph:  simple.NewDirectedGraph(),
-		Composites: make(map[types.Type]*Composite),
-		Functions:  make(map[types.Type]*Function),
-	}
-}
-
-func (p PackageMap) GetNestedFunctions(fn *Function) []*Function {
-	var dependencies []*Function
-
-	// Traverse the graph and called called functions
-	g := p.CallGraph
-
-	nodes := g.From(fn.ID())
-
-	for nodes.Next() {
-		t := nodes.Node().(*Function)
-		dependencies = append(dependencies, t)
-
-		dependencies = append(dependencies, p.GetNestedFunctions(t)...)
-	}
-
-	return dependencies
 }

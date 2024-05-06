@@ -106,7 +106,7 @@ func (c *compiler) buildComposite(cm *lir.Composite) llvm.Type {
 	}
 
 	llvmType := c.context.StructCreateNamed(cm.Name)
-	c.typesTable[cm.UnderlyingType] = llvmType
+	c.typesTable[cm.Type] = llvmType
 	llvmType.StructSetBody(members, false)
 	return llvmType
 

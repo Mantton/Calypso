@@ -12,10 +12,10 @@ type builder struct {
 	TFunctions     map[types.Type]*lir.Function              // maps fn types to their lir impl
 	EnumFunctions  map[*types.EnumVariant]*lir.Function
 	RFunctionEnums map[*lir.Function]*types.EnumVariant
-	MP             *lir.PackageMap
+	MP             *lir.Executable
 }
 
-func build(mod *lir.Module, mp *lir.PackageMap) error {
+func build(mod *lir.Module, mp *lir.Executable) error {
 	b := &builder{
 		Mod:            mod,
 		Functions:      make(map[*ast.FunctionExpression]*lir.Function),

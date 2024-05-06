@@ -73,6 +73,7 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 		return v
 	}
 
+	p := t
 	switch t := t.Parent().(type) {
 	case *types.Basic:
 		switch t.Literal {
@@ -100,7 +101,7 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 			panic("unhandled basic type")
 		}
 	case *types.Struct:
-		x := c.buildComposite(c.lirMod.Composites[t])
+		x := c.buildComposite(c.lirMod.Composites[types.SymbolName(p)])
 		c.typesTable[t] = x
 		return x
 

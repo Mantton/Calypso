@@ -6,10 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mantton/calypso/internal/calypso/builder"
 	"github.com/mantton/calypso/internal/calypso/compile"
 	"github.com/mantton/calypso/internal/calypso/fs"
-	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
 func build(paths []string) error {
@@ -48,8 +46,8 @@ func buildFromPath(path string) error {
 }
 
 func buildFromFile(pth string) error {
-	set := &fs.FileSet{FilesPaths: []string{pth}}
-	return builder.CompileFileSet(set, typechecker.USER)
+	// set := &fs.FileSet{FilesPaths: []string{pth}}
+	panic("unimplemented")
 }
 
 /*
@@ -92,7 +90,8 @@ func buildFromFileList(paths []string) error {
 		return fmt.Errorf("all files must be in the same directory, got: %s", s)
 	}
 
-	return builder.CompileFileSet(set, typechecker.USER)
+	panic("unimplemented")
+	// return builder.CompileFileSet(set, typechecker.USER)
 }
 
 func buildFromDirectory(path string) error {

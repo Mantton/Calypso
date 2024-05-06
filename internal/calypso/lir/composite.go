@@ -6,14 +6,6 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-// * 2
-type Executable struct {
-	Modules map[string]*Module
-}
-type Package struct {
-	Modules map[string]*Module
-}
-
 type Composite struct {
 	Members    []types.Type
 	Type       types.Type
@@ -40,16 +32,4 @@ func (c *Composite) String() string {
 
 func (c *Composite) Yields() types.Type {
 	return c.Type
-}
-
-// New Type For Array Type in LLVM
-type StaticArray struct {
-	OfType types.Type
-	Count  int
-}
-
-func (t *StaticArray) Parent() types.Type { return t }
-
-func (t *StaticArray) String() string {
-	return fmt.Sprintf("[%d x %s]", t.Count, t.OfType)
 }

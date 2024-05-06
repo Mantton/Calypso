@@ -6,19 +6,30 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) error {
+func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) (*lir.Executable, error) {
 
-	mp := lir.NewPackageMap()
+	mp := lir.NewExecutable()
 	for _, mod := range data.OrderedModules {
 		path := mod.FSMod.Path
 		tMod := tmap.Modules[path]
 		mod := lir.NewModule(tMod)
 		err := build(mod, mp)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		mp.Modules[path] = mod
 	}
 
-	return nil
+	for _, astPkg := range data.Packages {
+		lirPkg := lir.NewPackage(astPkg.Name())
+
+		for _, mod := range astPkg.Modules {
+			path := mod.FSMod.Path
+			lirPkg.Modules[path] = mp.Modules[path]
+		}
+
+		mp.Packages[lirPkg.Name] = lirPkg
+	}
+
+	return mp, nil
 }
