@@ -20,7 +20,7 @@ func init() {
 func Compile(s *lir.Executable) {
 
 	for _, mod := range s.Modules {
-		c := newCompiler(mod)
+		c := newCompiler(mod, s)
 		c.compileModule()
 	}
 }
@@ -29,13 +29,15 @@ type compiler struct {
 	context    llvm.Context
 	module     llvm.Module
 	lirMod     *lir.Module
+	exec       *lir.Executable
 	typesTable map[types.Type]llvm.Type
 }
 
-func newCompiler(module *lir.Module) *compiler {
+func newCompiler(module *lir.Module, exec *lir.Executable) *compiler {
 	c := &compiler{
 		context:    llvm.NewContext(),
 		typesTable: make(map[types.Type]llvm.Type),
+		exec:       exec,
 	}
 
 	c.module = c.context.NewModule(module.Name())

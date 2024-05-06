@@ -161,7 +161,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			return fn.ReturnType()
 		}
 
-		c.module.Table.SetNodeType(expr, typ)
+		c.module.Table.SetNodeType(expr.Target, typ)
 		ctx.sg.Function.AddCallEdge(typ)
 		specializations := make(types.Specialization)
 		for i, arg := range expr.Arguments {
@@ -242,7 +242,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 
 		// return signature if not generic
 		if !isGeneric {
-			c.module.Table.SetNodeType(expr, fn)
+			c.module.Table.SetNodeType(expr.Target, fn)
 			ctx.sg.Function.AddCallEdge(fn)
 			return fn.Result.Type()
 		}
@@ -255,7 +255,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 			return unresolved
 		}
 
-		c.module.Table.SetNodeType(expr, t)
+		c.module.Table.SetNodeType(expr.Target, t)
 		ctx.sg.Function.AddCallEdge(t)
 
 		switch t := t.(type) {
@@ -298,13 +298,13 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		if single, ok := options.GetAsSingle(); ok {
 			fmt.Println("\t[OVERLOAD] Exact match", single.Sg())
 
-			c.module.Table.SetNodeType(expr, single.Sg())
+			c.module.Table.SetNodeType(expr.Target, single.Sg())
 
 			return single.Sg().Result.Type()
 		}
 		mostSpec := options.MostSpecialized()
 		// TODO: Call Edge
-		c.module.Table.SetNodeType(expr, mostSpec)
+		c.module.Table.SetNodeType(expr.Target, mostSpec)
 		return mostSpec
 	}
 
@@ -667,7 +667,7 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 	// 	return unresolved
 	// }
 
-	c.module.Table.SetNodeType(n, symbolType)
+	c.module.Table.SetNodeType(n.Field, symbolType)
 	return symbolType
 }
 

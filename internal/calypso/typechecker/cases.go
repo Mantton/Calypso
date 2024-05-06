@@ -42,11 +42,6 @@ func (c *Checker) validateAssignment(variable *types.Var, provided types.Type, n
 	}
 
 	variable.SetType(expected)
-
-	switch node := node.(type) {
-	case *ast.NilLiteral, *ast.CompositeLiteral:
-		c.module.Table.SetNodeType(node, expected)
-	}
-
+	c.module.Table.SetNodeType(node, expected)
 	return nil
 }

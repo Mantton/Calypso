@@ -88,7 +88,7 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	switch val := val.(type) {
 	case *lir.GenericFunction:
 		// Find Target To Use
-		X := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedFunctionSignature)
+		X := b.Mod.TModule.Table.GetNodeType(n.Target).(*types.SpecializedFunctionSignature)
 		if types.IsGeneric(X) {
 			// Target Is Generic, Specialize with Function Spec
 			ssg := types.Instantiate(X, fn.Spec.Specialization()).(*types.SpecializedFunctionSignature)
@@ -108,7 +108,7 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 			v := b.evaluateExpression(p, fn, mod)
 			args = append(args, v)
 		}
-		X := b.Mod.TModule.Table.GetNodeType(n)
+		X := b.Mod.TModule.Table.GetNodeType(n.Target)
 
 		var ret types.Type
 		switch X := X.(type) {
@@ -774,7 +774,11 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 	switch target := target.(type) {
 	case *lir.GenericEnumReference:
-		X := target.Type.Parent().(*types.Enum).FindVariant(field)
+		X := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedFunctionSignature).ReturnType().(*types.SpecializedType).Parent().(*types.Enum).FindVariant(field)
+
+		if X == nil {
+			panic("")
+		}
 
 		// Unit
 		if len(X.Fields) == 0 {
@@ -907,7 +911,11 @@ func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Fu
 }
 
 func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, s types.Symbol, self lir.Value, mod *lir.Module) {
-	composite := mod.Composites[EnumVariantSymbolName(v, s)]
+	composite, ok := mod.Composites[EnumVariantSymbolName(v, s)]
+
+	if !ok {
+		panic("unknown composite")
+	}
 
 	// 0 Index is Discriminant
 	x := 1
@@ -985,7 +993,13 @@ func (b *builder) resolveCompositeOf(t types.Type, mod *lir.Module) *lir.Composi
 }
 
 func (b *builder) emitUnionVariant(n *lir.UnionTypeInlineCreation, fn *lir.Function, args []lir.Value, ret types.Type) lir.Value {
-	composite := b.MP.Composites[n.Variant]
+	composite, ok := b.MP.Composites[n.Variant]
+
+	fmt.Println(n.Variant)
+
+	if !ok {
+		panic("unknown composite")
+	}
 
 	// Allocate Base Type
 	addr := &lir.Allocate{
@@ -1017,10 +1031,5 @@ func (b *builder) emitUnionVariant(n *lir.UnionTypeInlineCreation, fn *lir.Funct
 		Value:   lir.NewConst(int64(n.Variant.Discriminant), types.LookUp(types.Int8)),
 	})
 
-	// emit return of pointer to foo
-	fn.Emit(&lir.Return{
-		Result: addr,
-	})
-
-	return fn
+	return addr
 }

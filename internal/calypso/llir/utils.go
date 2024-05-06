@@ -67,7 +67,7 @@ func (c *compiler) createConstant(n *lir.Constant) llvm.Value {
 }
 
 func (c *compiler) getType(t types.Type) llvm.Type {
-	v, ok := c.typesTable[t.Parent()]
+	v, ok := c.typesTable[t]
 
 	if ok {
 		return v
@@ -100,10 +100,16 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 		default:
 			panic("unhandled basic type")
 		}
-	case *types.Struct:
-		x := c.buildComposite(c.lirMod.Composites[types.SymbolName(p)])
-		c.typesTable[t] = x
-		return x
+	case *types.Struct, *types.Enum:
+		composite, ok := c.exec.Composites[p]
+
+		if !ok {
+			panic(fmt.Sprintf("cannot find composite for %s", p))
+		}
+		llvmComposite := c.buildComposite(composite)
+
+		c.typesTable[t] = llvmComposite
+		return llvmComposite
 
 	case *types.Pointer:
 		pt := c.getType(t.PointerTo)
@@ -111,9 +117,10 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 	case *lir.StaticArray:
 		element := c.getType(t.OfType)
 		return llvm.ArrayType(element, int(t.Count))
+	default:
+		panic(fmt.Sprintf("Unsupported Type: %T, %s", t, t))
 	}
 
-	panic(fmt.Sprintf("Unsupported Type: %T, %s", t, t))
 }
 
 func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {

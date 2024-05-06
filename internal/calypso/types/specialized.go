@@ -6,6 +6,7 @@ type SpecializedType struct {
 	Bounds     TypeList
 	Spec       Specialization
 	InstanceOf *DefinedType
+	p          Type
 }
 
 func NewSpecializedType(def *DefinedType, sub Specialization) *SpecializedType {
@@ -42,7 +43,12 @@ func (t *SpecializedType) String() string {
 }
 
 func (t *SpecializedType) Parent() Type {
-	return cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization())
+	if t.p != nil {
+		return t.p
+	}
+	x := cloneWithSpecialization(t.InstanceOf.wrapped, t.Specialization())
+	t.p = x
+	return x
 }
 
 func (t *SpecializedType) ResolveField(f string) Type {
