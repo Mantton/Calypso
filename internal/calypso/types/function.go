@@ -9,7 +9,7 @@ import (
 type Function struct {
 	symbol
 	Target *FunctionTarget
-	Self   *Var
+	Self   Symbol
 	Scope  *Scope
 
 	IsAsync    bool
@@ -78,7 +78,7 @@ func (t *FunctionSignature) String() string {
 
 func NewFunctionSignature() *FunctionSignature {
 	return &FunctionSignature{
-		Result: NewVar("", LookUp(Unresolved)),
+		Result: NewVar("", LookUp(Unresolved), nil),
 	}
 }
 
@@ -197,4 +197,12 @@ func (d *Function) AllSpecs() []*SpecializedFunctionSignature {
 	}
 
 	return x
+}
+
+func (fn *Function) SymbolName() string {
+	if fn.Self == nil {
+		return fn.symbol.SymbolName()
+	} else {
+		return fn.Self.SymbolName() + "::" + fn.name
+	}
 }

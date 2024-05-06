@@ -1,7 +1,5 @@
 package types
 
-import "fmt"
-
 type BasicType byte
 
 const (
@@ -157,9 +155,6 @@ func ResolveLiteral(t Type) Type {
 	case *Pointer:
 		ptr := ResolveLiteral(t.PointerTo)
 		return NewPointer(ptr)
-	case *SpecializedType:
-		fmt.Println("TODO: ")
-		return t
 	}
 
 	return t

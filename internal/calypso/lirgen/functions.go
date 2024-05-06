@@ -45,6 +45,7 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 		panic("function node not type checked")
 	}
 
+	fmt.Println("Registering", tFn.SymbolName())
 	if types.IsGeneric(sg) {
 		b.registerMonomorphicSpecializations(sg.Function)
 		return
@@ -56,6 +57,9 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	b.TFunctions[tFn.Sg()] = fn     // map sg to function
 	b.Mod.Functions[fn.Name] = fn   // add function to module
 	fn.External = tFn.Target != nil // mark target
+
+	b.MP.Functions[tFn.Type()] = fn // Add to Program Scope
+
 }
 
 func (b *builder) registerMonomorphicSpecializations(fn *types.Function) {
@@ -74,6 +78,9 @@ func (b *builder) registerMonomorphicSpecializations(fn *types.Function) {
 		sFn.Name = ssg.SymbolName()
 		gFn.Specs[sFn.Name] = sFn
 		b.MP.CallGraph.AddNode(sFn) // CallGraph Add Node
+		b.MP.Functions[ssg] = sFn   // Add to Program Scope
+
+		fmt.Println("\tRegistered", ssg.SymbolName())
 	}
 
 	b.Mod.GFunctions[fn.SymbolName()] = gFn

@@ -67,7 +67,7 @@ func (b *builder) genTaggedUnion(symbol types.Type, n *types.Enum) {
 	discrimimantSize := lir.SizeOf(byt) // Get Size of Discrimimant Size
 	maxUnionSize := size - discrimimantSize
 
-	baseSymbolName := SymbolName(symbol)
+	baseSymbolName := types.SymbolName(symbol)
 
 	// 2 - Base Composite can simply be 1X i8 (Discriminant) + nX i8 (Max Union)
 	baseComposite := &lir.Composite{
@@ -167,7 +167,7 @@ func (b *builder) genEnumComposite(t types.Type, underlying *types.Enum) *lir.En
 		Enum: underlying,
 	}
 
-	b.Mod.Enums[SymbolName(t)] = ref
+	b.Mod.Enums[types.SymbolName(t)] = ref
 
 	if underlying.IsUnion() {
 		b.genTaggedUnion(t, underlying)
@@ -182,23 +182,8 @@ func (b *builder) genGenericEnums(symbol *types.DefinedType) {
 		Specs: make(map[string]*lir.EnumReference),
 	}
 	for _, sT := range symbol.AllSpecs() {
-		ref.Specs[SymbolName(sT)] = b.genEnumComposite(sT, sT.Parent().(*types.Enum))
+		ref.Specs[types.SymbolName(sT)] = b.genEnumComposite(sT, sT.Parent().(*types.Enum))
 	}
 
 	b.Mod.GEnums[symbol.SymbolName()] = ref
-}
-
-func SymbolName(t types.Type) string {
-	switch t := t.(type) {
-	case *types.SpecializedType:
-		return t.SymbolName()
-	case *types.DefinedType:
-		return t.SymbolName()
-	case *types.SpecializedFunctionSignature:
-		return t.SymbolName()
-	case *types.FunctionSignature:
-		return t.Function.SymbolName()
-	default:
-		panic("unimplemented symbol")
-	}
 }

@@ -29,6 +29,8 @@ type PackageMap struct {
 	Modules    map[string]*Module
 	CallGraph  *simple.DirectedGraph
 	Composites map[types.Type]*Composite
+
+	Functions map[types.Type]*Function
 }
 
 func NewPackageMap() *PackageMap {
@@ -36,6 +38,7 @@ func NewPackageMap() *PackageMap {
 		Modules:    make(map[string]*Module),
 		CallGraph:  simple.NewDirectedGraph(),
 		Composites: make(map[types.Type]*Composite),
+		Functions:  make(map[types.Type]*Function),
 	}
 }
 

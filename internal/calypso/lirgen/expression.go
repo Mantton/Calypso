@@ -83,6 +83,7 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	}
 
 	var target *lir.Function
+	var args []lir.Value
 
 	switch val := val.(type) {
 	case *lir.GenericFunction:
@@ -117,13 +118,13 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 			ret = X
 		}
 		return b.emitUnionVariant(val, fn, args, ret)
+	case *lir.Method:
+		target = val.Fn
+		args = append(args, val.Self)
+
 	default:
-		X := b.Mod.TModule.Table.GetNodeType(n)
-		fmt.Println(X)
 		panic(fmt.Sprintf("unhandled call expression, %T", val))
 	}
-
-	var args []lir.Value
 
 	if target == nil {
 		panic("target function is nil")
@@ -133,10 +134,6 @@ func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function
 	g := b.MP.CallGraph
 	e := g.NewEdge(fn, target)
 	g.SetEdge(e)
-
-	if target.TFunction.Self != nil {
-		panic("unimplemented method access")
-	}
 
 	for _, p := range n.Arguments {
 		v := b.evaluateExpression(p, fn, mod)
@@ -615,10 +612,14 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 			return val
 		}
 
-		mod, ok := mod.Imports[n.Value]
-
-		if ok {
+		if mod, ok := mod.Imports[n.Value]; ok {
 			return mod
+		}
+
+		val = mod.Find(n.Value)
+
+		if val != nil {
+			return val
 		}
 
 		panic(fmt.Sprintf("unknown identifier, %s", n.Value))
@@ -704,6 +705,7 @@ func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Func
 		composite = val
 	case *lir.GenericType:
 		A := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedType)
+		fmt.Println(A)
 		composite = val.Specs[A.SymbolName()]
 	}
 
@@ -768,6 +770,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	}
 
 	var targetType types.Type
+	var base types.Type
 
 	switch target := target.(type) {
 	case *lir.GenericEnumReference:
@@ -793,26 +796,28 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			Variant: X,
 		}
 	default:
-		targetType = target.Yields()
-	}
+		base = target.Yields()
+		targetType = base
 
-	if fn.Spec != nil {
-		targetType = types.Instantiate(targetType, fn.Spec.Spec)
+		// Deref
+		if types.IsPointer(targetType) {
+			targetType = types.Dereference(targetType)
+		}
+
+		// Specialize
+		if fn.Spec != nil {
+			targetType = types.Instantiate(targetType, fn.Spec.Spec)
+		}
+		fmt.Println("\t\tAccessing", field, "on", targetType, fmt.Sprintf("%T", target))
 	}
 
 	symbol, symbolType := types.ResolveSymbol(targetType, field)
-
 	parent := targetType.Parent()
 
-	if types.IsPointer(parent) {
-		parent = types.Dereference(parent).Parent()
-	}
-
-	switch parent := parent.Parent().(type) {
+	switch parent := parent.(type) {
 	case *types.Struct:
 		switch symbol := symbol.(type) {
 		case *types.Var:
-
 			// Composite Type
 			composite := b.resolveCompositeOf(targetType, mod)
 
@@ -843,7 +848,20 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			// return GEP instruction, yeilding ptr to field
 			return ptr
 		case *types.Function:
-			tgt := b.TFunctions[symbolType]
+			tgt, ok := b.MP.Functions[symbolType]
+
+			if !ok {
+				panic("unable to locate function for symbol")
+			}
+
+			// Is Method Access
+			if tgt.TFunction.Self != nil {
+				return &lir.Method{
+					Fn:   tgt,
+					Self: target,
+				}
+			}
+
 			return tgt
 		default:
 			panic("unhandled symbol type")

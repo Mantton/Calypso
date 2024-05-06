@@ -71,18 +71,27 @@ func (f *Function) AddParameter(t *types.Var) {
 }
 
 func (f *Function) AddSelf() {
-	self := f.TFunction.Self
+	var self types.Type
+
+	if f.TFunction.Self != nil {
+		self = f.TFunction.Self.Type()
+	}
+
+	if self != nil && f.Spec != nil {
+		self = types.Instantiate(self, f.Spec.Spec)
+	}
+
 	if self == nil || f.TFunction.IsStatic {
 		return
 	}
 
 	var s types.Type
 	// Mutable Self || Composite
-	if f.TFunction.IsMutating || types.IsStruct(self.Type().Parent()) {
+	if f.TFunction.IsMutating || types.IsStruct(self.Parent()) {
 		// Mutating pass self as pointer
-		s = types.NewPointer(self.Type())
+		s = types.NewPointer(self)
 	} else {
-		s = self.Type()
+		s = self
 	}
 
 	p := &Parameter{

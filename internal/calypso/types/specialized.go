@@ -10,13 +10,6 @@ type SpecializedType struct {
 
 func NewSpecializedType(def *DefinedType, sub Specialization) *SpecializedType {
 	bounds := makeBounds(def.TypeParameters, sub)
-	symbolName := SpecializedSymbolName(def, bounds)
-
-	preDef := def.FindSpec(symbolName)
-
-	if preDef != nil {
-		return preDef
-	}
 
 	spec := &SpecializedType{
 		Spec:       sub,
@@ -24,7 +17,13 @@ func NewSpecializedType(def *DefinedType, sub Specialization) *SpecializedType {
 		Bounds:     bounds,
 	}
 
-	def.AddSpec(symbolName, spec)
+	preDef := def.FindSpec(spec.SymbolName())
+
+	if preDef != nil {
+		return preDef
+	}
+
+	def.AddSpec(spec.SymbolName(), spec)
 	return spec
 }
 
@@ -84,7 +83,7 @@ func (t *SpecializedType) Specialization() Specialization {
 }
 
 func (f *SpecializedType) SymbolName() string {
-	return SpecializedSymbolName(f.InstanceOf, f.Bounds)
+	return SSym(SymbolName(f.InstanceOf), f.Bounds)
 }
 
 func makeBounds(params TypeParams, ctx Specialization) TypeList {

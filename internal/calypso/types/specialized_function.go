@@ -46,22 +46,19 @@ func (t *SpecializedFunctionSignature) Specialization() Specialization {
 
 func NewSpecializedFunctionSignature(fn *FunctionSignature, sub Specialization) *SpecializedFunctionSignature {
 
-	bounds := makeBounds(fn.TypeParameters, sub)
-	symbolName := SpecializedSymbolName(fn.Function, bounds)
-
-	preDef := fn.Function.FindSpec(symbolName)
-
-	if preDef != nil {
-		return preDef
-	}
-
 	spec := &SpecializedFunctionSignature{
 		InstanceOf: fn,
 		Spec:       sub,
 		Bounds:     makeBounds(fn.TypeParameters, sub),
 	}
 
-	fn.Function.AddSpec(symbolName, spec)
+	preDef := fn.Function.FindSpec(spec.SymbolName())
+
+	if preDef != nil {
+		return preDef
+	}
+
+	fn.Function.AddSpec(spec.SymbolName(), spec)
 	for fn := range fn.Function.CallGraph {
 		Instantiate(fn, sub)
 	}
@@ -81,7 +78,7 @@ func (f *SpecializedFunctionSignature) Sg() *FunctionSignature {
 	f.sg = NewFunctionSignature()
 
 	for _, p := range f.InstanceOf.Parameters {
-		v := NewVar(p.name, nil)
+		v := NewVar(p.name, nil, p.mod)
 		v.SetType(Instantiate(p.typ, f.Spec))
 		v.ParamLabel = p.ParamLabel
 		v.Mutable = p.Mutable
@@ -94,5 +91,17 @@ func (f *SpecializedFunctionSignature) Sg() *FunctionSignature {
 }
 
 func (f *SpecializedFunctionSignature) SymbolName() string {
-	return SpecializedSymbolName(f.Sg().Function, f.Bounds)
+
+	fn := f.InstanceOf.Function
+
+	base := ""
+
+	if fn.Self == nil {
+		base += fn.symbol.SymbolName()
+	} else {
+		gen := Instantiate(fn.Self.Type(), f.Spec)
+		base += SymbolName(gen) + "::" + fn.name
+	}
+
+	return SSym(base, f.Bounds)
 }

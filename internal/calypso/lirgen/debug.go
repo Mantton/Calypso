@@ -1,9 +1,12 @@
 package lirgen
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/mantton/calypso/internal/calypso/types"
+)
 
 func (b *builder) debugPrint() {
-
 	fmt.Println()
 	fmt.Println("Module Completed:", b.Mod.TModule.SymbolName())
 	fmt.Println("\nFunctions")
@@ -31,7 +34,7 @@ func (b *builder) debugPrint() {
 
 	fmt.Println("\nEnums")
 	for _, c := range b.Mod.Enums {
-		fmt.Println(SymbolName(c.Type))
+		fmt.Println(types.SymbolName(c.Type))
 	}
 	fmt.Println()
 

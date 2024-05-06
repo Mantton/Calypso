@@ -7,11 +7,12 @@ type Var struct {
 	StructIndex int
 }
 
-func NewVar(name string, t Type) *Var {
+func NewVar(name string, t Type, mod *Module) *Var {
 	return &Var{
 		symbol: symbol{
 			name: name,
 			typ:  t,
+			mod:  mod,
 		},
 		StructIndex: -1,
 	}

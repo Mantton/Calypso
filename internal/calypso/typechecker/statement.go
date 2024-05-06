@@ -60,7 +60,7 @@ func (c *Checker) checkVariableStatement(stmt *ast.VariableStatement, ctx *NodeC
 
 	var def *types.Var
 	if !global {
-		def = types.NewVar(stmt.Identifier.Value, unresolved)
+		def = types.NewVar(stmt.Identifier.Value, unresolved, c.module)
 		def.Mutable = !stmt.IsConstant
 		err := ctx.scope.Define(def)
 
@@ -175,7 +175,7 @@ func (c *Checker) checkStructStatement(n *ast.StructStatement, ctx *NodeContext)
 	var fields []*types.Var
 
 	for _, f := range n.Fields {
-		d := types.NewVar(f.Identifier.Value, unresolved)
+		d := types.NewVar(f.Identifier.Value, unresolved, c.module)
 		t := c.evaluateTypeExpression(f.Identifier.AnnotatedType, def.TypeParameters, ctx)
 		d.SetType(t)
 		fields = append(fields, d)
@@ -228,7 +228,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
 		if v.Fields != nil {
 			for _, f := range v.Fields.Fields {
 				t := c.evaluateTypeExpression(f, def.TypeParameters, ctx)
-				fields = append(fields, types.NewVar("", t))
+				fields = append(fields, types.NewVar("", t, c.module))
 			}
 
 			if len(fields) == 0 {
@@ -274,7 +274,7 @@ func (c *Checker) checkEnumStatement(n *ast.EnumStatement, ctx *NodeContext) {
 			def.GetScope().Define(fn)
 		} else {
 			// No fields
-			disc := types.NewVar(v.Name, def)
+			disc := types.NewVar(v.Name, def, c.module)
 			disc.SetVisibility(true)
 			def.GetScope().Define(disc)
 		}

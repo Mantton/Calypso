@@ -33,7 +33,7 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 
 		// Placeholder / Discard
 
-		v := types.NewVar(p.Name.Value, unresolved)
+		v := types.NewVar(p.Name.Value, unresolved, c.module)
 
 		// Parameter Has Required Label
 		if p.Label.Value != "_" {
@@ -54,9 +54,9 @@ func (c *Checker) registerFunctionExpression(e *ast.FunctionExpression, scope *t
 
 	// Annotated Return Type
 	if e.ReturnType != nil {
-		sg.Result = types.NewVar("result", unresolved)
+		sg.Result = types.NewVar("result", unresolved, c.module)
 	} else {
-		sg.Result = types.NewVar("result", types.LookUp(types.Void))
+		sg.Result = types.NewVar("result", types.LookUp(types.Void), c.module)
 	}
 
 	// At this point the signature has been constructed fully, add to scope
@@ -173,13 +173,11 @@ func (c *Checker) registerTypeParameters(g *ast.GenericParametersClause, t *type
 
 func (c *Checker) registerFunctionSignatures(e *ast.FunctionExpression) *types.FunctionSignature {
 
-	typ := c.ctx.scope.MustResolve(e.Identifier.Value).(*types.Function)
+	sg := c.module.Table.GetNodeType(e).(*types.FunctionSignature)
 
-	if typ == nil {
+	if sg == nil {
 		panic("unregistered node")
 	}
-
-	sg := typ.Sg()
 
 	fn := sg.Function
 

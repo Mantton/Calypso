@@ -177,7 +177,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 				c.addError(fmt.Sprintf("missing paramter label \"%s\"", param.ParamLabel), arg.Range())
 			}
 
-			I := types.NewVar(param.Name(), expected)
+			I := types.NewVar(param.Name(), expected, c.module)
 			err = c.resolveVar(I, arg.Value, specializations, ctx)
 
 			if err != nil {
@@ -280,7 +280,7 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 				label = arg.Label.Value
 			}
 			vT := c.evaluateExpression(arg.Value, ctx)
-			v := types.NewVar("", vT)
+			v := types.NewVar("", vT, c.module)
 			v.ParamLabel = label
 			callSg.AddParameter(v)
 		}
@@ -662,10 +662,10 @@ func (c *Checker) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, ct
 	}
 
 	// Private
-	if !symbol.IsVisible(c.module) {
-		c.addError(fmt.Sprintf("cannot access '%s' from this context", field), n.Field.Range())
-		return unresolved
-	}
+	// if !symbol.IsVisible(c.module) {
+	// 	c.addError(fmt.Sprintf("cannot access '%s' from this context", field), n.Field.Range())
+	// 	return unresolved
+	// }
 
 	c.module.Table.SetNodeType(n, symbolType)
 	return symbolType
@@ -917,7 +917,7 @@ func (c *Checker) evaluateEnumDestructure(fn types.Type, expr *ast.CallExpressio
 			return unresolved
 		}
 
-		err := ctx.scope.Define(types.NewVar(ident.Value, t.Type()))
+		err := ctx.scope.Define(types.NewVar(ident.Value, t.Type(), c.module))
 
 		if err != nil {
 			c.addError(err.Error(), arg.Range())

@@ -36,7 +36,7 @@ func (c *Checker) specialize(m types.Specialization, tParam *types.TypeParam, pr
 
 	// Specialization Found
 	// has been specialized, ensure strict match
-	temp := types.NewVar("", currentSpec)
+	temp := types.NewVar("", currentSpec, c.module)
 	err := c.validateAssignment(temp, provided, expr, false)
 
 	if err != nil {

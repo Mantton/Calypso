@@ -1,8 +1,6 @@
 package lir
 
 import (
-	"fmt"
-
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -85,6 +83,5 @@ func (m *Module) FindSymbol(s string) Value {
 		return v
 	}
 
-	fmt.Println("DNE", s)
 	return nil
 }

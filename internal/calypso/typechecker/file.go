@@ -176,7 +176,7 @@ func (c *Checker) pass3(f *ast.File) {
 	// define constants as unresolved
 	for _, d := range f.Nodes.Constants {
 		stmt := d.Stmt
-		def := types.NewVar(stmt.Identifier.Value, unresolved)
+		def := types.NewVar(stmt.Identifier.Value, unresolved, c.module)
 		def.Mutable = !stmt.IsConstant
 		err := c.ParentScope().Define(def)
 

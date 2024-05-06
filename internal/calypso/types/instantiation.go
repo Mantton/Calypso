@@ -70,7 +70,7 @@ func cloneWithSpecialization(t Type, ctx Specialization) Type {
 		fields := []*Var{}
 		for _, field := range parent.Fields {
 			s := Instantiate(field.Type(), ctx)
-			spec := NewVar(field.Name(), s)
+			spec := NewVar(field.Name(), s, field.mod)
 			spec.StructIndex = field.StructIndex
 			fields = append(fields, spec)
 		}
@@ -87,7 +87,7 @@ func cloneWithSpecialization(t Type, ctx Specialization) Type {
 			fields := []*Var{}
 
 			for _, f := range variant.Fields {
-				v := NewVar(f.Name(), nil)
+				v := NewVar(f.Name(), nil, f.mod)
 				s := Instantiate(f.Type(), ctx)
 				v.SetType(s)
 				fields = append(fields, v)
@@ -122,10 +122,27 @@ func apply(s1, s2 Specialization) Specialization {
 	return s3
 }
 
-func SpecializedSymbolName(symbol Symbol, args TypeList) string {
-	o := symbol.SymbolName()
-	for _, typ := range args {
-		o += "::_G::" + typ.String()
+func SSym(base string, args TypeList) string {
+	if len(args) != 0 {
+		base += "::_G"
 	}
-	return o
+	for _, typ := range args {
+		base += "::" + typ.String()
+	}
+	return base
+}
+
+func SymbolName(t Type) string {
+	switch t := t.(type) {
+	case *SpecializedType:
+		return t.SymbolName()
+	case *DefinedType:
+		return t.SymbolName()
+	case *SpecializedFunctionSignature:
+		return t.SymbolName()
+	case *FunctionSignature:
+		return t.Function.SymbolName()
+	default:
+		panic("unimplemented symbol")
+	}
 }
