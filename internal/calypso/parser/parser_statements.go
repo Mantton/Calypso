@@ -528,7 +528,7 @@ func (p *Parser) parseSwitchStatement() (*ast.SwitchStatement, error) {
 	}
 
 	//  4 - Cases
-	cases, err := p.parseSwitchCases()
+	cases, err := p.parseSwitchCases(cond)
 
 	if err != nil {
 		return nil, err
@@ -551,12 +551,12 @@ func (p *Parser) parseSwitchStatement() (*ast.SwitchStatement, error) {
 
 }
 
-func (p *Parser) parseSwitchCases() ([]*ast.SwitchCaseExpression, error) {
+func (p *Parser) parseSwitchCases(cond ast.Expression) ([]*ast.SwitchCaseExpression, error) {
 
 	cases := []*ast.SwitchCaseExpression{}
 
 	for p.currentMatches(token.CASE) || p.currentMatches(token.DEFAULT) {
-		c, err := p.parseSwitchCase()
+		c, err := p.parseSwitchCase(cond)
 
 		if err != nil {
 			return nil, err
@@ -567,7 +567,7 @@ func (p *Parser) parseSwitchCases() ([]*ast.SwitchCaseExpression, error) {
 	return cases, nil
 }
 
-func (p *Parser) parseSwitchCase() (*ast.SwitchCaseExpression, error) {
+func (p *Parser) parseSwitchCase(comp ast.Expression) (*ast.SwitchCaseExpression, error) {
 
 	if p.currentMatches(token.CASE) {
 
@@ -582,6 +582,10 @@ func (p *Parser) parseSwitchCase() (*ast.SwitchCaseExpression, error) {
 		cond, err := p.parseExpression()
 		if err != nil {
 			return nil, err
+		}
+
+		if c, ok := cond.(*ast.CallExpression); ok {
+			c.SwitchExpansionOf = comp
 		}
 
 		// 3 - Body

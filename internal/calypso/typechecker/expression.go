@@ -192,7 +192,8 @@ func (c *Checker) evaluateCallExpression(expr *ast.CallExpression, ctx *NodeCont
 		fn := typ
 
 		// Enum Switch Spread
-		if ctx.lhs != nil {
+		if expr.SwitchExpansionOf != nil || ctx.lhs != nil {
+			c.module.Table.SetNodeType(expr.Target, ctx.lhs)
 			return c.evaluateEnumDestructure(fn, expr, ctx)
 		}
 

@@ -1,6 +1,8 @@
 package lir
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
@@ -50,6 +52,10 @@ func (m *Module) Yields() types.Type {
 
 func (m *Module) Find(s string) Value {
 	symbol := m.TModule.Scope.MustResolve(s)
+
+	if symbol == nil {
+		panic(fmt.Sprintf("nil symbol, %s", s))
+	}
 	s = symbol.SymbolName()
 	return m.FindSymbol(s)
 }

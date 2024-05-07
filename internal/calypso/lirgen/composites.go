@@ -124,8 +124,8 @@ func (b *builder) genTaggedUnion(symbol types.Type, n *types.Enum) {
 	}
 }
 
-func EnumVariantSymbolName(v *types.EnumVariant, sym types.Symbol) string {
-	return sym.SymbolName() + "::_V::" + v.Name
+func EnumVariantSymbolName(v *types.EnumVariant, sym types.Type) string {
+	return types.SymbolName(sym) + "::_V::" + v.Name
 }
 
 func EnumVariantSymbolNameStr(v *types.EnumVariant, sym string) string {

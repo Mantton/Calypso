@@ -17,8 +17,24 @@ type EnumVariants []*EnumVariant
 func (t *Enum) Parent() Type   { return t }
 func (t *Enum) String() string { return t.Name }
 
-func (t *EnumVariant) Parent() Type   { return t.Owner }
-func (t *EnumVariant) String() string { return t.Owner.String() + "::" + t.Name }
+func (t *EnumVariant) Parent() Type { return t.Owner }
+func (t *EnumVariant) String() string {
+	base := t.Owner.String() + "::" + t.Name
+
+	if len(t.Fields) == 0 {
+		return base
+	}
+
+	base += "("
+
+	for _, f := range t.Fields {
+		base += f.Type().String()
+	}
+
+	base += ")"
+
+	return base
+}
 
 func NewEnum(name string, cases []*EnumVariant) *Enum {
 	e := &Enum{
@@ -69,4 +85,12 @@ func IsUnionEnum(t Type) bool {
 	}
 
 	return x.IsUnion()
+}
+
+func IsEnum(t Type) bool {
+
+	_, ok := t.Parent().(*Enum)
+
+	return ok
+
 }

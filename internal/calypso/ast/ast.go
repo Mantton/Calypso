@@ -248,10 +248,11 @@ type ShorthandAssignmentExpression struct {
 }
 
 type CallExpression struct {
-	Target    Expression
-	Arguments []*CallArgument
-	LParenPos token.TokenPosition
-	RParenPos token.TokenPosition
+	Target            Expression
+	Arguments         []*CallArgument
+	LParenPos         token.TokenPosition
+	RParenPos         token.TokenPosition
+	SwitchExpansionOf Expression
 }
 
 type CallArgument struct {

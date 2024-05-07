@@ -292,6 +292,7 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement, ctx *NodeContext)
 
 	// 1 - Condition
 	condition := c.evaluateExpression(n.Condition, ctx)
+	c.module.Table.SetNodeType(n.Condition, condition)
 
 	// 2 - Cases
 
@@ -331,6 +332,7 @@ func (c *Checker) checkSwitchStatement(n *ast.SwitchStatement, ctx *NodeContext)
 			c.addError(err.Error(), cs.Condition.Range())
 			continue
 		}
+		c.module.Table.SetNodeType(cs.Condition, caseCondition)
 
 		// 2 - Block
 		c.checkBlockStatement(cs.Action, ctx)

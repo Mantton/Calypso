@@ -76,6 +76,11 @@ func (b *builder) evaluateExpression(n ast.Expression, fn *lir.Function, mod *li
 
 func (b *builder) evaluateCallExpression(n *ast.CallExpression, fn *lir.Function, mod *lir.Module) lir.Value {
 
+	// Expanding Enum Switch Case
+	if n.SwitchExpansionOf != nil {
+		return b.emitEnumExpansion(n, fn)
+	}
+
 	val := b.evaluateExpression(n.Target, fn, mod)
 
 	if val == nil {
@@ -774,7 +779,20 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 	switch target := target.(type) {
 	case *lir.GenericEnumReference:
-		X := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedFunctionSignature).ReturnType().(*types.SpecializedType).Parent().(*types.Enum).FindVariant(field)
+		Y := b.Mod.TModule.Table.GetNodeType(n)
+		var X *types.EnumVariant
+		var Z *types.SpecializedType
+		switch Y := Y.(type) {
+		case *types.SpecializedFunctionSignature:
+			Z = Y.ReturnType().(*types.SpecializedType)
+			X = Z.Parent().(*types.Enum).FindVariant(field)
+		case *types.SpecializedType:
+			Z = Y
+			X = Y.Parent().(*types.Enum).FindVariant(field)
+		default:
+			fmt.Println(Y)
+			panic(fmt.Sprintf("%T, unhanlded", Y))
+		}
 
 		if X == nil {
 			panic("")
@@ -782,21 +800,21 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 
 		// Unit
 		if len(X.Fields) == 0 {
-			return lir.NewConst(int64(X.Discriminant), types.LookUp(types.Int32))
+			return lir.NewConst(int64(X.Discriminant), types.LookUp(types.Int8))
 		}
 
 		return &lir.UnionTypeInlineCreation{
-			Type:    target.Type,
+			Type:    Z,
 			Variant: X,
 		}
 	case *lir.EnumReference:
 		X := target.Type.Parent().(*types.Enum).FindVariant(field)
 		// Unit
 		if len(X.Fields) == 0 {
-			return lir.NewConst(int64(X.Discriminant), types.LookUp(types.Int32))
+			return lir.NewConst(int64(X.Discriminant), types.LookUp(types.Int8))
 		}
 		return &lir.UnionTypeInlineCreation{
-			Type:    target.Type.(types.Symbol),
+			Type:    target.Type,
 			Variant: X,
 		}
 	default:
@@ -872,82 +890,6 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 		}
 	default:
 		panic(fmt.Sprintf("unhandled symbol type, %s", parent))
-	}
-}
-
-func (b *builder) evaluateSwitchConditionExpression(n ast.Expression, fn *lir.Function, mod *lir.Module) (lir.Value, *ast.CallExpression, *types.EnumVariant) {
-
-	var target lir.Value
-	var expr *ast.CallExpression
-	switch n := n.(type) {
-	case *ast.CallExpression:
-		expr = n
-		target = b.evaluateExpression(n.Target, fn, mod)
-	case *ast.FieldAccessExpression:
-		target = b.evaluateExpression(n, fn, mod)
-
-	default:
-		return b.evaluateExpression(n, fn, mod), nil, nil
-	}
-
-	f, ok := target.(*lir.Function)
-
-	if !ok {
-		return b.evaluateExpression(n, fn, mod), nil, nil
-	}
-
-	en := b.RFunctionEnums[f]
-
-	if en == nil {
-
-		return b.evaluateExpression(n, fn, mod), nil, nil
-	}
-
-	// Composite Enum
-	dis := lir.NewConst(int64(en.Discriminant), types.LookUp(types.Int8))
-
-	// for each argument create name:value
-	return dis, expr, en
-}
-
-func (b *builder) evaluateEnumVariantTuple(fn *lir.Function, n *ast.CallExpression, v *types.EnumVariant, s types.Symbol, self lir.Value, mod *lir.Module) {
-	composite, ok := mod.Composites[EnumVariantSymbolName(v, s)]
-
-	if !ok {
-		panic("unknown composite")
-	}
-
-	// 0 Index is Discriminant
-	x := 1
-
-	// If aligned 1 index is padding
-	if composite.IsAligned {
-		x += 1
-	}
-
-	// iterate through arguments
-	for i, arg := range n.Arguments {
-		idx := i + x
-		ident, ok := arg.Value.(*ast.IdentifierExpression)
-
-		if !ok {
-			panic("expected identifier")
-		}
-
-		addr := &lir.GEP{
-			Address:   self,
-			Index:     idx,
-			Composite: composite,
-		}
-
-		fn.Emit(addr)
-
-		load := &lir.Load{
-			Address: addr,
-		}
-
-		fn.Emit(load)
-		fn.Variables[ident.Value] = load
 	}
 }
 
@@ -1032,4 +974,86 @@ func (b *builder) emitUnionVariant(n *lir.UnionTypeInlineCreation, fn *lir.Funct
 	})
 
 	return addr
+}
+
+func (b *builder) emitEnumExpansion(n *ast.CallExpression, x *lir.Function) *lir.EnumExpansionResult {
+
+	X, ok := b.evaluateExpression(n.Target, x, b.Mod).(*lir.UnionTypeInlineCreation)
+
+	if !ok {
+		panic("cannot expand non enum type")
+	}
+
+	f := func(fn *lir.Function, self lir.Value) {
+
+		variant := X.Variant
+		composite, ok := b.MP.Composites[variant]
+
+		if !ok {
+			panic("composite not found")
+		}
+
+		// 0 Index is Discriminant
+		x := 1
+
+		// If aligned 1 index is padding
+		if composite.IsAligned {
+			x += 1
+		}
+
+		// iterate through arguments
+		for i, arg := range n.Arguments {
+			idx := i + x
+			ident, ok := arg.Value.(*ast.IdentifierExpression)
+
+			if !ok {
+				panic("expected identifier")
+			}
+
+			addr := &lir.GEP{
+				Address:   self,
+				Index:     idx,
+				Composite: composite,
+			}
+
+			fn.Emit(addr)
+
+			load := &lir.Load{
+				Address: addr,
+			}
+
+			fn.Emit(load)
+			fn.Variables[ident.Value] = load
+		}
+
+	}
+
+	return &lir.EnumExpansionResult{
+		Discriminant: lir.NewConst(int64(X.Variant.Discriminant), types.LookUp(types.Int8)),
+		Emit:         f,
+	}
+}
+
+func SafeDereference(t types.Type) types.Type {
+	if types.IsPointer(t) {
+		return types.Dereference(t)
+	}
+
+	return t
+}
+
+func (b *builder) evaluateSwitchCaseCondition(n *ast.SwitchCaseExpression, fn *lir.Function, self lir.Value) lir.Value {
+
+	y := SafeDereference(self.Yields())
+
+	fmt.Println(y)
+	if !types.IsEnum(y) {
+		return b.evaluateExpression(n.Condition, fn, b.Mod)
+	}
+
+	// Is enum switch case
+
+	b.Mod.TModule.Table.SetNodeType(n.Condition, y)
+	X := b.evaluateExpression(n.Condition, fn, b.Mod)
+	return X
 }

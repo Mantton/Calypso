@@ -179,7 +179,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 		symT = types.Dereference(symT)
 	}
 
-	symbol := symT.(types.Symbol)
+	symbol := symT
 	typ := cond.Yields().Parent()
 
 	// Is Composite Enum
@@ -188,7 +188,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 			addr := &lir.GEP{
 				Address:   cond,
 				Index:     0,
-				Composite: b.Mod.Composites[symbol.SymbolName()],
+				Composite: b.MP.Composites[symbol],
 			}
 
 			T = &lir.Load{
@@ -215,21 +215,23 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 			defaultCase = cs
 			continue
 		}
-		value, expr, typ := b.evaluateSwitchConditionExpression(cs.Condition, fn, b.Mod)
+		pair := &lir.SwitchValueBlock{}
 
 		block := fn.NewBlock()
+		pair.Block = block
+		res := b.evaluateSwitchCaseCondition(cs, fn, cond)
 
-		if expr != nil {
-			b.evaluateEnumVariantTuple(fn, expr, typ, symbol, cond, b.Mod)
+		switch res := res.(type) {
+		case *lir.EnumExpansionResult:
+			pair.Value = res.Discriminant
+			res.Emit(fn, cond)
+		default:
+			pair.Value = res
 		}
 
 		b.visitBlockStatement(cs.Action, fn)
 
-		pair := &lir.SwitchValueBlock{
-			Value:    value,
-			Block:    block,
-			EndBlock: fn.CurrentBlock,
-		}
+		pair.EndBlock = fn.CurrentBlock
 
 		instr.Blocks = append(instr.Blocks, pair)
 	}

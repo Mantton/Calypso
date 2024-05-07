@@ -24,9 +24,18 @@ func (t *GenericEnumReference) Yields() types.Type {
 
 type UnionTypeInlineCreation struct {
 	Variant *types.EnumVariant
-	Type    types.Symbol
+	Type    types.Type
 }
 
 func (t *UnionTypeInlineCreation) Yields() types.Type {
-	panic("should never yeild")
+	return t.Type
+}
+
+type EnumExpansionResult struct {
+	Discriminant Value
+	Emit         func(*Function, Value)
+}
+
+func (t *EnumExpansionResult) Yields() types.Type {
+	return t.Discriminant.Yields()
 }
