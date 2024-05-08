@@ -53,7 +53,11 @@ func ParseAndResolve(pkg *fs.LitePackage) (*ResolvedData, error) {
 	for len(r.seen) != len(r.nodes) {
 
 		for x := range r.nodes {
-			r.resolvePath(x)
+			err := r.resolvePath(x)
+
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
