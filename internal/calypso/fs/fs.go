@@ -21,6 +21,10 @@ func NewPackage(path string, config *Config) *Package {
 	}
 }
 
+func (p *Package) IsSTD() bool {
+	return p.Path == GetSTDPath()
+}
+
 func (p *Package) AddModule(m *Module) {
 	p.Modules = append(p.Modules, m)
 }

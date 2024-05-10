@@ -8,7 +8,7 @@ import (
 func (b *builder) passN(f *ast.File) {
 
 	for _, d := range f.Nodes.Imports {
-		key := d.PopulatedImportKey
+		key := d.ImportedModuleID
 
 		mod := b.MP.Modules[key]
 

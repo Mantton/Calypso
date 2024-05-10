@@ -8,8 +8,8 @@ import (
 type Executable struct {
 
 	// Outputs
-	Packages map[string]*Package
-	Modules  map[string]*Module
+	Packages map[int64]*Package
+	Modules  map[int64]*Module
 
 	// Composites & Functions
 	Composites map[types.Type]*Composite
@@ -21,8 +21,8 @@ type Executable struct {
 
 func NewExecutable() *Executable {
 	return &Executable{
-		Modules:    make(map[string]*Module),
-		Packages:   make(map[string]*Package),
+		Modules:    make(map[int64]*Module),
+		Packages:   make(map[int64]*Package),
 		Composites: make(map[types.Type]*Composite),
 		Functions:  make(map[types.Type]*Function),
 		CallGraph:  simple.NewDirectedGraph(),

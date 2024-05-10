@@ -10,10 +10,11 @@ import (
 type Module struct {
 
 	// core
+	TModule *types.Module // the typechecked module
+
 	Functions       map[string]*Function  // functions to be built in this module
 	GlobalConstants map[string]*Global    // global constants in this module
 	Composites      map[string]*Composite // composites defined in this module
-	TModule         *types.Module         // the typechecked module
 	Imports         map[string]*Module    // imports in this module
 
 	// Generics
@@ -24,7 +25,7 @@ type Module struct {
 	GEnums map[string]*GenericEnumReference
 }
 
-func NewModule(mod *types.Module) *Module {
+func NewModule(t *types.Module) *Module {
 	return &Module{
 		Functions:       make(map[string]*Function),
 		GFunctions:      make(map[string]*GenericFunction),
@@ -34,10 +35,13 @@ func NewModule(mod *types.Module) *Module {
 		Imports:         make(map[string]*Module),
 		Enums:           make(map[string]*EnumReference),
 		GEnums:          make(map[string]*GenericEnumReference),
-		TModule:         mod,
+		TModule:         t,
 	}
 }
 
+func (m *Module) ID() int64 {
+	return m.TModule.ID()
+}
 func (m *Module) Name() string {
 	return m.TModule.Name()
 }

@@ -9,6 +9,11 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+func GetSTDPath() string {
+	// TODO: STD path
+	return "./dev/std"
+}
+
 func ParseConfig(path string) (*Config, error) {
 
 	var cfg *Config

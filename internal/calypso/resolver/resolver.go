@@ -22,19 +22,10 @@ type resolver struct {
 	target              *ast.Package
 }
 
-type ResolvedData struct {
-	Packages       map[string]*ast.Package
-	OrderedModules []*ast.Module
-}
-
 func (r *resolver) addError(e error) {
 	r.errorList.Add(e)
 }
 
-func getSTDPath() string {
-	// TODO: STD path
-	return "./dev/std"
-}
 func ParseAndResolve(path string) ([]*ast.Package, error) {
 	// Collect paths
 	r := &resolver{
@@ -45,7 +36,7 @@ func ParseAndResolve(path string) ([]*ast.Package, error) {
 	}
 
 	// 1 -  Parse STD Package
-	r.ParsePackage(getSTDPath(), false)
+	r.ParsePackage(fs.GetSTDPath(), false)
 
 	// 2 - Parse Target Package
 	r.ParsePackage(path, true)
@@ -99,7 +90,7 @@ func (r *resolver) ParsePackage(p string, entry bool) *ast.Package {
 	r.programPackageGraph.AddNode(astPackage)
 
 	// store
-	if p == getSTDPath() {
+	if p == fs.GetSTDPath() {
 		r.pacakges["std"] = astPackage
 	} else {
 		r.pacakges[astPackage.Key()] = astPackage
@@ -131,10 +122,7 @@ func (r *resolver) ParseModule(mod *fs.Module, pkg *ast.Package) {
 
 	// add to graph
 	r.programModuleGraph.AddNode(ast)
-	// add top level mod to package
-	if ast.ParentModule == nil {
-		pkg.AddModule(ast)
-	}
+	pkg.AddModule(ast)
 
 	for _, sub := range mod.SubModules {
 		mod, err := parser.ParseModule(sub, pkg)

@@ -1,15 +1,21 @@
 package lir
 
+import "github.com/mantton/calypso/internal/calypso/ast"
+
 // *
 
 type Package struct {
-	Modules map[string]*Module
-	Name    string
+	Modules map[int64]*Module
+	AST     *ast.Package
 }
 
-func NewPackage(n string) *Package {
+func NewPackage(p *ast.Package) *Package {
 	return &Package{
-		Modules: map[string]*Module{},
-		Name:    n,
+		Modules: map[int64]*Module{},
+		AST:     p,
 	}
+}
+
+func (p *Package) ID() int64 {
+	return p.AST.ID()
 }

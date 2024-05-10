@@ -57,7 +57,7 @@ func CheckPackages(pkgs []*ast.Package) (*types.PackageMap, error) {
 		mp.Packages[pkg.ID()] = tPkg
 
 		// CheckModule
-		pkg.PerformInOrder(func(m *ast.Module) error {
+		err := pkg.PerformInOrder(func(m *ast.Module) error {
 			c := New(m, mp)
 			mod, err := c.Check()
 
@@ -68,6 +68,10 @@ func CheckPackages(pkgs []*ast.Package) (*types.PackageMap, error) {
 			mp.Modules[mod.ID()] = mod
 			return nil
 		})
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return mp, nil

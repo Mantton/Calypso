@@ -1,35 +1,50 @@
 package lirgen
 
 import (
+	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lir"
-	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) (*lir.Executable, error) {
+func Generate(packages []*ast.Package, tmap *types.PackageMap) (*lir.Executable, error) {
 
-	mp := lir.NewExecutable()
-	for _, mod := range data.OrderedModules {
-		path := mod.Info.Path
-		tMod := tmap.Modules[path]
-		mod := lir.NewModule(tMod)
-		err := build(mod, mp)
+	exec := lir.NewExecutable()
+
+	for _, pkg := range packages {
+		err := genPackage(pkg, tmap, exec)
+
 		if err != nil {
 			return nil, err
 		}
-		mp.Modules[path] = mod
 	}
+	return exec, nil
+}
 
-	for _, astPkg := range data.Packages {
-		lirPkg := lir.NewPackage(astPkg.Name())
+func genPackage(p *ast.Package, mp *types.PackageMap, e *lir.Executable) error {
 
-		for _, mod := range astPkg.Modules {
-			path := mod.Info.Path
-			lirPkg.Modules[path] = mp.Modules[path]
+	// Add pkg
+	pkg := lir.NewPackage(p)
+	e.Packages[pkg.ID()] = pkg
+
+	// add modules
+	err := p.PerformInOrder(func(m *ast.Module) error {
+		tMod := mp.Modules[m.ID()]
+		mod := lir.NewModule(tMod)
+
+		err := build(mod, e)
+
+		if err != nil {
+			return err
 		}
 
-		mp.Packages[lirPkg.Name] = lirPkg
+		e.Modules[mod.ID()] = mod
+		pkg.Modules[mod.ID()] = mod
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
-	return mp, nil
+	return nil
 }

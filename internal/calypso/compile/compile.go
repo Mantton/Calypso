@@ -3,6 +3,7 @@ package compile
 import (
 	"fmt"
 
+	"github.com/mantton/calypso/internal/calypso/lirgen"
 	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
@@ -18,20 +19,22 @@ func CompilePackage(path string) error {
 	}
 
 	fmt.Println("\n\nTypeCheck")
-	_, err = typechecker.CheckPackages(packages)
+	typedPackages, err := typechecker.CheckPackages(packages)
 	if err != nil {
 		return err
 	}
 
-	// fmt.Println("\n\nLIR GEN")
-	// exec, err := lirgen.Generate(data, pkgMap)
+	fmt.Println("\n\nLIR GEN")
+	exec, err := lirgen.Generate(packages, typedPackages)
 
-	// if err != nil {
-	// 	return err
-	// }
+	if err != nil {
+		return err
+	}
 
 	// fmt.Println("\n\nLLVM-IR GEN")
 
 	// llir.Compile(exec)
+
+	fmt.Println(packages, typedPackages, exec)
 	return nil
 }
