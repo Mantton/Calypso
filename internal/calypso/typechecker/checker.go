@@ -10,20 +10,9 @@ import (
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
-type CheckerMode byte
-
-const (
-	//  Standard Library, Certain Restrictions are lifted
-	STD CheckerMode = iota
-
-	// User Scripts, This is the standard language
-	USER
-)
-
 type Checker struct {
 	Errors lexer.ErrorList
 	depth  int
-	mode   CheckerMode
 	ctx    *NodeContext
 	file   *ast.File
 
@@ -34,11 +23,10 @@ type Checker struct {
 func New(mod *ast.Module, mp *types.PackageMap) *Checker {
 	c := &Checker{
 		depth: 0,
-		mode:  USER,
 		mp:    mp,
 	}
 
-	m := types.NewModule(mod, mp.Packages[mod.Package.FSPackage.Path])
+	m := types.NewModule(mod, mp.Packages[mod.Package.Info.Path])
 	c.module = m
 	return c
 }
@@ -67,7 +55,7 @@ func CheckParsedData(p *resolver.ResolvedData) (*types.PackageMap, error) {
 
 	for _, pkg := range p.Packages {
 		tPkg := types.NewPackage(pkg)
-		mp.Packages[tPkg.AST.FSPackage.Path] = tPkg
+		mp.Packages[tPkg.AST.Info.Path] = tPkg
 	}
 
 	for _, m := range p.OrderedModules {
@@ -78,7 +66,7 @@ func CheckParsedData(p *resolver.ResolvedData) (*types.PackageMap, error) {
 			return nil, err
 		}
 
-		mp.Modules[mod.AST.FSMod.Path] = mod
+		mp.Modules[mod.AST.Info.Path] = mod
 	}
 
 	return mp, nil

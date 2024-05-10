@@ -10,7 +10,7 @@ func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) (*lir.Executa
 
 	mp := lir.NewExecutable()
 	for _, mod := range data.OrderedModules {
-		path := mod.FSMod.Path
+		path := mod.Info.Path
 		tMod := tmap.Modules[path]
 		mod := lir.NewModule(tMod)
 		err := build(mod, mp)
@@ -24,7 +24,7 @@ func Generate(data *resolver.ResolvedData, tmap *types.PackageMap) (*lir.Executa
 		lirPkg := lir.NewPackage(astPkg.Name())
 
 		for _, mod := range astPkg.Modules {
-			path := mod.FSMod.Path
+			path := mod.Info.Path
 			lirPkg.Modules[path] = mp.Modules[path]
 		}
 

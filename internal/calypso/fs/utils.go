@@ -28,7 +28,7 @@ func ParseConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func CreateLitePackage(dir string, isProject bool) (*LitePackage, error) {
+func CreatePackage(dir string) (*Package, error) {
 	// 1 - Read Config File
 
 	cfgPath := path.Join(dir, CONFIG_FILE)
@@ -44,27 +44,71 @@ func CreateLitePackage(dir string, isProject bool) (*LitePackage, error) {
 		return nil, err
 	}
 
-	// 2 - Read src folder
-	srcPath := path.Join(dir, "src")
-	srcDir, err := os.Stat(srcPath)
+	p := NewPackage(dir, cfg)
+
+	err = p.CollectModules()
 
 	if err != nil {
 		return nil, err
 	}
 
-	if !srcDir.IsDir() {
-		return nil, errors.New("\"src\" is not a directory")
-	}
-
-	return &LitePackage{
-		Path:   dir,
-		Config: cfg,
-	}, nil
-
+	return p, nil
 }
 
-func CollectModule(path string, subs bool) (*Module, error) {
+func (p *Package) CollectModules() error {
 
+	// 2 - Read `src` folder of package
+	SRC := path.Join(p.Path, "src")
+	srcDir, err := os.Stat(SRC)
+
+	if err != nil {
+		return err
+	}
+
+	if !srcDir.IsDir() {
+		return errors.New("\"src\" is not a directory")
+	}
+	// read entries in `src` directory
+	entries, err := os.ReadDir(SRC)
+
+	if err != nil {
+		return err
+	}
+
+	if len(entries) == 0 {
+		return nil
+	}
+
+	// Base module at the source directory
+	base := NewModule(SRC, nil)
+	p.AddModule(base)
+
+	// iterate through src folder, collect files for base module, and subdirectories are top level modules of the package
+	for _, entry := range entries {
+		path := filepath.Join(SRC, entry.Name())
+
+		// If directory in `src`, this is another standalone module
+		if entry.IsDir() {
+			mod, err := p.CollectModule(path, nil)
+
+			if err != nil {
+				return err
+			}
+
+			if mod == nil {
+				continue
+			}
+
+			p.AddModule(mod)
+		} else {
+			base.AddFile(path)
+		}
+	}
+
+	return nil
+}
+
+func (p *Package) CollectModule(path string, parent *Module) (*Module, error) {
 	// read entries
 	entries, err := os.ReadDir(path)
 
@@ -72,34 +116,28 @@ func CollectModule(path string, subs bool) (*Module, error) {
 		return nil, err
 	}
 
-	// declare
-	set := &FileSet{}
-	var submodules map[string]*Module
-
-	mod := &Module{
-		Set:        set,
-		SubModules: submodules,
-		Path:       path,
+	if len(entries) == 0 {
+		return nil, nil
 	}
 
+	mod := NewModule(path, parent)
 	for _, entry := range entries {
-		p := filepath.Join(path, entry.Name())
+		path := filepath.Join(path, entry.Name())
 
 		// Is SubModule/Directory
 		if entry.IsDir() {
-			if subs {
-				continue
-			}
-			sub, err := CollectModule(p, true)
-
+			submodule, err := p.CollectModule(path, mod)
 			if err != nil {
 				return nil, err
 			}
 
-			mod.AddSubmodule(sub)
+			if mod == nil {
+				continue
+			}
+
+			mod.AddModule(submodule)
 		} else {
-			// is file, add to fileset
-			set.FilesPaths = append(set.FilesPaths, p)
+			mod.AddFile(path)
 		}
 	}
 

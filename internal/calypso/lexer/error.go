@@ -12,6 +12,14 @@ type CompilerError struct {
 	Message string
 }
 
+func NewError(msg string, pos token.SyntaxRange, file *File) *CompilerError {
+	return &CompilerError{
+		Message: msg,
+		Range:   pos,
+		File:    file,
+	}
+}
+
 type ErrorList []error
 
 func (l *ErrorList) Add(err error) {

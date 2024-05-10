@@ -169,7 +169,7 @@ func ParseFileSet(set *fs.FileSet) (*ast.FileSet, error) {
 	// Lex all Files
 
 	files := &ast.FileSet{}
-	for _, path := range set.FilesPaths {
+	for _, path := range set.Paths {
 
 		// Lex
 		f, err := lexer.NewFile(path)
@@ -201,13 +201,10 @@ func ParseFileSet(set *fs.FileSet) (*ast.FileSet, error) {
 	return files, nil
 }
 
-func ParseModule(mod *fs.Module) (*ast.Module, error) {
-
-	out := &ast.Module{
-		FSMod: mod,
-	}
+func ParseModule(mod *fs.Module, pkg *ast.Package) (*ast.Module, error) {
+	out := ast.NewModule(mod, pkg)
 	// Fileset
-	set, err := ParseFileSet(mod.Set)
+	set, err := ParseFileSet(mod.Files)
 
 	if err != nil {
 		return nil, err
@@ -217,7 +214,7 @@ func ParseModule(mod *fs.Module) (*ast.Module, error) {
 
 	// Submodules
 	for _, sub := range mod.SubModules {
-		sMod, err := ParseModule(sub)
+		sMod, err := ParseModule(sub, pkg)
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +223,14 @@ func ParseModule(mod *fs.Module) (*ast.Module, error) {
 			out.SubModules = make(map[string]*ast.Module)
 		}
 
-		out.SubModules[sMod.Name()] = sMod
+		name := sMod.Name()
+		_, ok := out.SubModules[name]
+
+		if ok {
+			return nil, fmt.Errorf("submodule \"%s\" already exists", name)
+		}
+
+		out.SubModules[name] = sMod
 		sMod.ParentModule = out
 	}
 

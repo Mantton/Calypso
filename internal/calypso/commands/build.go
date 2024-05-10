@@ -77,7 +77,7 @@ func buildFromFileList(paths []string) error {
 
 		dirs[filepath.Dir(path)] = struct{}{}
 
-		set.FilesPaths = append(set.FilesPaths, path)
+		set.Paths = append(set.Paths, path)
 	}
 
 	// map acts as a set in this case where we check that the dir lenght is just one, meaning one directory
@@ -95,13 +95,5 @@ func buildFromFileList(paths []string) error {
 }
 
 func buildFromDirectory(path string) error {
-	// collect file paths & group into modules and submodules
-	pkg, err := fs.CreateLitePackage(path, true)
-
-	if err != nil {
-		return err
-	}
-
-	// compile
-	return compile.CompilePackage(pkg)
+	return compile.CompilePackage(path)
 }

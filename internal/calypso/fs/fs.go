@@ -1,29 +1,66 @@
 package fs
 
+import "fmt"
+
 const CONFIG_FILE = "config.toml"
 
 type FileSet struct {
-	FilesPaths []string
-}
-
-type Module struct {
-	Path         string
-	Set          *FileSet
-	SubModules   map[string]*Module
-	ParentModule *Module
+	Paths []string
 }
 
 type Package struct {
-	Modules  []*Module
-	Config   *Config
-	BasePath string
+	Modules []*Module
+	Config  *Config
+	Path    string
 }
 
-type LitePackage struct {
-	Path   string
-	Config *Config
+func NewPackage(path string, config *Config) *Package {
+	return &Package{
+		Path:   path,
+		Config: config,
+	}
 }
 
+func (p *Package) AddModule(m *Module) {
+	p.Modules = append(p.Modules, m)
+}
+
+func (p *Package) ID() string {
+	return p.Config.ID()
+}
+
+// * Module
+type Module struct {
+	Path       string
+	Files      *FileSet
+	SubModules []*Module
+	Parent     *Module
+}
+
+func NewModule(path string, parent *Module) *Module {
+	return &Module{
+		Path:   path,
+		Parent: parent,
+	}
+}
+
+func (m *Module) AddFile(f string) {
+	if m.Files == nil {
+		m.Files = &FileSet{
+			Paths: []string{
+				f,
+			},
+		}
+	} else {
+		m.Files.Paths = append(m.Files.Paths, f)
+	}
+}
+
+func (m *Module) AddModule(sM *Module) {
+	m.SubModules = append(m.SubModules, sM)
+}
+
+// Config
 type Config struct {
 	Package struct {
 		Name    string
@@ -32,6 +69,11 @@ type Config struct {
 	Dependencies map[string]*ConfigDependency
 }
 
+func (c *Config) ID() string {
+	return fmt.Sprintf("%s::%s", c.Package.Name, c.Package.Version)
+}
+
+// Config Dependency
 type ConfigDependency struct {
 	Name    string
 	Path    string
@@ -39,13 +81,8 @@ type ConfigDependency struct {
 	Alias   string
 }
 
-func (m *Module) AddSubmodule(s *Module) {
-	if m.SubModules == nil {
-		m.SubModules = make(map[string]*Module)
-	}
-
-	m.SubModules[s.Path] = s
-	s.ParentModule = m
+func (c *ConfigDependency) ID() string {
+	return fmt.Sprintf("%s::%s", c.Name, c.Version)
 }
 
 func (c *Config) FindDependency(n string) *ConfigDependency {

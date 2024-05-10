@@ -1,29 +1,26 @@
 package resolver
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/mantton/calypso/internal/calypso/ast"
+	"github.com/mantton/calypso/internal/calypso/collections"
 	"github.com/mantton/calypso/internal/calypso/fs"
+	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
-	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/topo"
 )
 
 type resolver struct {
-	nodes       map[string]graph.Node
-	seen        map[string]struct{}
-	packages    map[string]*fs.LitePackage
-	nodePackage map[string]*fs.LitePackage
-	rnodes      map[graph.Node]string
-	modules     map[string]*ast.Module
-
-	dg *simple.DirectedGraph
+	pacakges            map[string]*ast.Package    // maps packages to their key value
+	errorList           lexer.ErrorList            // list of all errors found during parsing and resolution
+	queuedActions       *collections.Stack[func()] // a FIFO stack of functions to be invoked
+	programModuleGraph  *simple.DirectedGraph
+	programPackageGraph *simple.DirectedGraph
+	target              *ast.Package
 }
 
 type ResolvedData struct {
@@ -31,288 +28,267 @@ type ResolvedData struct {
 	OrderedModules []*ast.Module
 }
 
-func ParseAndResolve(pkg *fs.LitePackage) (*ResolvedData, error) {
+func (r *resolver) addError(e error) {
+	r.errorList.Add(e)
+}
+
+func getSTDPath() string {
+	// TODO: STD path
+	return "./dev/std"
+}
+func ParseAndResolve(path string) ([]*ast.Package, error) {
 	// Collect paths
 	r := &resolver{
-		nodes:       make(map[string]graph.Node),
-		rnodes:      make(map[graph.Node]string),
-		nodePackage: make(map[string]*fs.LitePackage),
-		seen:        make(map[string]struct{}),
-		packages:    make(map[string]*fs.LitePackage),
-		modules:     make(map[string]*ast.Module),
-		dg:          simple.NewDirectedGraph(),
+		programModuleGraph:  simple.NewDirectedGraph(),
+		programPackageGraph: simple.NewDirectedGraph(),
+		pacakges:            make(map[string]*ast.Package),
+		queuedActions:       &collections.Stack[func()]{},
 	}
 
-	// resolve first package
-	err := r.resolvePackage(pkg)
+	// 1 -  Parse STD Package
+	r.ParsePackage(getSTDPath(), false)
 
-	if err != nil {
-		return nil, err
-	}
+	// 2 - Parse Target Package
+	r.ParsePackage(path, true)
 
-	for len(r.seen) != len(r.nodes) {
+	// Perform Queued actions
+	for r.queuedActions.Length() != 0 {
+		action, ok := r.queuedActions.Pop()
 
-		for x := range r.nodes {
-			err := r.resolvePath(x)
-
-			if err != nil {
-				return nil, err
-			}
+		if !ok {
+			break
 		}
+
+		action()
 	}
 
-	// sort & find cyclic imports
-	sorted, err := topo.Sort(r.dg)
+	if len(r.errorList) != 0 {
+		fmt.Println(r.errorList)
+		return nil, errors.New("resolution failed")
+	}
+
+	sorted, err := topo.Sort(r.programPackageGraph)
 
 	if err != nil {
 		return nil, err
 	}
 
-	l := []*ast.Module{}
-	slices.Reverse(sorted) // this is the order we need
+	var packages []*ast.Package = make([]*ast.Package, len(sorted))
 
-	for _, node := range sorted {
-		p := r.rnodes[node]
-		m := r.modules[p]
-		l = append(l, m)
+	for i, node := range sorted {
+		j := abs(i - len(sorted) + 1)
+		packages[j] = node.(*ast.Package)
 	}
 
-	packages := make(map[string]*ast.Package)
-	for k, mod := range r.modules {
+	return packages, nil
+}
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+func (r *resolver) ParsePackage(p string, entry bool) *ast.Package {
 
-		fsPkg := r.nodePackage[k]
+	// Read Directory
+	pkg, err := fs.CreatePackage(p)
+	if err != nil {
+		r.addError(err)
+		return nil
+	}
 
-		if v, ok := packages[fsPkg.Path]; ok {
-			v.Modules[k] = mod
-			mod.Package = v
+	astPackage := ast.NewPackage(pkg)
+	r.programPackageGraph.AddNode(astPackage)
+
+	// store
+	if p == getSTDPath() {
+		r.pacakges["std"] = astPackage
+	} else {
+		r.pacakges[astPackage.Key()] = astPackage
+	}
+
+	if entry {
+		r.target = astPackage
+	}
+
+	for _, mod := range pkg.Modules {
+		r.ParseModule(mod, astPackage)
+	}
+
+	r.queuedActions.Push(func() {
+		r.ResolveImports(astPackage)
+	})
+
+	return astPackage
+}
+
+func (r *resolver) ParseModule(mod *fs.Module, pkg *ast.Package) {
+	// 1 - Parse AST
+	ast, err := parser.ParseModule(mod, pkg)
+
+	if err != nil {
+		r.addError(err)
+		return
+	}
+
+	// add to graph
+	r.programModuleGraph.AddNode(ast)
+	// add top level mod to package
+	if ast.ParentModule == nil {
+		pkg.AddModule(ast)
+	}
+
+	for _, sub := range mod.SubModules {
+		mod, err := parser.ParseModule(sub, pkg)
+
+		if err != nil {
+			r.addError(err)
 			continue
 		}
 
-		// create pacakge
-		astPkg := &ast.Package{
-			FSPackage: fsPkg,
-			Modules:   make(map[string]*ast.Module),
+		ast.AddModule(mod)
+	}
+}
+
+func (r *resolver) ResolveImports(pkg *ast.Package) {
+	for _, mod := range pkg.Modules {
+		for _, file := range mod.Set.Files {
+			for _, node := range file.Nodes.Imports {
+				r.ResolveDependency(node, file, mod)
+
+			}
 		}
-
-		astPkg.Modules[k] = mod
-		mod.Package = astPkg
-		packages[fsPkg.Path] = astPkg
 	}
-
-	return &ResolvedData{
-		OrderedModules: l,
-		Packages:       packages,
-	}, nil
 }
 
-func (r *resolver) resolvePackage(pkg *fs.LitePackage) error {
-	r.packages[pkg.Path] = pkg
+func (r *resolver) ResolveDependency(decl *ast.ImportDeclaration, file *ast.File, pMod *ast.Module) {
+	pkg := pMod.Package
+	// Path
+	importPath := decl.Path.Value
 
-	// load base module
-	src := filepath.Join(pkg.Path, "src")
-	mod, err := fs.CollectModule(src, false)
-	if err != nil {
-		return err
-	}
-
-	err = r.addModuleNodes(mod, pkg)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *resolver) resolvePath(path string) error {
-	if _, ok := r.seen[path]; ok {
-		return nil
-	}
-
-	pkg := r.nodePackage[path]
-
-	mod, err := fs.CollectModule(path, false)
-	if err != nil {
-		return err
-	}
-
-	err = r.addModuleNodes(mod, pkg)
-
-	return err
-}
-
-func (r *resolver) addModuleNodes(m *fs.Module, pkg *fs.LitePackage) error {
-	if _, ok := r.seen[m.Path]; ok {
-		return nil
-	}
-
-	// parse module
-	mod, err := parser.ParseModule(m)
-
-	if err != nil {
-		return err
-	}
-
-	// Add current module
-	if _, ok := r.nodes[m.Path]; !ok {
-		node := r.dg.NewNode()
-		r.dg.AddNode(node)
-		r.nodes[m.Path] = node
-		r.rnodes[node] = m.Path
-	}
-
-	r.seen[m.Path] = struct{}{}
-	r.modules[m.Path] = mod
-	r.nodePackage[m.Path] = pkg
-	mod.FSMod = m
-
-	// collect module deps
-	err = r.resolveDependencies(mod, pkg)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *resolver) addPathNode(path string) {
-
-	if _, ok := r.nodes[path]; ok {
+	// Check length
+	if len(importPath) == 0 {
+		r.addError(lexer.NewError("empty import path", decl.Range(), file.LexerFile))
 		return
 	}
-	node := r.dg.NewNode()
-	r.dg.AddNode(node)
-	r.nodes[path] = node
-	r.rnodes[node] = path
-}
 
-func (r *resolver) addEdge(x, y string) {
-	e := r.dg.NewEdge(r.nodes[x], r.nodes[y])
-	r.dg.SetEdge(e)
-}
-
-func (r *resolver) resolveDependencies(m *ast.Module, pkg *fs.LitePackage) error {
-	deps := []string{}
-	for _, file := range m.Set.Files {
-		for _, decl := range file.Nodes.Imports {
-
-			dep, err := r.findDependency(decl, pkg)
-
-			if err != nil {
-				return err
-			}
-
-			deps = append(deps, dep)
-		}
-	}
-
-	for _, dep := range deps {
-		r.addPathNode(dep)
-		r.addEdge(m.FSMod.Path, dep)
-	}
-
-	return nil
-
-}
-
-func (r *resolver) findDependency(decl *ast.ImportDeclaration, pkg *fs.LitePackage) (string, error) {
-
-	importPath := decl.Path.Value
-	if len(importPath) == 0 {
-		return "", fmt.Errorf("unable to resolve dependency")
-	}
-
+	// split path into <pkg>/<mod>/<mod>...
 	splitPath := strings.Split(importPath, "/")
-
 	if len(splitPath) < 1 {
-		return "", fmt.Errorf("unable to resolve dependency")
+		r.addError(lexer.NewError("expected module path, format: <package>/<module>", decl.Range(), file.LexerFile))
+		return
 	}
-
-	// First Element is always a package
 
 	p := splitPath[0]
+	var targetPackage *ast.Package
 
-	var path string
-	var err error
-	if p == pkg.Config.Package.Name {
-		// resolving local module
-		path, err = r.findLocalDependency(splitPath[1:], pkg) // without package name
-
+	if p == "std" {
+		targetPackage = r.pacakges["std"]
+	} else if r.target != nil && r.target.Name() == p {
+		targetPackage = r.target
 	} else {
-		// resolving external dependency
-		path, err = r.findExternalDependency(splitPath, pkg)
-	}
 
-	if err != nil {
-		return path, err
-	}
+		// Resolve package
+		dep := pkg.Info.Config.FindDependency(p)
 
-	// Map Node
-	decl.PopulatedImportKey = path
-	return path, err
-}
-
-func (r *resolver) findLocalDependency(paths []string, pkg *fs.LitePackage) (string, error) {
-	// 1 - The `paths` param contains the split path without the Package Name
-	packageBase := pkg.Path
-	path := filepath.Join(packageBase, "src") // Points to the src folder of the current package
-
-	for _, elem := range paths {
-		path = filepath.Join(path, elem)
-	}
-
-	// 2 - Ensure Path Exists
-	_, err := os.Stat(path)
-
-	if err != nil {
-		return "", err
-	}
-
-	r.nodePackage[path] = pkg
-	// 3- Return Correct Path
-	return path, nil
-}
-
-func (r *resolver) findExternalDependency(paths []string, pkg *fs.LitePackage) (string, error) {
-
-	p := paths[0] // target package
-
-	// Find In Config File
-	cfg := pkg.Config
-	dep := cfg.FindDependency(p)
-
-	if dep == nil {
-		return "", fmt.Errorf("unable to locate package, %s", p)
-	}
-
-	var tgt *fs.LitePackage
-	if r.packages[dep.FilePath()] == nil {
-		// add package
-		p, err := fs.CreateLitePackage(dep.FilePath(), true)
-
-		if err != nil {
-			return "", nil
+		if dep == nil {
+			r.addError(lexer.NewError(fmt.Sprintf("unable to locate package, \"%s\"", p), decl.Range(), file.LexerFile))
+			return
 		}
-		r.packages[dep.FilePath()] = p
-		tgt = p
+
+		pre, ok := r.pacakges[dep.ID()]
+
+		// Package has already been parsed
+		if ok {
+			targetPackage = pre
+		} else {
+
+			// package has not been parsed, parse
+			targetPackage = r.ParsePackage(dep.Path, false)
+			r.queuedActions.Push(func() {
+				r.ResolveImports(targetPackage)
+			})
+		}
+	}
+
+	if targetPackage == nil {
+		r.addError(lexer.NewError(fmt.Sprintf("unable to locates package, \"%s\"", p), decl.Range(), file.LexerFile))
+		return
+	}
+
+	// resolve target module
+	paths := splitPath[1:]
+	var mod *ast.Module
+
+	// looking for base module, base module is module at base either named the package name or main
+	if len(paths) == 0 {
+		x, ok := targetPackage.Modules[targetPackage.Name()]
+		if ok {
+			mod = x
+		} else {
+			x, ok = targetPackage.Modules["main"]
+			if ok {
+				mod = x
+			}
+		}
 	} else {
-		tgt = r.packages[dep.FilePath()]
+
+		// looking for non base module, loop till paths are exhasusted
+		for _, path := range paths {
+
+			if mod == nil {
+				x, ok := targetPackage.Modules[path]
+				// cannot locate
+				if !ok {
+					r.addError(lexer.NewError(fmt.Sprintf("unable to locate module, \"%s\"", path), decl.Range(), file.LexerFile))
+					return
+				} else {
+					mod = x
+				}
+			} else {
+				x, ok := mod.SubModules[path]
+
+				if !ok {
+					r.addError(lexer.NewError(fmt.Sprintf("unable to locate module, \"%s\"", path), decl.Range(), file.LexerFile))
+					return
+				} else {
+					mod = x
+				}
+			}
+
+		}
 	}
-	// Now map to path
-	path := filepath.Join(dep.FilePath(), "src") // Points to the src folder of the current package
 
-	for _, elem := range paths[1:] {
-		path = filepath.Join(path, elem)
+	if pMod == mod {
+		err := lexer.NewError("cannot import self", decl.Range(), file.LexerFile)
+		r.addError(err)
+		return
 	}
 
-	// 2 - Ensure Path Exists
-	_, err := os.Stat(path)
+	// cyclic package import
+	if pMod.Package != mod.Package {
+		cyclic := r.programPackageGraph.HasEdgeFromTo(mod.Package.ID(), pMod.Package.ID())
 
-	if err != nil {
-		return "", err
+		if cyclic {
+			r.addError(lexer.NewError(fmt.Sprintf("cyclic import between packages, %s & %s", pMod.Package.Name(), mod.Package.Name()), decl.Range(), file.LexerFile))
+		}
+
+		// add edge
+		pEdge := r.programPackageGraph.NewEdge(pMod.Package, mod.Package)
+		r.programPackageGraph.SetEdge(pEdge)
+
+	} else {
+		// of the same package, add edge between modules
+		pMod.Package.SetEdge(pMod, mod)
 	}
 
-	// 3- Return Correct Path
-	r.nodePackage[path] = tgt
-	return path, nil
+	// cyclic module import
+	cyclic := r.programModuleGraph.HasEdgeFromTo(mod.ID(), pMod.ID())
+	if cyclic {
+		r.addError(lexer.NewError(fmt.Sprintf("cyclic import between modules, %s & %s", pMod.Name(), mod.Name()), decl.Range(), file.LexerFile))
+	}
+
+	// add edge
+	mEdge := r.programModuleGraph.NewEdge(pMod, mod)
+	r.programModuleGraph.SetEdge(mEdge)
 }
