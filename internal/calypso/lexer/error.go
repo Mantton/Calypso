@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/token"
@@ -40,4 +41,13 @@ func (e *CompilerError) Error() string {
 	msg += fmt.Sprintf("\n\t%s", e.File.Lines[max(0, e.Range.Start.Line-1)])
 	// TODO: Arrow
 	return msg
+}
+
+func CombinedErrors(errs []error) error {
+	s := ""
+	for _, e := range errs {
+		s += e.Error()
+	}
+
+	return errors.New(s)
 }

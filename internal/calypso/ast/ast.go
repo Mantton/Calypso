@@ -48,11 +48,11 @@ type Nodes struct {
 // - Imports, Modules, Structs, Types
 
 type ImportDeclaration struct {
-	KeyWPos            token.TokenPosition
-	Path               *StringLiteral
-	AsKeywPos          token.TokenPosition
-	Alias              *IdentifierExpression
-	PopulatedImportKey string
+	KeyWPos          token.TokenPosition
+	Path             *StringLiteral
+	AsKeywPos        token.TokenPosition
+	Alias            *IdentifierExpression
+	ImportedModuleID int64
 }
 
 type ConstantDeclaration struct {

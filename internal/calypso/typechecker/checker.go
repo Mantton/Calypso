@@ -6,7 +6,6 @@ import (
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/parser"
-	"github.com/mantton/calypso/internal/calypso/resolver"
 	"github.com/mantton/calypso/internal/calypso/types"
 )
 
@@ -26,7 +25,7 @@ func New(mod *ast.Module, mp *types.PackageMap) *Checker {
 		mp:    mp,
 	}
 
-	m := types.NewModule(mod, mp.Packages[mod.Package.Info.Path])
+	m := types.NewModule(mod, mp.Packages[mod.Package.ID()])
 	c.module = m
 	return c
 }
@@ -49,24 +48,26 @@ func (c *Checker) GlobalFind(n string) (types.Symbol, bool) {
 	return c.ParentScope().Resolve(n, c.ParentScope())
 }
 
-func CheckParsedData(p *resolver.ResolvedData) (*types.PackageMap, error) {
+func CheckPackages(pkgs []*ast.Package) (*types.PackageMap, error) {
 
 	mp := types.NewPackageMap()
 
-	for _, pkg := range p.Packages {
+	for _, pkg := range pkgs {
 		tPkg := types.NewPackage(pkg)
-		mp.Packages[tPkg.AST.Info.Path] = tPkg
-	}
+		mp.Packages[pkg.ID()] = tPkg
 
-	for _, m := range p.OrderedModules {
-		c := New(m, mp)
-		mod, err := c.Check()
+		// CheckModule
+		pkg.PerformInOrder(func(m *ast.Module) error {
+			c := New(m, mp)
+			mod, err := c.Check()
 
-		if err != nil {
-			return nil, err
-		}
+			if err != nil {
+				return err
+			}
 
-		mp.Modules[mod.AST.Info.Path] = mod
+			mp.Modules[mod.ID()] = mod
+			return nil
+		})
 	}
 
 	return mp, nil

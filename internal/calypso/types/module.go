@@ -7,13 +7,13 @@ import (
 )
 
 type PackageMap struct {
-	Packages map[string]*Package
-	Modules  map[string]*Module
+	Packages map[int64]*Package
+	Modules  map[int64]*Module
 }
 
 type Package struct {
 	AST     *ast.Package
-	modules map[string]*Module
+	modules map[int64]*Module
 }
 
 type Module struct {
@@ -26,8 +26,8 @@ type Module struct {
 
 func NewPackageMap() *PackageMap {
 	return &PackageMap{
-		Packages: make(map[string]*Package),
-		Modules:  make(map[string]*Module),
+		Packages: make(map[int64]*Package),
+		Modules:  make(map[int64]*Module),
 	}
 }
 func NewPackage(p *ast.Package) *Package {
@@ -37,7 +37,7 @@ func NewPackage(p *ast.Package) *Package {
 }
 
 func (p *Package) AddModule(m *Module) {
-	p.modules[m.Name()] = m
+	p.modules[m.AST.ID()] = m
 }
 
 func NewModule(m *ast.Module, p *Package) *Module {
@@ -55,9 +55,16 @@ func (m *Module) Package() *Package {
 func (m *Module) Name() string {
 	return m.AST.Name()
 }
+func (m *Module) ID() int64 {
+	return m.AST.ID()
+}
 
 func (m *Package) Name() string {
 	return m.AST.Name()
+}
+
+func (m *Package) ID() int64 {
+	return m.AST.ID()
 }
 
 func (m *Module) Type() Type {

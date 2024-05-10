@@ -60,9 +60,13 @@ func (c *Checker) pass() {
 func (c *Checker) passN(f *ast.File) {
 
 	for _, d := range f.Nodes.Imports {
-		key := d.PopulatedImportKey
+		key := d.ImportedModuleID
 
-		mod := c.mp.Modules[key]
+		mod, ok := c.mp.Modules[key]
+
+		if !ok {
+			panic("module should be resolved")
+		}
 
 		// trying to import same module being checked
 		if mod == c.module {

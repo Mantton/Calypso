@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -63,8 +62,7 @@ func ParseAndResolve(path string) ([]*ast.Package, error) {
 	}
 
 	if len(r.errorList) != 0 {
-		fmt.Println(r.errorList)
-		return nil, errors.New("resolution failed")
+		return nil, lexer.CombinedErrors(r.errorList)
 	}
 
 	sorted, err := topo.Sort(r.programPackageGraph)
@@ -291,4 +289,7 @@ func (r *resolver) ResolveDependency(decl *ast.ImportDeclaration, file *ast.File
 	// add edge
 	mEdge := r.programModuleGraph.NewEdge(pMod, mod)
 	r.programModuleGraph.SetEdge(mEdge)
+
+	// poulate import id
+	decl.ImportedModuleID = mod.ID()
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mantton/calypso/internal/calypso/resolver"
+	"github.com/mantton/calypso/internal/calypso/typechecker"
 )
 
 const DEBUG = false
@@ -16,11 +17,11 @@ func CompilePackage(path string) error {
 		return err
 	}
 
-	// fmt.Println("\n\nTypeCheck")
-	// pkgMap, err := typechecker.CheckParsedData(data)
-	// if err != nil {
-	// 	return err
-	// }
+	fmt.Println("\n\nTypeCheck")
+	_, err = typechecker.CheckPackages(packages)
+	if err != nil {
+		return err
+	}
 
 	// fmt.Println("\n\nLIR GEN")
 	// exec, err := lirgen.Generate(data, pkgMap)

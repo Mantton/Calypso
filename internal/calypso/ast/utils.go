@@ -7,6 +7,7 @@ import (
 	"github.com/mantton/calypso/internal/calypso/fs"
 	"github.com/mantton/calypso/internal/calypso/lexer"
 	"gonum.org/v1/gonum/graph/simple"
+	"gonum.org/v1/gonum/graph/topo"
 )
 
 type File struct {
@@ -107,4 +108,36 @@ func (p *Package) AddModule(m *Module) {
 func (p *Package) SetEdge(m1, m2 *Module) {
 	e := p.graph.NewEdge(m1, m2)
 	p.graph.SetEdge(e)
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+func (p *Package) PerformInOrder(fn func(*Module) error) error {
+
+	errs := []error{}
+	nodes, err := topo.Sort(p.graph)
+
+	if err != nil {
+		return err
+	}
+	for i := range nodes {
+		j := abs(i - len(nodes) + 1)
+		mod := nodes[j].(*Module)
+
+		err := fn(mod)
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) != 0 {
+		return lexer.CombinedErrors(errs)
+	}
+
+	return nil
 }
