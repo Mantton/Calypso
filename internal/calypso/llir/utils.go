@@ -97,8 +97,10 @@ func (c *compiler) getType(t types.Type) llvm.Type {
 			return c.context.Int1Type()
 		case types.NilLiteral:
 			panic("INVALID")
+		case types.String:
+			panic("String Impl")
 		default:
-			panic("unhandled basic type")
+			panic(fmt.Sprintf("unhandled basic type, %d", t.Literal))
 		}
 	case *types.Struct, *types.Enum:
 		composite, ok := c.exec.Composites[p]
@@ -137,6 +139,12 @@ func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {
 	for _, param := range fn.Parameters {
 		t := c.getType(param.Symbol)
 		params = append(params, t)
+	}
+
+	fmt.Println(retType)
+
+	if _, ok := c.exec.Composites[sg.Result.Type()]; ok {
+		retType = llvm.PointerType(retType, 0)
 	}
 
 	fnType := llvm.FunctionType(retType, params, false)

@@ -710,7 +710,6 @@ func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Func
 		composite = val
 	case *lir.GenericType:
 		A := b.Mod.TModule.Table.GetNodeType(n).(*types.SpecializedType)
-		fmt.Println(A)
 		composite = val.Specs[A.SymbolName()]
 	}
 
@@ -775,7 +774,6 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 	}
 
 	var targetType types.Type
-	var base types.Type
 
 	switch target := target.(type) {
 	case *lir.GenericEnumReference:
@@ -790,7 +788,6 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			Z = Y
 			X = Y.Parent().(*types.Enum).FindVariant(field)
 		default:
-			fmt.Println(Y)
 			panic(fmt.Sprintf("%T, unhanlded", Y))
 		}
 
@@ -818,13 +815,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			Variant: X,
 		}
 	default:
-		base = target.Yields()
-		targetType = base
-
-		// Deref
-		if types.IsPointer(targetType) {
-			targetType = types.Dereference(targetType)
-		}
+		targetType = SafeDereference(target.Yields())
 
 		// Specialize
 		if fn.Spec != nil {
@@ -937,8 +928,6 @@ func (b *builder) resolveCompositeOf(t types.Type, mod *lir.Module) *lir.Composi
 func (b *builder) emitUnionVariant(n *lir.UnionTypeInlineCreation, fn *lir.Function, args []lir.Value, ret types.Type) lir.Value {
 	composite, ok := b.MP.Composites[n.Variant]
 
-	fmt.Println(n.Variant)
-
 	if !ok {
 		panic("unknown composite")
 	}
@@ -1046,7 +1035,6 @@ func (b *builder) evaluateSwitchCaseCondition(n *ast.SwitchCaseExpression, fn *l
 
 	y := SafeDereference(self.Yields())
 
-	fmt.Println(y)
 	if !types.IsEnum(y) {
 		return b.evaluateExpression(n.Condition, fn, b.Mod)
 	}
