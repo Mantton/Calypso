@@ -200,6 +200,11 @@ func (d *Function) AllSpecs() []*SpecializedFunctionSignature {
 }
 
 func (fn *Function) SymbolName() string {
+
+	if fn.Target != nil {
+		return fn.name
+	}
+
 	if fn.Self == nil {
 		return fn.symbol.SymbolName()
 	} else {
