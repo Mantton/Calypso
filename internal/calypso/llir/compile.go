@@ -1,9 +1,10 @@
 package llir
 
 import (
-	"fmt"
 	"os"
+	"os/exec"
 
+	"github.com/mantton/calypso/internal/calypso/lexer"
 	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/types"
 	"tinygo.org/x/go-llvm"
@@ -17,12 +18,126 @@ func init() {
 	llvm.InitializeAllAsmPrinters()
 }
 
-func Compile(s *lir.Executable) {
+type GCompiler struct {
+	modules map[int64]llvm.Module
+}
 
-	for _, mod := range s.Modules {
-		c := newCompiler(mod, s)
-		c.compileModule()
+func Compile(s *lir.Executable) error {
+
+	gc := &GCompiler{
+		modules: make(map[int64]llvm.Module),
 	}
+	errs := []error{}
+	ctx := llvm.NewContext()
+
+	files := []string{}
+
+	// Generate LLVM Modules
+	for _, pkg := range s.Packages {
+		for _, mod := range pkg.Modules {
+			c := newCompiler(mod, s, ctx)
+			lMod, err := c.compileModule()
+			if err != nil {
+				errs = append(errs, err)
+			}
+			gc.modules[mod.ID()] = lMod
+		}
+	}
+
+	if len(errs) != 0 {
+		return lexer.CombinedErrors(errs)
+	}
+
+	// Combine
+	for _, pkg := range s.Packages {
+
+		base := ctx.NewModule(pkg.AST.Name())
+
+		for _, mod := range pkg.Modules {
+			llvmMod := gc.modules[mod.ID()]
+			err := llvm.LinkModules(base, llvmMod)
+
+			if err != nil {
+				return err
+			}
+
+		}
+
+		err := llvm.VerifyModule(base, llvm.ReturnStatusAction)
+
+		if err != nil {
+			return err
+		}
+
+		trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())
+		if err != nil {
+			errs = append(errs, err)
+		}
+		base.SetTarget(trg.Description())
+
+		mt := trg.CreateTargetMachine(llvm.DefaultTargetTriple(), "", "", llvm.CodeGenLevelDefault, llvm.RelocDefault, llvm.CodeModelDefault)
+
+		pbo := llvm.NewPassBuilderOptions()
+		defer pbo.Dispose()
+
+		pm := llvm.NewPassManager()
+		mt.AddAnalysisPasses(pm)
+
+		err = base.RunPasses("default<Os>", mt, pbo)
+
+		if err != nil {
+			return err
+		}
+
+		// fmt.Println("\n\n")
+		// base.Dump()
+
+		f, err := os.Create("./bin/" + pkg.AST.Name() + ".bc")
+		if err != nil {
+			return err
+		}
+
+		err = llvm.WriteBitcodeToFile(base, f)
+
+		if err != nil {
+			return err
+		}
+
+		files = append(files, f.Name())
+	}
+
+	// Link Packages
+	combined, err := os.Create("./bin/combined.bc")
+
+	if err != nil {
+		return err
+	}
+
+	args := []string{}
+	args = append(args, files...)
+	args = append(args, "-o")
+	args = append(args, combined.Name())
+
+	cmd := exec.Command("llvm-link", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+
+	if err != nil {
+		return err
+	}
+
+	// Create Executable
+	cmd = exec.Command("clang", combined.Name(), "-o", "exec")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type compiler struct {
@@ -33,9 +148,9 @@ type compiler struct {
 	typesTable map[types.Type]llvm.Type
 }
 
-func newCompiler(module *lir.Module, exec *lir.Executable) *compiler {
+func newCompiler(module *lir.Module, exec *lir.Executable, ctx llvm.Context) *compiler {
 	c := &compiler{
-		context:    llvm.NewContext(),
+		context:    ctx,
 		typesTable: make(map[types.Type]llvm.Type),
 		exec:       exec,
 	}
@@ -46,7 +161,7 @@ func newCompiler(module *lir.Module, exec *lir.Executable) *compiler {
 	return c
 }
 
-func (c *compiler) compileModule() {
+func (c *compiler) compileModule() (llvm.Module, error) {
 	// builder
 	b := c.context.NewBuilder()
 	defer b.Dispose()
@@ -69,34 +184,10 @@ func (c *compiler) compileModule() {
 	err := llvm.VerifyModule(c.module, llvm.ReturnStatusAction)
 
 	if err != nil {
-		c.module.Dump()
-		fmt.Printf("\n\n[Validation Error]\n%s\n", err)
-		os.Exit(1)
+		return llvm.Module{}, err
 	}
 
-	fmt.Println("\n\n")
-	c.module.Dump()
-
-	// trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// c.module.SetTarget(trg.Description())
-
-	// mt := trg.CreateTargetMachine(llvm.DefaultTargetTriple(), "", "", llvm.CodeGenLevelDefault, llvm.RelocDefault, llvm.CodeModelDefault)
-
-	// pbo := llvm.NewPassBuilderOptions()
-	// defer pbo.Dispose()
-
-	// pm := llvm.NewPassManager()
-	// mt.AddAnalysisPasses(pm)
-
-	// err = c.module.RunPasses("default<Os>", mt, pbo)
-
-	// if err != nil {
-	// 	panic(err)
-	// }
-
+	return c.module, nil
 }
 
 func (c *compiler) buildComposite(cm *lir.Composite) llvm.Type {

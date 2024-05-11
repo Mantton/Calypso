@@ -33,6 +33,10 @@ func CompilePackage(path string) error {
 	}
 
 	fmt.Println("\n\nLLVM-IR GEN")
-	llir.Compile(exec)
+	err = llir.Compile(exec)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
