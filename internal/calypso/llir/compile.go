@@ -128,7 +128,7 @@ func Compile(s *lir.Executable) error {
 	}
 
 	// Create Executable
-	cmd = exec.Command("clang", combined.Name(), "-o", "exec")
+	cmd = exec.Command("clang", combined.Name(), "-o", "./bin/exec")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()

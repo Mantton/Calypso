@@ -58,6 +58,10 @@ func (b *builder) registerFunction(n *ast.FunctionExpression) {
 	b.Mod.Functions[fn.Name] = fn   // add function to module
 	fn.External = tFn.Target != nil // mark target
 
+	if b.Mod.IsMainTarget() && tFn.Name() == "main" {
+		b.main = fn
+	}
+
 	b.MP.Functions[tFn.Type()] = fn // Add to Program Scope
 
 }

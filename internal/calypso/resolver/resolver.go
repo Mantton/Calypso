@@ -98,6 +98,7 @@ func (r *resolver) ParsePackage(p string, entry bool) *ast.Package {
 
 	if entry {
 		r.target = astPackage
+		astPackage.IsTarget = true
 	}
 
 	for _, mod := range pkg.Modules {

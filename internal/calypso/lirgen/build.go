@@ -1,6 +1,8 @@
 package lirgen
 
 import (
+	"fmt"
+
 	"github.com/mantton/calypso/internal/calypso/ast"
 	"github.com/mantton/calypso/internal/calypso/lir"
 	"github.com/mantton/calypso/internal/calypso/types"
@@ -13,6 +15,7 @@ type builder struct {
 	EnumFunctions  map[*types.EnumVariant]*lir.Function
 	RFunctionEnums map[*lir.Function]*types.EnumVariant
 	MP             *lir.Executable
+	main           *lir.Function
 }
 
 func build(mod *lir.Module, mp *lir.Executable) error {
@@ -51,4 +54,33 @@ func (b *builder) pass() {
 	}
 
 	b.mono()
+
+	if b.Mod.IsMainTarget() {
+		b.entry()
+	}
+}
+
+func (b *builder) entry() {
+	// Build Function
+	sg := types.NewFunctionSignature()
+	sg.Result.SetType(types.LookUp(types.Int8))
+	tfn := types.NewFunction("main", sg, nil)
+	tfn.Target = &types.FunctionTarget{
+		Target: "calypso",
+	}
+	fn := lir.NewFunction(tfn)
+	fn.Name = "main"
+	b.Mod.Functions["main"] = fn
+
+	if b.main != nil {
+		fn.Emit(&lir.Call{
+			Target: b.main,
+		})
+	}
+
+	fn.Emit(&lir.Return{
+		Result: lir.NewConst(int64(0), types.LookUp(types.Int8)),
+	})
+
+	fmt.Println("done", b.Mod.Name())
 }

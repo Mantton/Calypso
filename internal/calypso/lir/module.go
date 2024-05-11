@@ -54,6 +54,15 @@ func (m *Module) Yields() types.Type {
 	return m.TModule
 }
 
+func (m *Module) IsMainTarget() bool {
+
+	if m.TModule.Package().AST.IsTarget && m.Name() == "main" {
+		return true
+	}
+
+	return false
+}
+
 func (m *Module) Find(s string) Value {
 	symbol := m.TModule.Scope.MustResolve(s)
 

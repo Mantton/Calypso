@@ -68,10 +68,11 @@ func (m *Module) IsSTD() bool {
 // * Package
 
 type Package struct {
-	Modules map[string]*Module
-	Info    *fs.Package
-	graph   *simple.DirectedGraph
-	id      int64
+	Modules  map[string]*Module
+	Info     *fs.Package
+	graph    *simple.DirectedGraph
+	id       int64
+	IsTarget bool
 }
 
 func (p *Package) Name() string {
