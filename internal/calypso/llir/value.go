@@ -181,7 +181,6 @@ func (b *builder) createStructFieldAccess(v *lir.AccessStructProperty) llvm.Valu
 
 func (b *builder) createExtractValue(v *lir.ExtractValue) llvm.Value {
 	addr := b.getValue(v.Address)
-	fmt.Println("ADDR:", addr)
 	return b.CreateExtractValue(addr, v.Index, "")
 }
 

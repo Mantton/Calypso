@@ -75,7 +75,6 @@ func (c *compiler) compileModule() {
 	}
 
 	c.module.Dump()
-	fmt.Println("Valid Module")
 
 	// trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())
 	// if err != nil {
