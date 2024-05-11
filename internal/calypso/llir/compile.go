@@ -74,6 +74,7 @@ func (c *compiler) compileModule() {
 		os.Exit(1)
 	}
 
+	fmt.Println("\n\n")
 	c.module.Dump()
 
 	// trg, err := llvm.GetTargetFromTriple(llvm.DefaultTargetTriple())

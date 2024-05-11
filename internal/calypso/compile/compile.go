@@ -34,7 +34,5 @@ func CompilePackage(path string) error {
 
 	fmt.Println("\n\nLLVM-IR GEN")
 	llir.Compile(exec)
-
-	fmt.Println(packages, typedPackages, exec)
 	return nil
 }

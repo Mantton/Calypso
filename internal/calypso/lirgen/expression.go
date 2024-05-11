@@ -632,14 +632,6 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 	case *ast.FieldAccessExpression:
 		x := b.evaluateFieldAccessExpression(n, fn, mod, false)
 		return x
-
-	case *ast.UnaryExpression:
-		if n.Op == token.STAR {
-			return b.evaluateAddressOfExpression(n.Expr, fn, mod)
-		}
-
-		panic("cannot get address of unary expression")
-
 	default:
 		panic(fmt.Sprintf("unimplmented address of, %T", n))
 	}

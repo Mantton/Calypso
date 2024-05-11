@@ -175,7 +175,6 @@ func (b *builder) createStructFieldAccess(v *lir.AccessStructProperty) llvm.Valu
 	}
 
 	elemT := b.getType(v.Composite.Type)
-	// b.module.Dump()
 	return b.CreateInBoundsGEP(elemT, addr, indices, "")
 }
 
@@ -192,7 +191,6 @@ func (b *builder) createPointerOffset(v *lir.PointerOffset) llvm.Value {
 		i,
 	}
 
-	elemT := b.getType(v.Address.Yields())
-	// b.module.Dump()
+	elemT := b.context.Int8Type() // Will return pointer address
 	return b.CreateInBoundsGEP(elemT, addr, indices, "")
 }

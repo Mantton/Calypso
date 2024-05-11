@@ -275,7 +275,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 
 func (b *builder) visitDerefAssignmentStatement(n *ast.DereferenceAssignmentStatement, fn *lir.Function) {
 
-	addr := b.evaluateAddressOfExpression(n.Target, fn, b.Mod)
+	addr := b.evaluateExpression(n.Target, fn, b.Mod)
 
 	val := b.evaluateExpression(n.Value, fn, b.Mod)
 
