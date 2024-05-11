@@ -223,7 +223,8 @@ func (b *builder) evaluateUnaryExpression(n *ast.UnaryExpression, fn *lir.Functi
 
 	switch n.Op {
 	case token.STAR:
-		panic("todo: dereference")
+		// dereference
+		return b.evaluateExpression(n.Expr, fn, mod)
 	case token.AMP:
 		panic("todo: get pointer Reference")
 	case token.NOT:
@@ -631,8 +632,16 @@ func (b *builder) evaluateAddressOfExpression(n ast.Expression, fn *lir.Function
 	case *ast.FieldAccessExpression:
 		x := b.evaluateFieldAccessExpression(n, fn, mod, false)
 		return x
+
+	case *ast.UnaryExpression:
+		if n.Op == token.STAR {
+			return b.evaluateAddressOfExpression(n.Expr, fn, mod)
+		}
+
+		panic("cannot get address of unary expression")
+
 	default:
-		panic("unimplmented address of")
+		panic(fmt.Sprintf("unimplmented address of, %T", n))
 	}
 }
 

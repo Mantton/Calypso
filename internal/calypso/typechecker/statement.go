@@ -40,6 +40,8 @@ func (c *Checker) checkStatement(stmt ast.Statement, ctx *NodeContext) {
 		c.checkWhileStatement(stmt, ctx)
 	case *ast.TypeStatement:
 		c.checkTypeStatement(stmt, ctx)
+	case *ast.DereferenceAssignmentStatement:
+		c.checkDerefAssignment(stmt, ctx)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", stmt)
 		panic(msg)
@@ -385,4 +387,16 @@ func (c *Checker) checkTypeStatement(n *ast.TypeStatement, ctx *NodeContext) {
 		RHS = c.evaluateTypeExpression(n.Value, alias.TypeParameters, ctx)
 		alias.SetType(RHS)
 	}
+}
+
+func (c *Checker) checkDerefAssignment(n *ast.DereferenceAssignmentStatement, ctx *NodeContext) {
+	lhs := c.evaluateExpression(n.Target, ctx)
+	rhs := c.evaluateExpression(n.Value, ctx)
+
+	_, err := c.validate(lhs, rhs)
+
+	if err != nil {
+		c.addError(err.Error(), n.Range())
+	}
+
 }

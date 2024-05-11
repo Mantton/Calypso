@@ -285,18 +285,19 @@ func (e *BreakStatement) Range() token.SyntaxRange {
 	}
 }
 
-func (s *IfStatement) statementNode()         {}
-func (s *ExpressionStatement) statementNode() {}
-func (s *WhileStatement) statementNode()      {}
-func (s *ReturnStatement) statementNode()     {}
-func (s *BlockStatement) statementNode()      {}
-func (s *VariableStatement) statementNode()   {}
-func (s *FunctionStatement) statementNode()   {}
-func (s *StructStatement) statementNode()     {}
-func (s *EnumStatement) statementNode()       {}
-func (s *SwitchStatement) statementNode()     {}
-func (s *BreakStatement) statementNode()      {}
-func (d *TypeStatement) statementNode()       {}
+func (s *IfStatement) statementNode()                    {}
+func (s *ExpressionStatement) statementNode()            {}
+func (s *WhileStatement) statementNode()                 {}
+func (s *ReturnStatement) statementNode()                {}
+func (s *BlockStatement) statementNode()                 {}
+func (s *VariableStatement) statementNode()              {}
+func (s *FunctionStatement) statementNode()              {}
+func (s *StructStatement) statementNode()                {}
+func (s *EnumStatement) statementNode()                  {}
+func (s *SwitchStatement) statementNode()                {}
+func (s *BreakStatement) statementNode()                 {}
+func (d *TypeStatement) statementNode()                  {}
+func (d *DereferenceAssignmentStatement) statementNode() {}
 
 // * Declarations
 func (e *ConstantDeclaration) Range() token.SyntaxRange {
@@ -331,6 +332,13 @@ func (e *TypeStatement) Range() token.SyntaxRange {
 		}
 	}
 
+}
+
+func (e *DereferenceAssignmentStatement) Range() token.SyntaxRange {
+	return token.SyntaxRange{
+		Start: e.Target.Range().Start,
+		End:   e.Value.Range().End,
+	}
 }
 
 func (e *ExtensionDeclaration) Range() token.SyntaxRange {
@@ -566,6 +574,11 @@ func (n *StandardDeclaration) String() string {
 func (n *TypeStatement) String() string {
 	return ""
 }
+
+func (n *DereferenceAssignmentStatement) String() string {
+	return ""
+}
+
 func (n *ExtensionDeclaration) String() string {
 	return ""
 }

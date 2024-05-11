@@ -38,7 +38,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		return p.parseBreakStatement()
 	case token.TYPE:
 		return p.parseTypeStatement()
-
+	case token.STAR:
+		return p.parseDereferenceStatement()
 	}
 
 	return nil, p.error(fmt.Sprintf("expected statement, got %s", p.currentScannedToken().Lit))
@@ -774,4 +775,28 @@ func (p *Parser) parseTypeStatement() (*ast.TypeStatement, error) {
 		Identifier:    ident,
 		Visibility:    vis,
 	}, nil
+}
+
+func (p *Parser) parseDereferenceStatement() (*ast.DereferenceAssignmentStatement, error) {
+	expr, err := p.parseExpression()
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.expect(token.SEMICOLON)
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch expr := expr.(type) {
+	case *ast.AssignmentExpression:
+		return &ast.DereferenceAssignmentStatement{
+			Target: expr.Target,
+			Value:  expr.Value,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected dereference")
+	}
 }

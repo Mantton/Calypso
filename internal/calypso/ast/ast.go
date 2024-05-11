@@ -162,6 +162,11 @@ type StructStatement struct {
 	Visibility    Visibility
 }
 
+type DereferenceAssignmentStatement struct {
+	Target Expression
+	Value  Expression
+}
+
 type StructField struct {
 	Identifier *IdentifierExpression
 	Visibility Visibility

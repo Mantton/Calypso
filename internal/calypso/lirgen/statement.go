@@ -37,14 +37,13 @@ func (b *builder) visitStatement(node ast.Statement, fn *lir.Function) {
 		b.visitSwitchStatement(node, fn)
 	case *ast.WhileStatement:
 		b.visitWhileStatement(node, fn)
-	// case *ast.BreakStatement:
-	// case *ast.StructStatement:
-	// case *ast.EnumStatement:
-	// case *ast.TypeStatement:
+	case *ast.BreakStatement, *ast.StructStatement, *ast.EnumStatement, *ast.TypeStatement:
+		break
+	case *ast.DereferenceAssignmentStatement:
+		b.visitDerefAssignmentStatement(node, fn)
 	default:
 		msg := fmt.Sprintf("statement check not implemented, %T\n", node)
-		// panic(msg)
-		fmt.Println(msg)
+		panic(msg)
 	}
 }
 
@@ -272,4 +271,18 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 		})
 	}
 
+}
+
+func (b *builder) visitDerefAssignmentStatement(n *ast.DereferenceAssignmentStatement, fn *lir.Function) {
+
+	addr := b.evaluateAddressOfExpression(n.Target, fn, b.Mod)
+
+	val := b.evaluateExpression(n.Value, fn, b.Mod)
+
+	str := &lir.Store{
+		Address: addr,
+		Value:   val,
+	}
+
+	fn.Emit(str)
 }
