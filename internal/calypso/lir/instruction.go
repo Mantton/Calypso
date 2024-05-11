@@ -218,10 +218,14 @@ type PhiNode struct {
 }
 
 // Get Element Pointer
-type GEP struct {
+type AccessStructProperty struct {
 	Index     int
 	Address   Value
 	Composite *Composite
+}
+type PointerOffset struct {
+	Offset  Value
+	Address Value
 }
 
 // Extract Value
@@ -252,7 +256,13 @@ var SOpMap = map[token.Token]ICompOp{
 func (c *Call) Yields() types.Type     { return c.Target.Signature().Result.Type() }
 func (c *Load) Yields() types.Type     { return types.Dereference(c.Address.Yields()) }
 func (c *Allocate) Yields() types.Type { return types.NewPointer(c.TypeOf) }
-func (c *GEP) Yields() types.Type      { return types.NewPointer(c.Composite.Members[c.Index]) }
+func (c *AccessStructProperty) Yields() types.Type {
+	return types.NewPointer(c.Composite.Members[c.Index])
+}
+
+func (c *PointerOffset) Yields() types.Type {
+	return c.Address.Yields()
+}
 
 func (c *Add) Yields() types.Type  { return c.Left.Yields() }
 func (c *FAdd) Yields() types.Type { return c.Left.Yields() }

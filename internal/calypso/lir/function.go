@@ -28,6 +28,10 @@ type Function struct {
 	Name         string
 }
 
+func (f *Function) IsIntrinsic() bool {
+	return f.TFunction.Module().AST.IsSTD() && f.TFunction.Module().Name() == "intrinsic"
+}
+
 func (f *Function) Signature() *types.FunctionSignature {
 	if f.Spec != nil {
 		return f.Spec.Sg()

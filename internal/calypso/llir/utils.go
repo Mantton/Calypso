@@ -141,8 +141,6 @@ func (c *compiler) getFunction(fn *lir.Function) (llvm.Value, llvm.Type) {
 		params = append(params, t)
 	}
 
-	fmt.Println(retType)
-
 	if _, ok := c.exec.Composites[sg.Result.Type()]; ok {
 		retType = llvm.PointerType(retType, 0)
 	}

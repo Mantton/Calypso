@@ -257,6 +257,9 @@ func (c *Checker) pass6(f *ast.File) {
 			sg := c.registerFunctionSignatures(fn.Func)
 
 			if types.IsGeneric(sg) {
+				if c.module.AST.IsSTD() && c.module.Name() == "intrinsic" {
+					continue
+				}
 				c.addError(fmt.Sprintf("external function %s cannot be generic", fn.Func.Identifier.Value), fn.Range())
 			}
 		}

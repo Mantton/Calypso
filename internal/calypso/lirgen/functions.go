@@ -140,6 +140,11 @@ func (b *builder) walkFunction(n *ast.FunctionExpression, fn *lir.Function) {
 		return
 	}
 
+	if fn.IsIntrinsic() && n.Body == nil {
+		b.walkIntrinsicFunction(fn)
+		return
+	}
+
 	// Body
 	stmts := n.Body.Statements
 
@@ -180,5 +185,24 @@ func (b *builder) mono() {
 				b.Mod.Functions[nFn.Name] = nFn
 			}
 		}
+	}
+}
+
+func (b *builder) walkIntrinsicFunction(fn *lir.Function) {
+	// test with offset
+	switch fn.TFunction.Name() {
+	case "offset":
+
+		gep := &lir.PointerOffset{
+			Offset:  fn.Parameters[1],
+			Address: fn.Parameters[0],
+		}
+
+		fn.Emit(gep)
+
+		fn.Emit(&lir.Return{
+			Result: gep,
+		})
+
 	}
 }

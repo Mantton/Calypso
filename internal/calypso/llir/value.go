@@ -107,10 +107,12 @@ func (b *builder) createValue(v lir.Value) llvm.Value {
 		return b.createLoad(v)
 	case *lir.Allocate:
 		return b.createAlloc(v)
-	case *lir.GEP:
-		return b.createGEP(v)
+	case *lir.AccessStructProperty:
+		return b.createStructFieldAccess(v)
 	case *lir.ExtractValue:
 		return b.createExtractValue(v)
+	case *lir.PointerOffset:
+		return b.createPointerOffset(v)
 	default:
 		msg := fmt.Sprintf("[LLIRGEN] Value not implemented, %T", v)
 		panic(msg)
@@ -164,7 +166,7 @@ func (b *builder) createCall(v *lir.Call) llvm.Value {
 	return r
 }
 
-func (b *builder) createGEP(v *lir.GEP) llvm.Value {
+func (b *builder) createStructFieldAccess(v *lir.AccessStructProperty) llvm.Value {
 	addr := b.getValue(v.Address)
 
 	indices := []llvm.Value{
@@ -181,4 +183,17 @@ func (b *builder) createExtractValue(v *lir.ExtractValue) llvm.Value {
 	addr := b.getValue(v.Address)
 	fmt.Println("ADDR:", addr)
 	return b.CreateExtractValue(addr, v.Index, "")
+}
+
+func (b *builder) createPointerOffset(v *lir.PointerOffset) llvm.Value {
+	addr := b.getValue(v.Address)
+	i := b.getValue(v.Offset)
+
+	indices := []llvm.Value{
+		i,
+	}
+
+	elemT := b.getType(v.Address.Yields())
+	// b.module.Dump()
+	return b.CreateInBoundsGEP(elemT, addr, indices, "")
 }

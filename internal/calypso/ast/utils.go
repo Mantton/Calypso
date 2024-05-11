@@ -61,6 +61,10 @@ func (m *Module) AddModule(s *Module) {
 	m.SubModules[s.Name()] = s
 }
 
+func (m *Module) IsSTD() bool {
+	return m.Package.Info.IsSTD()
+}
+
 // * Package
 
 type Package struct {

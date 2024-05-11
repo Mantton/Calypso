@@ -185,7 +185,7 @@ func (b *builder) visitSwitchStatement(n *ast.SwitchStatement, fn *lir.Function)
 	// Is Composite Enum
 	if types.IsPointer(typ) {
 		if en, ok := types.Dereference(typ).Parent().(*types.Enum); ok && en.IsUnion() {
-			addr := &lir.GEP{
+			addr := &lir.AccessStructProperty{
 				Address:   cond,
 				Index:     0,
 				Composite: b.MP.Composites[symbol],

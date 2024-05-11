@@ -728,7 +728,7 @@ func (b *builder) evaluateCompositeLiteral(n *ast.CompositeLiteral, fn *lir.Func
 		value := b.evaluateExpression(field.Value, fn, mod)
 		// Get Pointer to Property
 
-		prop_ptr := &lir.GEP{
+		prop_ptr := &lir.AccessStructProperty{
 			Index:     index,
 			Address:   addr,
 			Composite: composite,
@@ -845,7 +845,7 @@ func (b *builder) evaluateFieldAccessExpression(n *ast.FieldAccessExpression, fn
 			}
 
 			// Get Element Pointer of Field
-			ptr := &lir.GEP{
+			ptr := &lir.AccessStructProperty{
 				Index:     index,
 				Address:   target,
 				Composite: composite,
@@ -942,7 +942,7 @@ func (b *builder) emitUnionVariant(n *lir.UnionTypeInlineCreation, fn *lir.Funct
 	// GEP & Store of Fields
 	for i := range n.Variant.Fields {
 
-		ptr := &lir.GEP{
+		ptr := &lir.AccessStructProperty{
 			Index:     i + 1, // First Position is always dicriminant
 			Address:   addr,
 			Composite: composite,
@@ -999,7 +999,7 @@ func (b *builder) emitEnumExpansion(n *ast.CallExpression, x *lir.Function) *lir
 				panic("expected identifier")
 			}
 
-			addr := &lir.GEP{
+			addr := &lir.AccessStructProperty{
 				Address:   self,
 				Index:     idx,
 				Composite: composite,
