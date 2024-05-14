@@ -75,19 +75,19 @@ func Compile(s *lir.Executable) error {
 		}
 		base.SetTarget(trg.Description())
 
-		mt := trg.CreateTargetMachine(llvm.DefaultTargetTriple(), "", "", llvm.CodeGenLevelDefault, llvm.RelocDefault, llvm.CodeModelDefault)
+		// mt := trg.CreateTargetMachine(llvm.DefaultTargetTriple(), "", "", llvm.CodeGenLevelDefault, llvm.RelocDefault, llvm.CodeModelDefault)
 
-		pbo := llvm.NewPassBuilderOptions()
-		defer pbo.Dispose()
+		// pbo := llvm.NewPassBuilderOptions()
+		// defer pbo.Dispose()
 
-		pm := llvm.NewPassManager()
-		mt.AddAnalysisPasses(pm)
+		// pm := llvm.NewPassManager()
+		// mt.AddAnalysisPasses(pm)
 
-		err = base.RunPasses("default<Os>", mt, pbo)
+		// err = base.RunPasses("default<Os>", mt, pbo)
 
-		if err != nil {
-			return err
-		}
+		// if err != nil {
+		// 	return err
+		// }
 
 		// fmt.Println("\n\n")
 		// base.Dump()
