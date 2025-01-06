@@ -59,3 +59,4 @@ func Bar<T: Hashable>(a:T) -> T {
     return a;
 }
 ```
+# Foo
